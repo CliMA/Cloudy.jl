@@ -1,4 +1,4 @@
-"Linear + product coalescence kernel example"
+"Product coalescence kernel example"
 
 using DifferentialEquations
 using Plots
