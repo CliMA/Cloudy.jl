@@ -1,4 +1,4 @@
-"Smoluchowski 1916 constant coalescence kernel example"
+"Linear coalescence kernel example"
 
 using DifferentialEquations
 using Plots
@@ -14,11 +14,11 @@ function main()
   tol = 1e-8
 
   # Physicsal parameters
-  coalescence_coeff = 1/3.14
-  kernel = ConstantCoalescenceTensor(coalescence_coeff)
+  coalescence_coeff = Array{FT}([[0.0, 1/3.14/4] [1/3.14/4, 0.0]])
+  kernel = LinearCoalescenceTensor(coalescence_coeff)
 
   # Initial condition
-  moments_init = Array{FT}([67.14, 123.325, 524.23])
+  moments_init = Array{FT}([150.0, 30.0, 200.0])
   distribution = Gamma(4.56, 1.24, 6.23)
   update_params!(distribution, moments_init)
 
@@ -31,24 +31,35 @@ function main()
   sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
 
   # Plot the solution for the 0th moment and compare to analytical solution
+  pyplot()
   time = sol.t
   moment_0 = vcat(sol.u'...)[:, 1]
   moment_1 = vcat(sol.u'...)[:, 2]
+  moment_2 = vcat(sol.u'...)[:, 3]
+
+  println(typeof(moment_0))
+
   plot(time,
       moment_0,
       linewidth=3,
-      title="Smoluchowski 1916 (K(m,m') = const.) vs. Climate Machine",
-      xaxis="Time (t)",
-      yaxis="M_0(t)",
+      title="\$C(m, m') = k(m + m')\$ vs. Climate Machine",
+      xaxis="time",
+      yaxis="M\$_k\$(time)",
       xlims=(0, 1.0),
-      label="CliMA"
+      ylims=(0, 600.0),
+      label="M\$_0\$ CLIMA"
   )
   plot!(time,
-      t-> (1 / moments_init[1] + 0.5 * coalescence_coeff * t)^(-1),
-      lw=3,
-      ls=:dash,
-      label="SM1916"
+      moment_1,
+      linewidth=3,
+      label="M\$_1\$ CLIMA"
   )
+  plot!(time,
+      moment_2,
+      linewidth=3,
+      label="M\$_2\$ CLIMA"
+  )
+  savefig("linear_kernel_example.eps")
 end
 
 main()
