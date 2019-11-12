@@ -1,0 +1,8 @@
+language: julia
+julia:
+  - 1.2
+
+script:
+  using Pkg
+  Pkg.build(; verbose = true)
+  Pkg.test(coverage=true)
