@@ -12,3 +12,11 @@ script:
   - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.build("Cloudy");'
 
   - julia --project=docs/ --color=yes 'docs/make.jl'
+
+after_success:
+  # push coverage results to Codecov
+  - julia -e 'import Pkg;
+                     cd(Pkg.dir("Cloudy"));
+                     Pkg.add("Coverage");
+                     using Coverage;
+                     Codecov.submit(Codecov.process_folder())'
