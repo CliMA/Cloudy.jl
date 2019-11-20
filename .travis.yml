@@ -9,6 +9,7 @@ script:
 
   - julia --project --color=yes --check-bounds=yes -e 'using Pkg; Pkg.test(coverage=true);'
 
+  - export DOCUMENTER_DEBUG="true"
   - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.build("Cloudy");'
 
   - julia --project=docs/ --color=yes 'docs/make.jl'
