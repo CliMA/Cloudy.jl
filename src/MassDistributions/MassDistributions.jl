@@ -71,7 +71,6 @@ Represents particle mass distribution function of exponential shape.
 # Fields
 
 """
-
 mutable struct Exponential{FT} <: MassDistributionFunction{FT}
   "normalization constant (e.g., droplet number concentration)"
   n::FT

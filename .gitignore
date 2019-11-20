@@ -1,2 +1,5 @@
 # Plots
 *.eps
+#Docs
+docs/build/
+docs/site/
