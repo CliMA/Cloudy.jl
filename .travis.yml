@@ -9,9 +9,6 @@ script:
 
   - julia --project --color=yes --check-bounds=yes -e 'using Pkg; Pkg.test(coverage=true);'
 
-  - export DOCUMENTER_DEBUG="true"
-  - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate(); Pkg.build("Cloudy");'
-
   - julia --project=docs/ --color=yes 'docs/make.jl'
 
 after_success:
@@ -21,3 +18,16 @@ after_success:
                      Pkg.add("Coverage");
                      using Coverage;
                      Codecov.submit(Codecov.process_folder())'
+jobs:
+  include:
+    - stage: "Documentation"
+      julia: 1.0
+      os: linux
+      script:
+        - export DOCUMENTER_DEBUG="true"
+        - julia --color=yes --project=docs/ -e 'using Pkg;
+                                                      Pkg.develop(PackageSpec(path=pwd()));
+                                                      Pkg.instantiate();
+                                                      Pkg.build("Cloudy")'
+        - julia --color=yes --project=docs/ docs/make.jl
+      after_success: skip
