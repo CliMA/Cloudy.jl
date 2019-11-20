@@ -65,9 +65,7 @@ version = "0.5.0"
 
 [[Cloudy]]
 deps = ["DifferentialEquations", "LinearAlgebra", "PyPlot", "SpecialFunctions"]
-git-tree-sha1 = "68cac509dbf3d6334c71a99d1864ecbc05736408"
-repo-rev = "docs"
-repo-url = "../cloudy/"
+path = ".."
 uuid = "9e3b23bb-e7cc-4b94-886c-65de2234ba87"
 version = "0.1.0"
 
@@ -382,9 +380,9 @@ version = "0.11.0"
 
 [[Parsers]]
 deps = ["Dates", "Test"]
-git-tree-sha1 = "c56ecb484f286639f161e712b8311f5ab77e8d32"
+git-tree-sha1 = "a23968e107c0544aca91bfab6f7dd34de1206a54"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "0.3.8"
+version = "0.3.9"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
@@ -529,7 +527,7 @@ uuid = "789caeaf-c7a9-5a7d-9973-96adeb23e2a0"
 version = "6.8.0"
 
 [[SuiteSparse]]
-deps = ["Libdl", "LinearAlgebra", "SparseArrays"]
+deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
 [[Sundials]]
