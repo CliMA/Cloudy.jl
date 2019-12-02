@@ -4,7 +4,7 @@ using DifferentialEquations
 using Plots
 
 using Cloudy.KernelTensors
-using Cloudy.MassDistributions
+using Cloudy.Distributions
 using Cloudy.Sources
 
 
@@ -18,9 +18,8 @@ function main()
   kernel = LinearCoalescenceTensor(coalescence_coeff)
 
   # Initial condition
-  moments_init = Array{FT}([150.0, 30.0, 200.0])
-  distribution = Gamma(4.56, 1.24, 6.23)
-  update_params!(distribution, moments_init)
+  moments_init = [150.0, 30.0, 200.0]
+  distribution = Gamma(150.0, 6.466666666666667, 0.030928153898493804)
 
   # Set up the right hand side of ODE
   rhs(m,p,t) = get_src_coalescence(m, distribution, kernel)
@@ -36,8 +35,6 @@ function main()
   moment_0 = vcat(sol.u'...)[:, 1]
   moment_1 = vcat(sol.u'...)[:, 2]
   moment_2 = vcat(sol.u'...)[:, 3]
-
-  println(typeof(moment_0))
 
   plot(time,
       moment_0,
@@ -59,7 +56,7 @@ function main()
       linewidth=3,
       label="M\$_2\$ CLIMA"
   )
-  savefig("linear_kernel_example.eps")
+  savefig("linear_kernel_example.png")
 end
 
 main()
