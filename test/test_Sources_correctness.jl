@@ -1,6 +1,6 @@
 "Testing correctness of Sources module."
 
-using Cloudy.MassDistributions
+using Cloudy.Distributions
 using Cloudy.Sources
 
 # Constant kernel test (e.g, Smoluchowski 1916)
@@ -9,9 +9,8 @@ function sm1916(n_steps, δt)
   ker = ConstantCoalescenceTensor(1.0)
 
   # Initial condition
-  mom = Array{FT}([1.0, 2.0])
+  mom = [1.0, 2.0]
   dist = Exponential(1.0, 1.0)
-  update_params!(dist, mom)
 
   # Euler steps
   for i in 1:n_steps

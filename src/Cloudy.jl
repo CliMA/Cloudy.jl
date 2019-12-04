@@ -1,7 +1,7 @@
 module Cloudy
 
 include("KernelTensors/KernelTensors.jl")
-include("MassDistributions/MassDistributions.jl")
+include("Distributions/Distributions.jl")
 include("Sources/Sources.jl")
 
 end

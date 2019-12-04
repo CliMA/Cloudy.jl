@@ -9,7 +9,7 @@ Microphysics parameterization based on moment approximations:
 """
 module Sources
 
-using Cloudy.MassDistributions
+using Cloudy.Distributions
 using Cloudy.KernelTensors
 
 # methods that compute source terms from microphysical parameterizations
@@ -20,22 +20,22 @@ export get_src_coalescence
 
 
 """
-  get_src_coalescence(mom_p::Array{Real},dist::MassDistributionFunction, ker::KernelTensor)
+  get_src_coalescence(mom_p::Array{Real},dist::Distribution{Real}, ker::KernelTensor{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
   - `dist` - particle mass distribution used to calculate diagnostic moments
   - `ker` - coalescence kernel tensor
 Returns the coalescence integral for all moments in `mom_p`.
 """
-function get_src_coalescence(mom_p::Array{FT}, dist::MassDistributionFunction{FT}, ker::KernelTensor{FT}) where {FT <: Real}
+function get_src_coalescence(mom_p::Array{FT}, dist::Distribution{FT}, ker::KernelTensor{FT}) where {FT <: Real}
   r = ker.r
   s = length(mom_p)
 
   # Need to build diagnostic moments for coalescence processes
-  update_params!(dist, mom_p)
+  dist = update_params_from_moments(dist, mom_p)
   mom_d = Array{FT}(undef, r)
   for k in 0:r-1
-    mom_d[k+1] = compute_moment(dist, s+k)
+    mom_d[k+1] = moment(dist, FT(s+k))
   end
   mom = vcat(mom_p, mom_d)
 

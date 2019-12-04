@@ -1,5 +1,18 @@
 # Plots
 *.eps
+*.png
+*.jpg
+*.pdf
+
+# Backup files
+*.bu
+*.bckp
+
+# Data files
+*.dat
+*.csv
+*.tsv
+
 #Docs
 docs/build/
 docs/site/
