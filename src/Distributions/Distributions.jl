@@ -10,6 +10,7 @@ Particle mass distribution functions for microphysical process modeling:
 module Distributions
 
 using SpecialFunctions: gamma, gamma_inc
+using DocStringExtensions
 
 import LinearAlgebra: norm
 import Optim: optimize, LBFGS
@@ -56,7 +57,7 @@ Represents particle mass distribution function of exponential shape.
   Exponential(n::Real, θ::Real)
 
 # Fields
-
+$(DocStringExtensions.FIELDS)
 """
 struct Exponential{FT} <: Primitive{FT}
   "normalization constant (e.g., droplet number concentration)"
@@ -83,7 +84,7 @@ Represents particle mass distribution function of gamma shape.
   Gamma(n::Real, θ::Real, k::Real)
 
 # Fields
-
+$(DocStringExtensions.FIELDS)
 """
 struct Gamma{FT} <: Primitive{FT}
   "normalization constant (e.g., droplet number concentration)"
@@ -113,7 +114,7 @@ primitive or truncated subdistribution functions.
   Mixture(dist_arr::Array{Distribution{FT}})
 
 # Fields
-
+$(DocStringExtensions.FIELDS)
 """
 struct Mixture{FT} <: Distribution{FT}
   "array of distributions"
