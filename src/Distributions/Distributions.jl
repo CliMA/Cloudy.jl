@@ -41,7 +41,7 @@ abstract type Distribution{FT} end
 """
   Primitive{FT}
 
-A particle mass distribution that has support on the positive real 
+A particle mass distribution that has support on the positive real
 axis and analytic expressions for moments and partial moments.
 """
 abstract type Primitive{FT} <: Distribution{FT} end
@@ -58,7 +58,6 @@ Represents particle mass distribution function of exponential shape.
 # Fields
 
 """
-
 struct Exponential{FT} <: Primitive{FT}
   "normalization constant (e.g., droplet number concentration)"
   n::FT
@@ -69,7 +68,7 @@ struct Exponential{FT} <: Primitive{FT}
     if n < 0 || θ <= 0
       error("n needs to be nonnegative. θ needs to be positive.")
     end
-    
+
     new{FT}(n, θ)
   end
 end
@@ -106,12 +105,12 @@ end
 """
   Mixture{FT} <: Distribution{FT}
 
-A particle mass distribution function that is a mixture of 
+A particle mass distribution function that is a mixture of
 primitive or truncated subdistribution functions.
 
 # Constructors
   Mixture(dists::Distribution{Real}...)
-  Mixture(dist_arr::Array{Distribution{FT}}) 
+  Mixture(dist_arr::Array{Distribution{FT}})
 
 # Fields
 
@@ -119,12 +118,12 @@ primitive or truncated subdistribution functions.
 struct Mixture{FT} <: Distribution{FT}
   "array of distributions"
   subdists::Array{Distribution{FT}}
-  
+
   function Mixture(dists::Distribution{FT}...) where {FT<:Real}
     if length(dists) < 2
       error("need at least two subdistributions to form a mixture.")
     end
-    
+
     new{FT}(collect(dists))
   end
 end
@@ -143,10 +142,10 @@ Returns a function that computes the moments of `dist`.
 function moment_func(dist::Exponential{FT}) where {FT<:Real}
   # moment_of_dist = n * θ^q * Γ(q+1)
   # can reuse the moments of gamma distribution
-  
+
   moment_func_gamma = moment_func(Gamma(1.0, 1.0, 1.0))
   function f(n, θ, q)
-    moment_func_gamma(n, θ, 1.0, q) 
+    moment_func_gamma(n, θ, 1.0, q)
   end
   return f
 end
@@ -161,7 +160,7 @@ end
 
 function moment_func(dist::Mixture{FT}) where {FT<:Real}
   # mixture moment is sum of moments
-  num_pars = [nparams(d) for d in dist.subdists] 
+  num_pars = [nparams(d) for d in dist.subdists]
   mom_funcs = [moment_func(d) for d in dist.subdists]
   function f(params...)
     inputs = collect(params)
@@ -181,13 +180,13 @@ end
 
 """
   moment(dist, q)
-  
+
   - `dist` - distribution of which the partial moment `q` is taken
   - `q` - is a potentially real-valued order of the moment
 Returns the q-th moment of a particle mass distribution function.
 """
 function moment(dist::Distribution{FT}, q::FT) where {FT<:Real}
-  moment_func(dist)(reduce(vcat, get_params(dist)[2])..., q)  
+  moment_func(dist)(reduce(vcat, get_params(dist)[2])..., q)
 end
 
 
@@ -199,11 +198,11 @@ Returns the particle mass density function.
 """
 function density_func(dist::Exponential{FT}) where {FT<:Real}
   # density = n / θ * exp(-x/θ)
-  
+
   # can reuse the density of gamma distribution
   density_func_gamma = density_func(Gamma(1.0, 1.0, 1.0))
   function f(n, θ, x)
-    density_func_gamma(n, θ, 1.0, x) 
+    density_func_gamma(n, θ, 1.0, x)
   end
   return f
 end
@@ -218,7 +217,7 @@ end
 
 function density_func(dist::Mixture{FT}) where {FT<:Real}
   # mixture density is sum of densities of subdists
-  num_pars = [nparams(d) for d in dist.subdists] 
+  num_pars = [nparams(d) for d in dist.subdists]
   dens_funcs = [density_func(d) for d in dist.subdists]
   function f(params...)
     inputs = collect(params)
@@ -279,7 +278,7 @@ function get_params(dist::Primitive{FT}) where {FT<:Real}
 end
 
 function get_params(dist::Mixture{FT}) where {FT<:Real}
-  params, values = Array{Array{Symbol, 1}}([]), Array{Array{FT, 1}}([]) 
+  params, values = Array{Array{Symbol, 1}}([]), Array{Array{FT, 1}}([])
   for (i, d) in enumerate(dist.subdists)
     params_sub, values_sub = get_params(d)
     append!(params, [params_sub])
@@ -308,11 +307,11 @@ function update_params(dist::Mixture{FT}, values::Array{FT}) where {FT<:Real}
   if length(values) != nparams(dist)
     error("length of values must match number of params of dist.")
   end
-  
+
   # create new subdistributions one dist at a time
   i = 1
   dist_arr = Array{Distribution{FT}}([])
-  for d in dist.subdists 
+  for d in dist.subdists
     n = nparams(d)
     push!(dist_arr, update_params(d, values[i:i+n-1]))
     i += n
@@ -326,7 +325,7 @@ function update_params_from_moments(dist::Distribution{FT}, m::Array{FT}) where 
   if length(m) != nparams(dist)
     error("Number of moments must be consistent with distribution type.")
   end
-  check_moment_consistency(m) 
+  check_moment_consistency(m)
 
   # function whose minimum defines new parameters of dist given m
   function g(x)
@@ -335,12 +334,12 @@ function update_params_from_moments(dist::Distribution{FT}, m::Array{FT}) where 
 
   # minimize g to find parameter values so that moments of dist are close to m
   r = optimize(
-    g, 
+    g,
     log.(reduce(vcat, get_params(dist)[2])) .+ 1e-6, # initial value for new dist parameters is old dist parameters
     LBFGS(),
     autodiff = :forward
   );
-  
+
   update_params(dist, exp.(r.minimizer))
 end
 

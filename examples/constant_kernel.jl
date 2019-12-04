@@ -31,6 +31,7 @@ function main()
 
   # Plot the solution for the 0th moment and compare to analytical solution
   pyplot()
+  gr()
   time = sol.t
   moment_0 = vcat(sol.u'...)[:, 1]
   moment_1 = vcat(sol.u'...)[:, 2]

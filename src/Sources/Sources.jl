@@ -20,7 +20,7 @@ export get_src_coalescence
 
 
 """
-  get_src_coalescence(mom_p::Array{Real},dist::Distribution{Real}, ker::KernelTensor)
+  get_src_coalescence(mom_p::Array{Real},dist::Distribution{Real}, ker::KernelTensor{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
   - `dist` - particle mass distribution used to calculate diagnostic moments

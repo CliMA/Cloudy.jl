@@ -19,7 +19,7 @@ function main()
 
   # Initial condition
   moments_init = [150.0, 30.0, 200.0, 300.0]
-  distribution = Mixture(Exponential(1.0, 1.0), Exponential(2.0, 2.0)) 
+  distribution = Mixture(Exponential(1.0, 1.0), Exponential(2.0, 2.0))
 
   # Set up the right hand side of ODE
   rhs(m,p,t) = get_src_coalescence(m, distribution, kernel)
@@ -31,6 +31,7 @@ function main()
 
   # Plot the solution for the 0th moment and compare to analytical solution
   pyplot()
+  gr()
   time = sol.t
   moment_0 = vcat(sol.u'...)[:, 1]
   moment_1 = vcat(sol.u'...)[:, 2]
