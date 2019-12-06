@@ -14,8 +14,8 @@ function main()
   tol = 1e-8
 
   # Physicsal parameters
-  coalescence_coeff = Array{FT}([[0.0, 1/3.14/4] [1/3.14/4, 0.0]])
-  kernel = LinearCoalescenceTensor(coalescence_coeff)
+  kernel_func = x -> 1/3.14/4 * (x[1] + x[2])
+  kernel = CoalescenceTensor(kernel_func, 1, 5.0)
 
   # Initial condition
   moments_init = [150.0, 30.0, 200.0, 300.0]

@@ -5,8 +5,9 @@ FT = Float64
 
 @testset "Cloudy" begin
   @testset "Correctness" begin
-    @testset "KernelTensors" begin
+    @testset "Kernels" begin
       include("test_KernelTensors_correctness.jl")
+      include("test_KernelFunctions_correctness.jl")
 	  end
 
 	  @testset "Distributions" begin
