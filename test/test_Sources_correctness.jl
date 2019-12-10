@@ -3,10 +3,28 @@
 using Cloudy.Distributions
 using Cloudy.Sources
 
-# Constant kernel test (e.g, Smoluchowski 1916)
-function sm1916(n_steps, δt)
+# Constant kernel array test (e.g, Smoluchowski 1916)
+function sm1916_array(n_steps, δt)
   # Parameters & initial condition
-  ker = ConstantCoalescenceTensor(1.0)
+  ker = CoalescenceTensor([1.0])
+
+  # Initial condition
+  mom = [1.0, 2.0]
+  dist = Exponential(1.0, 1.0)
+
+  # Euler steps
+  for i in 1:n_steps
+    dmom = get_src_coalescence(mom, dist, ker)
+    mom += δt * dmom
+  end
+
+  return mom
+end
+
+function sm1916_func(n_steps, δt)
+  # Parameters & initial condition
+  kernel_func = x -> 1.0
+  ker = CoalescenceTensor(kernel_func, 0, 100.0)
 
   # Initial condition
   mom = [1.0, 2.0]
@@ -31,5 +49,6 @@ n_steps = 5
 # Run tests
 for i in 0:n_steps
   t = δt * i
-  @test sm1916(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) atol=1e-3
+  @test sm1916_array(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) atol=1e-3
+  @test sm1916_func(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) atol=1e-3
 end

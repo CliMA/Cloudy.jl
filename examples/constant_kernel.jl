@@ -15,7 +15,8 @@ function main()
 
   # Physicsal parameters
   coalescence_coeff = 1/3.14/4
-  kernel = ConstantCoalescenceTensor(coalescence_coeff)
+  kernel_func = x -> coalescence_coeff
+  kernel = CoalescenceTensor(kernel_func, 0, 100.0)
 
   # Initial condition
   moments_init = [150.0, 30.0, 200.0]
