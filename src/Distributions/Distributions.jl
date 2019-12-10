@@ -336,8 +336,7 @@ function update_params_from_moments(dist::Distribution{FT}, m::Array{FT}) where 
   r = optimize(
     g,
     log.(reduce(vcat, get_params(dist)[2])) .+ 1e-6, # initial value for new dist parameters is old dist parameters
-    LBFGS(),
-    autodiff = :forward
+    LBFGS()
   );
 
   update_params(dist, exp.(r.minimizer))

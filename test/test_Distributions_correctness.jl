@@ -6,6 +6,7 @@ using Cloudy.Distributions
 import Cloudy.Distributions: nparams, get_params, update_params,
                              check_moment_consistency, moment_func, density_func
 
+rtol = 1e-3
 
 # Exponential distribution
 # Initialization
@@ -36,8 +37,8 @@ dist = Exponential(1.0, 2.0)
 
 ## Update params from moments
 dist = update_params_from_moments(dist, [1.1, 2.0])
-@test moment(dist, 0.0) ≈ 1.1 atol=1e-6
-@test moment(dist, 1.0) ≈ 2.0 atol=1e-6
+@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
+@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
 
 
 # Gamma distribution
@@ -73,13 +74,13 @@ dist = Gamma(1.0, 1.0, 2.0)
 
 # Update params from moments
 dist = update_params_from_moments(dist, [1.1, 2.0, 4.1])
-@test moment(dist, 0.0) ≈ 1.1 atol=1e-6
-@test moment(dist, 1.0) ≈ 2.0 atol=1e-6
-@test moment(dist, 2.0) ≈ 4.1 atol=1e-6
+@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
+@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
+@test moment(dist, 2.0) ≈ 4.1 rtol=rtol
 dist = update_params_from_moments(dist, [1.1, 2.423, 8.112])
-@test moment(dist, 0.0) ≈ 1.1 atol=1e-6
-@test moment(dist, 1.0) ≈ 2.423 atol=1e-6
-@test moment(dist, 2.0) ≈ 8.112 atol=1e-6
+@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
+@test moment(dist, 1.0) ≈ 2.423 rtol=rtol
+@test moment(dist, 2.0) ≈ 8.112 rtol=rtol
 
 
 # Mixture distributions
@@ -107,7 +108,7 @@ p2 = moment(Exponential(2.0, 2.0), 2.23)
 @test moment(dist, 2.23) == p1 + p2
 @test moment(dist, 0.0) == 3.0
 @test moment(dist, 1.0) == 5.0
-@test moment(dist, 11.0) ≈ gamma(12) + 2.0 * 2.0^11 * gamma(12.0) atol=1e-6
+@test moment(dist, 11.0) ≈ gamma(12) + 2.0 * 2.0^11 * gamma(12.0) rtol=rtol
 @test density_func(dist)(reduce(vcat, get_params(dist)[2])..., 0.0) == 2.0
 @test density(dist, 0.0) == 2.0
 @test density(dist, 1.0) == exp(-1.0) + exp(-0.5)
@@ -115,25 +116,25 @@ p2 = moment(Exponential(2.0, 2.0), 2.23)
 
 # Update params from moments
 dist = update_params_from_moments(dist, [3.0 + 1e-6, 5.0 - 1e-6, 18.0, 102.0])
-@test moment(dist, 0.0) ≈ 3.0 atol=1e-2
-@test moment(dist, 1.0) ≈ 5.0 atol=1e-2
-@test moment(dist, 2.0) ≈ 18.0 atol=1e-2
-@test moment(dist, 3.0) ≈ 102.0 atol=1e-2
+@test moment(dist, 0.0) ≈ 3.0 rtol=rtol
+@test moment(dist, 1.0) ≈ 5.0 rtol=rtol
+@test moment(dist, 2.0) ≈ 18.0 rtol=rtol
+@test moment(dist, 3.0) ≈ 102.0 rtol=rtol
 dist2 = update_params_from_moments(dist, [3.0, 4.9, 18.0, 102.0])
-@test moment(dist2, 0.0) ≈ 3.0 atol=1e-6
-@test moment(dist2, 1.0) ≈ 4.9 atol=1e-6
-@test moment(dist2, 2.0) ≈ 18.0 atol=1e-6
-@test moment(dist2, 3.0) ≈ 102.0 atol=1e-6
+@test moment(dist2, 0.0) ≈ 3.0 rtol=rtol
+@test moment(dist2, 1.0) ≈ 4.9 rtol=rtol
+@test moment(dist2, 2.0) ≈ 18.0 rtol=rtol
+@test moment(dist2, 3.0) ≈ 102.0 rtol=rtol
 dist3 = update_params_from_moments(dist, [2.5, 4.9, 19.0, 104.0])
-@test moment(dist3, 0.0) ≈ 2.5 atol=1e0
-@test moment(dist3, 1.0) ≈ 4.9 atol=1e0
-@test moment(dist3, 2.0) ≈ 19.0 atol=1e0
-@test moment(dist3, 3.0) ≈ 104.0 atol=1e0
+@test moment(dist3, 0.0) ≈ 2.5 rtol=1e0
+@test moment(dist3, 1.0) ≈ 4.9 rtol=1e0
+@test moment(dist3, 2.0) ≈ 19.0 rtol=1e0
+@test moment(dist3, 3.0) ≈ 104.0 rtol=1e0
 dist4 = update_params_from_moments(dist, [3.0, 4.9, 18.0, 102.0])
-@test moment(dist4, 0.0) ≈ 3.0 atol=1e-6
-@test moment(dist4, 1.0) ≈ 4.9 atol=1e-6
-@test moment(dist4, 2.0) ≈ 18.0 atol=1e-6
-@test moment(dist4, 3.0) ≈ 102.0 atol=1e-6
+@test moment(dist4, 0.0) ≈ 3.0 rtol=rtol
+@test moment(dist4, 1.0) ≈ 4.9 rtol=rtol
+@test moment(dist4, 2.0) ≈ 18.0 rtol=rtol
+@test moment(dist4, 3.0) ≈ 102.0 rtol=rtol
 
 
 # Moment consitency checks
@@ -151,3 +152,115 @@ m = [0.1, -1.0]
 @test_throws Exception check_moment_consistency(m)
 m = [1.0, 3.0, 2.0]
 @test_throws Exception check_moment_consistency(m)
+
+## Truncated distributions 
+## Initialization
+#rl, ru = 0.0, 2.0
+#dist = Truncated(Exponential(1.0, 1.0), rl, ru) 
+#@test typeof(dist.primitive) == Exponential{FT}
+#@test dist.rl == rl
+#@test dist.ru == ru
+#
+## Getters and setters
+#@test nparams(dist) == 2
+#@test get_params(dist) == ([:n, :θ], [1.0, 1.0]) 
+#dist = update_params(dist, [1.0, 2.0]) 
+#@test get_params(dist) == ([:n, :θ], [1.0, 2.0]) 
+#@test_throws Exception update_params(dist, [-0.2,
+#1.1]) 
+#@test_throws Exception update_params(dist, [0.2,
+#-1.1]) 
+#
+## Partial moments, moments, density
+#dist = Truncated(Exponential(1.0, 2.0), rl, ru) 
+#rll, ruu = 0.0, 1.0
+#@test moment_func(dist, rl=rll, ru=ruu)(1.0, 2.0,
+#0.0) ≈ 1 - exp(-0.5) rtol=rtol
+#@test moment(dist, 0.0, 0.0, 1.0) ≈ 1 - exp(-0.5)
+#rtol=rtol
+#@test moment(dist, 0.0, 0.0, 3.0) ≈ 1 - exp(-1.0)
+#rtol=rtol
+#@test moment(dist, 0.0, 1.0, 2.0) ≈ exp(-0.5) -
+#exp(-1) rtol=rtol 
+#@test moment(dist, 0.0, 10.0, 20.0) == 0.0
+#@test moment(dist, 0.0) ==
+#moment(Exponential(1.0, 2.0), 0.0, 0.0, 2.0)
+#@test density_func(dist)(1.0, 2.0, 0.0) == 0.5
+#@test_broken density_func(dist)([1.0, 1.0], [2.0,
+#2.0], [0.0, 3.1]) == [0.5, 0.0]
+#@test density(dist, 0.0) == 0.5 
+#@test density(dist, 3.1) == 0.0
+#@test_throws Exception density(dist, -3.1)
+#
+## Update params from moments
+#
+#
+## Mixture distributions
+## Initialization
+#dist = Mixture(Exponential(1.0, 1.0),
+#Exponential(2.0, 2.0))
+#@test typeof(dist.subdists) ==
+#Array{Distribution{FT}, 1}
+#@test length(dist.subdists) == 2
+#
+## Getters and setters
+#@test nparams(dist) == 4
+#@test get_params(dist) == ([[:n, :θ], [:n, :θ]],
+#[[1.0, 1.0], [2.0, 2.0]])
+#dist = update_params(dist, [0.2, 0.4, 3.1, 4.1])
+#@test get_params(dist) == ([[:n, :θ], [:n, :θ]],
+#[[0.2, 0.4], [3.1, 4.1]]) 
+#@test_throws Exception update_params(dist, [-0.2,
+#1.1, 1.1, 2.1]) 
+#@test_throws Exception update_params(dist, [0.2,
+#-1.1, 0.1, 3.1]) 
+#@test_throws Exception update_params(dist, [0.2,
+#1.1, -0.1, 3.1]) 
+#@test_throws Exception update_params(dist, [0.2,
+#1.1, 0.1, -3.1]) 
+#
+## Partial moments, moments, density
+#dist = update_params(dist, [1.0, 1.0, 2.0, 2.0])
+#r = (1.1, 2.3)
+#p1 = moment(Exponential(1.0, 1.0), 2.23, r)
+#p2 = moment(Exponential(2.0, 2.0), 2.23, r)
+#@test moment(dist, 2.23, r) == p1 + p2
+#@test moment(dist, 0.0) == 3.0
+#@test moment(dist, 1.0) == 5.0
+#@test moment(dist, 11.0) ≈ gamma(12) + 2.0 *
+#2.0^11 * gamma(12.0) rtol=rtol
+#@test density(dist, 0.0) == 2.0
+#@test density(dist, 1.0) == exp(-1.0) +
+#exp(-0.5)
+#@test_throws Exception density(dist, -3.1)
+#
+#t1 = Truncated(Exponential(1.0, 1.0), (0.0,
+#2.0))
+#t2 = Truncated(Exponential(2.0, 2.0), (2.0,
+#1e16))
+#dist = Mixture(t1, t2)
+#q = 3.4
+#r = (0.0, 2.0)
+#@test moment(dist, q, r) ==
+#moment(Exponential(1.0, 1.0), q, r)
+#r = (2.0, 1e16)
+#@test moment(dist, q, r) ==
+#moment(Exponential(2.0, 2.0), q, r)
+#r = (1.0, 3.0)
+#p1 = moment(Exponential(1.0, 1.0), q, (1.0,
+#2.0))
+#p2 = moment(Exponential(2.0, 2.0), q, (2.0,
+#3.0))
+#@test moment(dist, q, r) == p1 + p2 
+#p1 = moment(Exponential(1.0, 1.0), q, (0.0,
+#2.0))
+#p2 = moment(Exponential(2.0, 2.0), q, (2.0,
+#1e16))
+#@test moment(dist, q) == p1 + p2 
+#
+#
+## Update params from moments
+#dist = Truncated(Gamma(2.0, 1.0, 3.0), (0.0,
+#2.0)) 
+#dist = update_params_from_moments(dist, [1.0,
+#1.0, 3.0])
