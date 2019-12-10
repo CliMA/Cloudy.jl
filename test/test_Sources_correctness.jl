@@ -46,9 +46,10 @@ end
 
 n_steps = 5
 δt = 1e-4
+rtol = 1e-3
 # Run tests
 for i in 0:n_steps
   t = δt * i
-  @test sm1916_array(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) atol=1e-3
-  @test sm1916_func(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) atol=1e-3
+  @test sm1916_array(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol=rtol
+  @test sm1916_func(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol=rtol
 end
