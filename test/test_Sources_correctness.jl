@@ -3,7 +3,10 @@
 using Cloudy.Distributions
 using Cloudy.Sources
 
-# Constant kernel array test (e.g, Smoluchowski 1916)
+
+rtol = 1e-3
+
+# Constant kernel test (e.g, Smoluchowski 1916)
 function sm1916_array(n_steps, δt)
   # Parameters & initial condition
   ker = CoalescenceTensor([1.0])
@@ -14,7 +17,7 @@ function sm1916_array(n_steps, δt)
 
   # Euler steps
   for i in 1:n_steps
-    dmom = get_src_coalescence(mom, dist, ker)
+    dmom = get_int_coalescence(mom, dist, ker)
     mom += δt * dmom
   end
 
@@ -32,7 +35,7 @@ function sm1916_func(n_steps, δt)
 
   # Euler steps
   for i in 1:n_steps
-    dmom = get_src_coalescence(mom, dist, ker)
+    dmom = get_int_coalescence(mom, dist, ker)
     mom += δt * dmom
   end
 
@@ -53,3 +56,9 @@ for i in 0:n_steps
   @test sm1916_array(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol=rtol
   @test sm1916_func(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol=rtol
 end
+
+# Sedimentation moment flux tests
+c = [1.0, -1.0]
+dist = Exponential(1.0, 1.0)
+mom = [1.0, 1.0]
+@test get_flux_sedimentation(mom, dist, c) ≈ [0.0, 1.0] rtol=rtol

@@ -13,25 +13,23 @@ using Cloudy.Distributions
 using Cloudy.KernelTensors
 
 # methods that compute source terms from microphysical parameterizations
-export get_src_coalescence
-#export get_src_breakup
-#export get_src_sedimentation
-#export get_src_cond_evap
+export get_int_coalescence
+export get_flux_sedimentation
 
 
 """
-  get_src_coalescence(mom_p::Array{Real},dist::Distribution{Real}, ker::KernelTensor{Real})
+  get_int_coalescence(mom_p::Array{Real}, dist::Distribution{Real}, ker::KernelTensor{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
   - `dist` - particle mass distribution used to calculate diagnostic moments
   - `ker` - coalescence kernel tensor
 Returns the coalescence integral for all moments in `mom_p`.
 """
-function get_src_coalescence(mom_p::Array{FT}, dist::Distribution{FT}, ker::KernelTensor{FT}) where {FT <: Real}
+function get_int_coalescence(mom_p::Array{FT}, dist::Distribution{FT}, ker::KernelTensor{FT}) where {FT <: Real}
   r = ker.r
   s = length(mom_p)
 
-  # Need to build diagnostic moments for coalescence processes
+  # Need to build diagnostic moments
   dist = update_params_from_moments(dist, mom_p)
   mom_d = Array{FT}(undef, r)
   for k in 0:r-1
@@ -39,9 +37,9 @@ function get_src_coalescence(mom_p::Array{FT}, dist::Distribution{FT}, ker::Kern
   end
   mom = vcat(mom_p, mom_d)
 
-  # Only calculate coalescence integral for prognostic moments
+  # only calculate coalescence integral for prognostic moments
   coal_int = similar(mom_p)
-  for k in 0:length(mom_p)-1
+  for k in 0:s-1
     if k == 1
       # implies conservation of 1st moment (~mass) under coalescence processes
       temp = 0.0
@@ -67,4 +65,39 @@ function get_src_coalescence(mom_p::Array{FT}, dist::Distribution{FT}, ker::Kern
   return coal_int
 end
 
-end #module Microphysics.jl
+
+"""
+  get_flux_sedimentation(mom_p::Array{Real}, dist::Distribution{Real}, vel::Array{Real})
+
+  - `mom_p` - prognostic moments of particle mass distribution
+  - `dist` - particle mass distribution used to calculate diagnostic moments
+  _ `vel` - settling velocity coefficient tensor
+Returns the sedimentation flux for all moments in `mom_p`.
+"""
+function get_flux_sedimentation(mom_p::Array{FT}, dist::Distribution{FT}, vel::Array{FT}) where {FT <: Real}
+  r = length(vel)-1
+  s = length(mom_p) 
+  
+  # Need to build diagnostic moments
+  dist = update_params_from_moments(dist, mom_p)
+  mom_d = Array{FT}(undef, r)
+  for k in 0:r-1
+    mom_d[k+1] = moment(dist, FT(s+k))
+  end
+  mom = vcat(mom_p, mom_d)
+
+  # only calculate sedimentation flux for prognostic moments
+  sedi_int = similar(mom_p)
+  for k in 0:s-1
+    temp = 0.0
+    for i in 0:r
+      coef = vel[i+1]
+      temp -= coef * mom[i+k+1]
+    end
+    sedi_int[k+1] = temp
+  end
+
+  return sedi_int
+end
+
+end #module Sources.jl

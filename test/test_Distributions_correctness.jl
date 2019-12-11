@@ -6,7 +6,7 @@ using Cloudy.Distributions
 import Cloudy.Distributions: nparams, get_params, update_params,
                              check_moment_consistency, moment_func, density_func
 
-rtol = 1e-5
+rtol = 1e-3
 
 # Exponential distribution
 # Initialization
