@@ -22,7 +22,7 @@ function main()
   distribution = Mixture(Exponential(1.0, 1.0), Exponential(2.0, 2.0))
 
   # Set up the right hand side of ODE
-  rhs(m,p,t) = get_src_coalescence(m, distribution, kernel)
+  rhs(m,p,t) = get_int_coalescence(m, distribution, kernel)
 
   # Solve the ODE
   tspan = (0.0, 0.73)

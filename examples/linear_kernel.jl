@@ -22,7 +22,7 @@ function main()
   distribution = Gamma(150.0, 6.466666666666667, 0.030928153898493804)
 
   # Set up the right hand side of ODE
-  rhs(m,p,t) = get_src_coalescence(m, distribution, kernel)
+  rhs(m,p,t) = get_int_coalescence(m, distribution, kernel)
 
   # Solve the ODE
   tspan = (0.0, 1.0)
