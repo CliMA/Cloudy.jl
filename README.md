@@ -5,17 +5,17 @@
 | [![latest][docs-latest-img]][docs-latest-url] | [![travis][travis-img]][travis-url] [![codecov][codecov-img]][codecov-url] |
 
 [docs-latest-img]: https://img.shields.io/badge/docs-latest-blue.svg
-[docs-latest-url]: https://climate-machine.github.io/Cloudy/latest/
+[docs-latest-url]: https://climate-machine.github.io/Cloudy.jl/latest/
 
-[travis-img]: https://travis-ci.org/climate-machine/Cloudy.svg?branch=master
-[travis-url]: https://travis-ci.org/climate-machine/Cloudy
+[travis-img]: https://travis-ci.org/climate-machine/Cloudy.jl.svg?branch=master
+[travis-url]: https://travis-ci.org/climate-machine/Cloudy.jl
 
-[codecov-img]: https://codecov.io/gh/climate-machine/Cloudy/branch/master/graph/badge.svg
-[codecov-url]: https://codecov.io/gh/climate-machine/Cloudy
+[codecov-img]: https://codecov.io/gh/climate-machine/Cloudy.jl/branch/master/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/climate-machine/Cloudy.jl
 
-A multi-moment cloud microphysics toy model.
+:cloud_with_rain: A multi-moment cloud microphysics toy model.
 
-Currently Cloudy only supports collisions with simple kernels.
+Currently Cloudy.jl only supports collisions with simple kernels.
 
 Examples can be found in the examples folder.
 
