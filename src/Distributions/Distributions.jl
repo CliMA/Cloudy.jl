@@ -366,7 +366,7 @@ function check_moment_consistency(m::Array{FT}) where {FT<:Real}
     for i in 0:order
       cm += binomial(order, i) * (-1)^i * (m[2] / m[1])^i * (m[order-i+1] / m[1])
     end
-    if cm <= 0.0
+    if cm < 0.0
       error("order-$order central moment needs to be nonnegative.")
     end
   end
