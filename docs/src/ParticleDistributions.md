@@ -1,15 +1,15 @@
-# Mass Distributions
+# Particle Distributions
 
 TODO
 
 ```@meta
-CurrentModule = Cloudy.MassDistributions
+CurrentModule = Cloudy.ParticleDistributions
 ```
 
 ## Functions
 
 ```@docs
-MassDistributionFunction
+ParticleDistribution
 Gamma
 Exponential
 compute_moment

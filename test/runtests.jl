@@ -10,8 +10,8 @@ FT = Float64
       include("test_KernelFunctions_correctness.jl")
 	  end
 
-	  @testset "Distributions" begin
-	    include("test_Distributions_correctness.jl")
+	  @testset "ParticleDistributions" begin
+	    include("test_ParticleDistributions_correctness.jl")
     end
 
 	  @testset "Sources" begin

@@ -4,7 +4,7 @@ using DifferentialEquations
 using Plots
 
 using Cloudy.KernelTensors
-using Cloudy.Distributions
+using Cloudy.ParticleDistributions
 using Cloudy.Sources
 
 

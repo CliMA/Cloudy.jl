@@ -4,17 +4,17 @@ using DifferentialEquations
 using Plots
 
 using Cloudy.KernelTensors
-using Cloudy.Distributions
+using Cloudy.ParticleDistributions
 using Cloudy.Sources
 
-import Cloudy.Distributions: density, nparams
+import Cloudy.ParticleDistributions: density, nparams
 
 
 FT = Float64
 
 
 """
-  sedi_flux(mom_p::Array{Real}, dist::Distribution{Real}, vel::Array{Real})
+  sedi_flux(mom_p::Array{Real}, dist::ParticleDistribution{Real}, vel::Array{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
   - `dist` - particle mass distribution used to calculate diagnostic moments
@@ -22,7 +22,7 @@ FT = Float64
 Returns the sedimentation flux for all moments in `mom_p`.
 
 """
-function sedi_flux(mom_p::Array{FT}, dist::Distribution{FT}, coef::FT) where {FT <: Real}
+function sedi_flux(mom_p::Array{FT}, dist::ParticleDistribution{FT}, coef::FT) where {FT <: Real}
   s = length(mom_p)
   dist = update_params_from_moments(dist, mom_p)
    
