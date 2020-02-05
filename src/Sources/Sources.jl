@@ -9,7 +9,7 @@ Microphysics parameterization based on moment approximations:
 """
 module Sources
 
-using Cloudy.Distributions
+using Cloudy.ParticleDistributions
 using Cloudy.KernelTensors
 
 # methods that compute source terms from microphysical parameterizations
@@ -18,14 +18,14 @@ export get_flux_sedimentation
 
 
 """
-  get_int_coalescence(mom_p::Array{Real}, dist::Distribution{Real}, ker::KernelTensor{Real})
+  get_int_coalescence(mom_p::Array{Real}, dist::ParticleDistribution{Real}, ker::KernelTensor{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
   - `dist` - particle mass distribution used to calculate diagnostic moments
   - `ker` - coalescence kernel tensor
 Returns the coalescence integral for all moments in `mom_p`.
 """
-function get_int_coalescence(mom_p::Array{FT}, dist::Distribution{FT}, ker::KernelTensor{FT}) where {FT <: Real}
+function get_int_coalescence(mom_p::Array{FT}, dist::ParticleDistribution{FT}, ker::KernelTensor{FT}) where {FT <: Real}
   r = ker.r
   s = length(mom_p)
 
@@ -67,14 +67,14 @@ end
 
 
 """
-  get_flux_sedimentation(mom_p::Array{Real}, dist::Distribution{Real}, vel::Array{Real})
+  get_flux_sedimentation(mom_p::Array{Real}, dist::ParticleDistribution{Real}, vel::Array{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
   - `dist` - particle mass distribution used to calculate diagnostic moments
   _ `vel` - settling velocity coefficient tensor
 Returns the sedimentation flux for all moments in `mom_p`.
 """
-function get_flux_sedimentation(mom_p::Array{FT}, dist::Distribution{FT}, vel::Array{FT}) where {FT <: Real}
+function get_flux_sedimentation(mom_p::Array{FT}, dist::ParticleDistribution{FT}, vel::Array{FT}) where {FT <: Real}
   r = length(vel)-1
   s = length(mom_p) 
   
