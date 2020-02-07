@@ -13,195 +13,355 @@ import Cloudy.Distributions: density, nparams
 FT = Float64
 
 
-"""
-  sedi_flux(mom_p::Array{Real}, dist::Distribution{Real}, vel::Array{Real})
-
-  - `mom_p` - prognostic moments of particle mass distribution
-  - `dist` - particle mass distribution used to calculate diagnostic moments
-  _ `coef` - settling velocity coefficient
-Returns the sedimentation flux for all moments in `mom_p`.
-
-"""
-function sedi_flux(mom_p::Array{FT}, dist::Distribution{FT}, coef::FT) where {FT <: Real}
-  s = length(mom_p)
-  dist = update_params_from_moments(dist, mom_p)
-   
-  sedi_int = similar(mom_p)
-  for k in 0:s-1
-    sedi_int[k+1] = -coef*moment(dist, FT(k)+1/6)
-  end
+function sedi_flux(mom)
+  """Physical parameters"""
+  cd = 0.55 # drag coefficient for droplets
+  grav = 9.81 # gravitational constant
+  ρ_l = 1e3 # liquid water density
+  ρ_a = 1.225 # air density
   
-  return sedi_int
+  sedi_coef = (8*grav/3/cd*(ρ_l/ρ_a-1)*(3/4/π/ρ_l)^(1/3))^(1/2) * 0.01
+  flux = mom -> mom
+  dflux = mom -> zeros(size(mom)) 
 end
 
 
 """
-  main(t_min, t_max, z_min, z_max, n_z, mass_min, mass_max, n_mass)
+  initial_condition(z, nmom)
 
-  - `t_min` - minimum time
-  - `t_max` - maximum time
-  - `z_min` - minimum height
-  - `z_max` - maximum height
-  - `n_z` - number of vertical levels
-  - `mass_min` - minimum droplet mass
-  - `mass_max` - maximum droplet mass
-  - `n_mass` - number of grid points in mass spass 
+  - `z` - height coordinate 
+  - `nmom` - number of moments
+Returns array of initial values.
+
+"""
+function initial_condition(z, nmom)
+  zmax = findmax(z)[1]
+  zs1 = 2 .* (z .- 0.5 .* zmax) ./ zmax .* 500.0
+  zs2 = 2 .* (z .- 0.75 .* zmax) ./ zmax .* 500.0
+  at1 = 0.5 .* (1 .+ atan.(zs1) .* 2 ./ pi)
+  at2 = 0.5 .* (1 .+ atan.(zs2) .* 2 ./ pi)
+  at = 1e-6 .+ at1 .- at2
+
+  ic = zeros(length(z), nmom)
+  ic[:, 1] = 1.0e3 .* at
+  ic[:, 2] = 1.0e3 .* at
+
+  return ic 
+end
+
+
+"""
+  weno(m, flux, dflux, source, dz)
+  
+  - `m` - number of layers 
+  - `flux` - sedimentation flux function
+  - `dflux` - derivative of sedimentation flux function
+  - `source` - sources and sinks function of RHS
+  - `dz` - vertical grid spacing
+  Returns WENO (weighted essentially non-oscillatory) scheme rhs.
+  This scheme is strongly mass conserving and allows for sharp gradients in the fields.
+
+"""
+function weno(m, flux, dflux, source, dz)
+  # Lax-Friedrich flux splitting
+  a = findmax(abs.(dflux(m)), dims=1)[1]
+  v = 0.5 .* (flux(m) .+ a .* m) 
+  u = 0.5 .* (flux(m) .- a .* m) 
+  u = circshift(u, [-1, 0])
+
+  # Right Flux
+  # Choose the positive fluxes, 'v', to compute the right cell boundary flux:
+  # $u_{i+1/2}^{-}$
+  vm = circshift(v, [1, 0])
+  vp = circshift(v, [-1, 0])
+
+  # Polynomials
+  p0n = 0.5 .* (-vm .+ 3 .* v)
+  p1n = 0.5 .* (v  .+ vp)
+  
+  # Smooth Indicators (Beta factors)
+  B0n = (vm .- v).^2 
+  B1n = (v .- vp).^2
+  
+  # Constants
+  d0n = 1/3 
+  d1n = 2/3 
+  epsilon = 1E-6
+  
+  # Alpha weights 
+  alpha0n = d0n ./ (epsilon .+ B0n).^2
+  alpha1n = d1n ./ (epsilon .+ B1n).^2
+  alphasumn = alpha0n .+ alpha1n
+  
+  # ENO stencils weigths
+  m0n = alpha0n ./ alphasumn
+  m1n = alpha1n ./ alphasumn
+  
+  # Numerical Flux at cell boundary, $u_{i+1/2}^{-}$
+  hn = m0n .* p0n .+ m1n .* p1n
+
+  # Left Flux 
+  # Choose the negative fluxes, 'u', to compute the left cell boundary flux:
+  # $u_{i-1/2}^{+}$ 
+  um  = circshift(u, [1, 0])
+  up  = circshift(u, [-1, 0])
+
+  # Polynomials
+  p0p = 0.5 .* (um .+ u)
+  p1p = 0.5 .* (3 .* u .- up)
+  
+  # Smooth Indicators (Beta factors)
+  B0p = (um .- u).^2 
+  B1p = (u .- up).^2
+  
+  # Constants
+  d0p = 2/3 
+  d1p = 1/3 
+  epsilon = 1E-6
+  
+  # Alpha weights 
+  alpha0p = d0p ./ (epsilon .+ B0p).^2
+  alpha1p = d1p ./ (epsilon .+ B1p).^2
+  alphasump = alpha0p .+ alpha1p
+  
+  # ENO stencils weigths
+  m0p = alpha0p ./ alphasump
+  m1p = alpha1p ./ alphasump
+  
+  # Numerical Flux at cell boundary, $u_{i-1/2}^{+}$
+  hp = m0p .* p0p .+ m1p .* p1p
+
+  # Positive and negative flux componetns
+  flux_right = hp .+ hn
+  flux_left = circshift(hp, [1, 0]) .+ circshift(hn, [1, 0])
+  flux_right[end, :] = zeros(size(m)[2])
+  flux_left[1, :] = zeros(size(m)[2]) 
+
+  # Compute finite volume rhs term, df/dz.
+  rhs = (flux_right .- flux_left) ./ dz - source(m)
+
+  return rhs
+end
+
+
+"""
+
+"""
+function weno2(m, flux, dflux, source, dz)
+  # Parameters
+  n = size(m)[1]	
+  i = 2:(n+1)
+  
+  # Ghost cell values
+  lower = m[[2], :]
+  upper = m[[end], :]
+  upper2 = m[[end], :]
+
+  # Extended field
+  u = [lower; lower; m[i[1:n-1], :]; upper; upper2]
+  
+  # Lax-Friedrichs (LF) flux splitting
+  a = findmax(abs.(dflux(u)), dims=1)[1]
+  fp = 0.5 * (flux(u) .+ a .* u) 
+  fm = 0.5 * (flux(u) .- a .* u)
+  fp[end, :] -= flux(u[end, :])
+  fp[end-1, :] -= flux(u[end-1, :])
+  fp[1, :] -= flux(u[1, :])
+
+  alpha1 = zeros(size(u)) 
+  alpha2 = zeros(size(u)) 
+  r_minus = zeros(size(u)) 
+  r_plus = zeros(size(u)) 
+  
+  # WENO3 "right" flux reconstruction
+  epsilon = 1e-16
+  alpha1[i, :] = (1/3) ./ (epsilon .+ (fp[i, :] .- fp[i.-1, :]).^2).^2   
+  alpha2[i, :] = (2/3) ./ (epsilon .+ (fp[i.+1, :] .- fp[i, :]).^2).^2
+  alphasum = alpha1 .+ alpha2
+  omega1 = alpha1 ./ alphasum 
+  omega2 = alpha2 ./ alphasum 
+  r_plus[i, :] = omega1[i, :] .* (3/2 .* fp[i, :] .- 1/2 .* fp[i.-1, :]) .+ omega2[i, :] .* (1/2 .* fp[i, :] .+ 1/2 .* fp[i.+1, :])
+  
+  # WENO3 "left" flux reconstruction
+  alpha1[i, :] = (1/3) ./ (epsilon .+ (fm[i.+2] .- fm[i.+1, :]).^2).^2   
+  alpha2[i, :] = (2/3) ./ (epsilon .+ (fm[i.+1, :] .- fm[i, :]).^2).^2   
+  alphasum = alpha1 .+ alpha2
+  omega1 = alpha1 ./ alphasum 
+  omega2 = alpha2 ./ alphasum 
+  r_minus[i, :] = omega1[i, :] .* (3/2 .* fm[i.+1, :] .- 1/2 .* fm[i.+2]) .+ omega2[i, :] .* (1/2 .* fm[i, :] .+ 1/2 .* fm[i.+1, :])
+  
+  # Compute Residual
+  rhs_right = r_plus[i, :] .+ r_minus[i, :]
+  rhs_left = r_plus[i.-1, :] .+ r_minus[i.-1, :]
+  #rhs_left[1, :] = rhs_left[2, :] 
+  rhs_left[1, :] = zeros(1, size(m)[2]) 
+
+  rhs = (rhs_right .- rhs_left) ./ dz .- source(m)
+
+  return rhs
+end
+
+
+"""
+  main(nz, zmax, tend, cfl)
+
+  - `nz` - number of vertical levels
+  - `zmax` - maximum height
+  - `tend` - maximum time
+  - `cfl` - cfl_max number
 Returns the results from a 1D rainshaft model run with collisions and sedimentation. 
 
 """
-function main(t_min=0.0,
-              t_max=1.0,
-              z_min=0.0,
-              z_max=1.0,
-              n_z=50,
-              mass_min=0.0, 
-              mass_max=10.0,
-              n_mass=10)
-  
-  # Physicsal parameters
-  coal_kernel = CoalescenceTensor([0.01]) # constant coalescence kernel
-  sedi_coef = 0.2 # sedimentation flux coefficient 
-  distribution = Exponential(1.0, 1.0) # Size distribution function
+function main(nmom=2, nz=50, zmax=2000.0, tend=7200.0, cfl=5.0)
+  # Flux and source terms
+  coef = -0.5
+  flux = m -> coef * m
+  dflux = m -> coef * ones(size(m))
+  source = m -> zeros(size(m))
 
+  # Build discrete domain
+  a = 0.0
+  b = zmax
+  dz = (b-a) / nz 
+  height = a+dz/2:dz:b
+  
   # Initial condition
-  d1 = Exponential(100.0, 1.25) # Used to init upper half of domain
-  d2 = Exponential(1e-1, 10.0) # Used to init lower half of domain
-  n_z_zero = div(n_z, 2)
-  n_mom = nparams(d1)
-  moments_init = zeros(n_z, n_mom)
-  for i in 1:n_z
-    if i > n_z_zero
-      moments_init[i,:] = [moment(d1, FT(j)) for j in 0:n_mom-1]
-    else
-      moments_init[i,:] = [moment(d2, FT(j)) for j in 0:n_mom-1]
-    end
-  end
+  m0 = initial_condition(height, nmom)
+  m = m0
+  moments = reshape(m, size(m)..., 1)
 
-  # First-order finite difference matrix with no-flux boundary conditions
-  # This is used to calculate the flux divergence for the sedimentation flux
-  δz = (z_max-z_min) / (n_z - 1)
-  height = z_min:δz:z_max
-  dd1 = Tridiagonal(zeros(n_z-1), 1.0*ones(n_z), -1.0.*ones(n_z-1))
-  dd1[1,1] = -1.0
-  dd1[1,2] = 0.0
-  dd1[end,end-1] = 0.0
-  dd1[end,end] = 1.0
-  dd1 /= δz
+  # Rhs function
+  get_rhs = weno2 
+ 
+  # Solver loop
+  t = 0.0
+  it = 0
+  time = [t]
 
-  # Set up the right hand side of ODE
-  function rhs!(dm, m, p, t)
-    flux_sedi = Array{FT}(undef, n_z, n_mom)
-    for i in 1:n_z
-      flux_sedi[i, :] = sedi_flux(m[i,:], distribution, sedi_coef)
-    end
-    for i in 1:n_mom
-      dm[:, i] = dd1 * flux_sedi[:, i]
-    end
-    for i in 2:n_z
-      dm[i, :] += get_int_coalescence(m[i,:], distribution, coal_kernel)
-    end
-  end
+  # Let's keep track of the integral of the field to track conservation
+  column_mass = [sum(m[2:end, 2] .* dz)]
+  surface_mass = [m[1, 2] .* dz]
+  minimum = [findmin(m)[1]]
   
-  # Solve the ODE 
-  prob = ODEProblem(rhs!, moments_init, (t_min, t_max))
-  sol = solve(prob)
-
-  # Unpack ODE solution into an array
-  time = sol.t
-  n_time = length(time)
-  moments = Array{FT}(undef, n_time, n_z, n_mom)
-  for (i, slice) in enumerate(sol.u)
-    moments[i,:,:] = slice
-  end
-
-  # Turn time series of moments into time series of density
-  δm = mass_max/(n_mass-1)
-  mass = mass_min:δm:mass_max
-  dists = Array{FT}(undef, n_time, n_z, n_mass)
-  for i in 1:n_time
-    for j in 1:n_z
-      d = update_params_from_moments(d1, moments[i,j,:])
-      for k in 1:n_mass
-        dists[i,j,k] = density(d, mass[k])
-      end
+  while t < tend
+    # Update/correct time step
+    dt = cfl * dz / findmax(abs.(m[2:end-1, :]))[1] 
+    if t + dt > tend
+      dt = tend - t 
     end
-  end
+    
+    # Update iteration counter
+    it = it + 1
+    t = t + dt
+    append!(time, t)
 
-  time, height, mass, moments, dists
+    # RK step
+    mo = m
+    
+    # 1st stage
+    df = get_rhs(m, flux, dflux, source, dz)
+    m = mo .- dt .* df
+    
+    # 2nd Stage
+    df = get_rhs(m, flux, dflux, source, dz)
+    m = 0.75 .* mo .+ 0.25 .* (m .- dt .* df)
+
+    # 3rd stage
+    df = get_rhs(m, flux, dflux, source, dz)
+    m = (mo .+ 2 .* (m .- dt .* df)) ./ 3.0
+
+    append!(column_mass, sum(m[2:end, 2] .* dz))
+    append!(surface_mass, m[1, 2] .* dz)
+    append!(minimum, findmin(m)[1])
+    moments = cat(moments, reshape(m, size(m)..., 1), dims=3)
+  end
+  minimum = findmin(minimum)[1]
+
+  # Report minimum during integration
+  println("Minimum value of moments was: $minimum.")
+
+  return time, height, moments, column_mass, surface_mass
 end
 
 
 """
-  plotting(time, height, mass, moments, dist)
+  plotting(time, height, moments, column_mass, surface_mass)
 
   - `time` - time grid
   - `height` - height grid
-  - `mass` - mass grid
-  - `moments` - moments on time, height, mass grid
-  - `dists` - droplet mass distribution on time, height, mass grid 
+  - `moments` - moments on time, height grid
+  - `column_mass` - column integrated water mass 
+  - `surface_mass` - surface integrated water mass 
 Generates various plots for the ODE solution.
 
 """
-function plotting(time, height, mass, moments, dists)
+function plotting(time, height, moments, column_mass, surface_mass)
   gr()
   plot(
-    moments[1, :, 1], 
-    height,
+    moments[2:end, 1, 1], 
+    height[2:end],
     lw=3,
-    xaxis="Number density",
-    yaxis="Height",
-    xlims=(0, 150.0),
+    xaxis="Number density [1/cm^3]",
+    yaxis="Height [m]",
+    xlims=(0, 1500.0),
     ylims=(height[1], height[end]),
     label="Initial condition",
-    title="Zeroth moment"
+    title="Zeroth moment - particle number"
   )
   plot!(
-    moments[end, :, 1], 
-    height, 
+    moments[2:end, 1, end],
+    height[2:end], 
     lw=3,
     label="Final condition"
   )
   savefig("zeroth_moment.png")
 
   plot(
-    moments[1, :, 2], 
-    height,
+    moments[2:end, 2, 1] * 1e-9 * 1e6 / 1.225, # nanograms for droplets and conversion to spec. hum.
+    height[2:end],
     lw=3,
-    xaxis="Number density",
-    yaxis="Height",
-    xlims=(0, 150.0),
+    xaxis="Liquid water specific humidity [g/kg]",
+    yaxis="Height [m]",
+    xlims=(0, 1500.0 * 1e-3),
     ylims=(height[1], height[end]),
     label="Initial condition",
-    title="First moment"
+    title="First moment - mass"
   )
   plot!(
-    moments[end, :, 2], 
-    height, 
+    moments[2:end, 2, end] * 1e-9 * 1e6 / 1.225,
+    height[2:end], 
     lw=3,
     label="Final condition"
   )
   savefig("first_moment.png")
   
   plot(
-    time,
-    moments[:, 1, 1], 
+    time / 60.0,
+    surface_mass * 1e-12 * 1e6, 
     lw=3,
-    xaxis="Time",
-    yaxis="Moments",
-    xlims=(time[1], time[end]),
-    ylims=(0.0, 1000.0),
-    label="Zeroth moment",
+    xaxis="Time [min]",
+    yaxis="Mass [kg]",
+    xlims=(time[1] / 60.0, time[end] / 60.0),
+    ylims=(0.0, 2 * findmax(column_mass)[1] *1e-12 * 1e6),
+    label="Surface mass (fallen precipitation)",
     title="Surface"
   )
   plot!(
-    time,
-    moments[:, 1, 2], 
+    time / 60.0,
+    column_mass * 1e-12 * 1e6,
     lw=3,
-    label="First moment"
+    label="Column-integrated mass"
+  )
+  plot!(
+    time / 60.0,
+    (column_mass .+ surface_mass) .* 1e-12 * 1e6,
+    lw=1,
+    linecolor=:black,
+    linestyle=:dash,
+    label=""
   )
   savefig("surface.png")
 end
 
 # Run everything!
 plotting(main()...)
-
