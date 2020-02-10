@@ -9,8 +9,8 @@ export linear
 
 """
   linear(x::FT, y::FT)
-  
-  - `x` - array of particle masses 
+
+  - `x` - array of particle masses
 Return interaction rate based on particle masses.
 """
 function linear(x::Array{FT}) where {FT<:Real}
