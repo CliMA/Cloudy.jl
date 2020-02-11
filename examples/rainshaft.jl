@@ -25,12 +25,12 @@ Returns the sedimentation flux for all moments in `mom_p`.
 function sedi_flux(mom_p::Array{FT}, dist::ParticleDistribution{FT}, coef::FT) where {FT <: Real}
   s = length(mom_p)
   dist = update_params_from_moments(dist, mom_p)
-   
+
   sedi_int = similar(mom_p)
   for k in 0:s-1
     sedi_int[k+1] = -coef*moment(dist, FT(k)+1/6)
   end
-  
+
   return sedi_int
 end
 
@@ -45,8 +45,8 @@ end
   - `n_z` - number of vertical levels
   - `mass_min` - minimum droplet mass
   - `mass_max` - maximum droplet mass
-  - `n_mass` - number of grid points in mass spass 
-Returns the results from a 1D rainshaft model run with collisions and sedimentation. 
+  - `n_mass` - number of grid points in mass spass
+Returns the results from a 1D rainshaft model run with collisions and sedimentation.
 
 """
 function main(t_min=0.0,
@@ -54,13 +54,13 @@ function main(t_min=0.0,
               z_min=0.0,
               z_max=1.0,
               n_z=50,
-              mass_min=0.0, 
+              mass_min=0.0,
               mass_max=10.0,
               n_mass=10)
-  
+
   # Physicsal parameters
   coal_kernel = CoalescenceTensor([0.01]) # constant coalescence kernel
-  sedi_coef = 0.2 # sedimentation flux coefficient 
+  sedi_coef = 0.2 # sedimentation flux coefficient
   distribution = Exponential(1.0, 1.0) # Size distribution function
 
   # Initial condition
@@ -101,8 +101,8 @@ function main(t_min=0.0,
       dm[i, :] += get_int_coalescence(m[i,:], distribution, coal_kernel)
     end
   end
-  
-  # Solve the ODE 
+
+  # Solve the ODE
   prob = ODEProblem(rhs!, moments_init, (t_min, t_max))
   sol = solve(prob)
 
@@ -138,14 +138,14 @@ end
   - `height` - height grid
   - `mass` - mass grid
   - `moments` - moments on time, height, mass grid
-  - `dists` - droplet mass distribution on time, height, mass grid 
+  - `dists` - droplet mass distribution on time, height, mass grid
 Generates various plots for the ODE solution.
 
 """
 function plotting(time, height, mass, moments, dists)
   gr()
   plot(
-    moments[1, :, 1], 
+    moments[1, :, 1],
     height,
     lw=3,
     xaxis="Number density",
@@ -156,15 +156,15 @@ function plotting(time, height, mass, moments, dists)
     title="Zeroth moment"
   )
   plot!(
-    moments[end, :, 1], 
-    height, 
+    moments[end, :, 1],
+    height,
     lw=3,
     label="Final condition"
   )
   savefig("zeroth_moment.png")
 
   plot(
-    moments[1, :, 2], 
+    moments[1, :, 2],
     height,
     lw=3,
     xaxis="Number density",
@@ -175,16 +175,16 @@ function plotting(time, height, mass, moments, dists)
     title="First moment"
   )
   plot!(
-    moments[end, :, 2], 
-    height, 
+    moments[end, :, 2],
+    height,
     lw=3,
     label="Final condition"
   )
   savefig("first_moment.png")
-  
+
   plot(
     time,
-    moments[:, 1, 1], 
+    moments[:, 1, 1],
     lw=3,
     xaxis="Time",
     yaxis="Moments",
@@ -195,7 +195,7 @@ function plotting(time, height, mass, moments, dists)
   )
   plot!(
     time,
-    moments[:, 1, 2], 
+    moments[:, 1, 2],
     lw=3,
     label="First moment"
   )

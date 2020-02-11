@@ -9,8 +9,8 @@ Microphysics parameterization based on moment approximations:
 """
 module Sources
 
-using Cloudy.ParticleDistributions
-using Cloudy.KernelTensors
+using ..ParticleDistributions
+using ..KernelTensors
 
 # methods that compute source terms from microphysical parameterizations
 export get_int_coalescence
@@ -76,8 +76,8 @@ Returns the sedimentation flux for all moments in `mom_p`.
 """
 function get_flux_sedimentation(mom_p::Array{FT}, dist::ParticleDistribution{FT}, vel::Array{FT}) where {FT <: Real}
   r = length(vel)-1
-  s = length(mom_p) 
-  
+  s = length(mom_p)
+
   # Need to build diagnostic moments
   dist = update_params_from_moments(dist, mom_p)
   mom_d = Array{FT}(undef, r)

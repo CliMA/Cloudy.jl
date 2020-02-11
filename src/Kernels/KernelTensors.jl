@@ -61,19 +61,19 @@ end
 
   - `kernel_func` - is a collision-coalescence kernel function
   - `r` - is the order of the polynomial approximation
-  - `limit` - is the upper limit of particle mass allowed for this kernel function 
+  - `limit` - is the upper limit of particle mass allowed for this kernel function
 Returns a collision-coalescence rate matrix (as array) approximating the specified
 kernel function `kernel_func` to order `2r` using a monomial basis in two dimensions.
 """
 function polyfit(kernel_func, r::Int, limit::FT) where {FT<:Real}
-  check_symmetry(kernel_func) 
+  check_symmetry(kernel_func)
   # Build a coefficient matrix for the two-dimensional monomial
   # basis function set used for the polynomial approximation.
   Q = Array{FT}(undef, (r+1)^2, (r+1)^2)
   for i in 1:(r+1)^2
     for j in 1:(r+1)^2
-      a, b = unpack_vector_index_to_poly_index(i, r+1) 
-      c, d = unpack_vector_index_to_poly_index(j, r+1) 
+      a, b = unpack_vector_index_to_poly_index(i, r+1)
+      c, d = unpack_vector_index_to_poly_index(j, r+1)
       Q[i,j] = limit^(a+b+c+d+2) * (a+c+1.0)^(-1) * (b+d+1.0)^(-1)
     end
   end
@@ -82,23 +82,23 @@ function polyfit(kernel_func, r::Int, limit::FT) where {FT<:Real}
   # approximation problem (projects of kernel_func onto polynomial basis).
   F = Array{FT}(undef, (r+1)^2)
   for i in 1:(r+1)^2
-    a, b = unpack_vector_index_to_poly_index(i, r+1) 
+    a, b = unpack_vector_index_to_poly_index(i, r+1)
     integrand = x -> kernel_func(x) * x[1]^a * x[2]^b
-    F[i], err = hcubature(integrand, [0.0, 0.0], [limit, limit], rtol=1e-4, atol=1e-6) 
+    F[i], err = hcubature(integrand, [0.0, 0.0], [limit, limit], rtol=1e-4, atol=1e-6)
   end
 
   # Build vector of coefficients that measure importance of each monomial
   # in the polynomial approximation.
   K = inv(Q) * F
 
-  # Because polynomial regression was done in vector-matrix setup K is now a 
-  # one-dimensional array. The desired coefficient matrix corresponding to K 
+  # Because polynomial regression was done in vector-matrix setup K is now a
+  # one-dimensional array. The desired coefficient matrix corresponding to K
   # is just an unpacked version of K, where each entry of K is mapped onto a
   # matrix element.
   C = Array{FT}(undef, r+1, r+1)
   for (i, kk) in enumerate(K)
-    a, b = unpack_vector_index_to_poly_index(i, r+1) 
-    C[a+1, b+1] = K[i] 
+    a, b = unpack_vector_index_to_poly_index(i, r+1)
+    C[a+1, b+1] = K[i]
   end
 
   # Symmetrize collision-coalescence coefficient array to have numerically exact
@@ -112,8 +112,8 @@ end
 """
   unpack_vector_index_to_poly_index(ind::Int, array_size:Int)
 
-  - `ind` - vector index of vector that is being mapped to array 
-  - `array_size` - size of array the vector is being mapped to 
+  - `ind` - vector index of vector that is being mapped to array
+  - `array_size` - size of array the vector is being mapped to
 Returns the double index of a matrix that a vector is being mapped to.
 """
 function unpack_vector_index_to_poly_index(ind::Int, array_size::Int)
@@ -125,13 +125,13 @@ function unpack_vector_index_to_poly_index(ind::Int, array_size::Int)
   end
   i = ind
   r = array_size
-  div(i,r) + sign(mod(i,r)) - 1, mod(i,r) - sign(mod(ind,r)) * r + r - 1 
+  div(i,r) + sign(mod(i,r)) - 1, mod(i,r) - sign(mod(ind,r)) * r + r - 1
 end
 
 
 """
   symmetrize!(array::Array{FT})
-  - `array` - array that is being symmetrized 
+  - `array` - array that is being symmetrized
 """
 function symmetrize!(array::Array{FT}) where {FT<:Real}
   ndim = size(array)[1]
@@ -149,9 +149,9 @@ end
 """
   check_symmetry(array)
   check_symmetry(func)
-  
-  - `array` - array that is being checked for symmety 
-  - `func` - function that is being checked for symmety 
+
+  - `array` - array that is being checked for symmety
+  - `func` - function that is being checked for symmety
 Throws an exception if `array` is not symmetric.
 """
 function check_symmetry(array::Array{FT}) where {FT <: Real}
