@@ -1,6 +1,6 @@
 "Testing correctness of Sources module."
 
-using Cloudy.Distributions
+using Cloudy.ParticleDistributions
 using Cloudy.Sources
 
 

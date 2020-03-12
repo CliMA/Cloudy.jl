@@ -13,7 +13,7 @@ makedocs(
   pages = Any[
     "Home" => "index.md",
     "KernelTensors" => "KernelTensors.md",
-    "MassDistributions" => "MassDistributions.md",
+    "ParticleDistributions" => "ParticleDistributions.md",
     "Sources" => "Sources.md"
   ]
 )

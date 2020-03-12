@@ -7,7 +7,7 @@ Particle mass distribution functions for microphysical process modeling:
   - creating distributions given a set of parameters
   - creating distributions given a set of moments
 """
-module Distributions
+module ParticleDistributions
 
 using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
@@ -15,8 +15,8 @@ using DocStringExtensions
 import LinearAlgebra: norm
 import Optim: optimize, LBFGS
 
-# mass distributions available for microphysics
-export Distribution
+# particle mass distributions available for microphysics
+export ParticleDistribution
 export Primitive
 export Exponential
 export Gamma
@@ -31,12 +31,12 @@ export update_params_from_moments
 
 
 """
-  Distribution{FT}
+  ParticleDistribution{FT}
 
 A particle mass distribution function, which can be initialized
 for various subtypes of assumed shapes in the microphysics parameterization.
 """
-abstract type Distribution{FT} end
+abstract type ParticleDistribution{FT} end
 
 
 """
@@ -45,7 +45,7 @@ abstract type Distribution{FT} end
 A particle mass distribution that has support on the positive real
 axis and analytic expressions for moments and partial moments.
 """
-abstract type Primitive{FT} <: Distribution{FT} end
+abstract type Primitive{FT} <: ParticleDistribution{FT} end
 
 
 """
@@ -104,23 +104,23 @@ end
 
 
 """
-  Mixture{FT} <: Distribution{FT}
+  Mixture{FT} <: ParticleDistribution{FT}
 
 A particle mass distribution function that is a mixture of
 primitive or truncated subdistribution functions.
 
 # Constructors
-  Mixture(dists::Distribution{Real}...)
-  Mixture(dist_arr::Array{Distribution{FT}})
+  Mixture(dists::ParticleDistribution{Real}...)
+  Mixture(dist_arr::Array{ParticleDistribution{FT}})
 
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct Mixture{FT} <: Distribution{FT}
+struct Mixture{FT} <: ParticleDistribution{FT}
   "array of distributions"
-  subdists::Array{Distribution{FT}}
+  subdists::Array{ParticleDistribution{FT}}
 
-  function Mixture(dists::Distribution{FT}...) where {FT<:Real}
+  function Mixture(dists::ParticleDistribution{FT}...) where {FT<:Real}
     if length(dists) < 2
       error("need at least two subdistributions to form a mixture.")
     end
@@ -129,7 +129,7 @@ struct Mixture{FT} <: Distribution{FT}
   end
 end
 
-function Mixture(dist_arr::Array{Distribution{FT}}) where {FT<:Real}
+function Mixture(dist_arr::Array{ParticleDistribution{FT}}) where {FT<:Real}
   Mixture(dist_arr...)
 end
 
@@ -144,9 +144,9 @@ function moment_func(dist::Exponential{FT}) where {FT<:Real}
   # moment_of_dist = n * θ^q * Γ(q+1)
   # can reuse the moments of gamma distribution
 
-  moment_func_gamma = moment_func(Gamma(1.0, 1.0, 1.0))
+  moment_func_gamma = moment_func(Gamma(FT(1), FT(1), FT(1)))
   function f(n, θ, q)
-    moment_func_gamma(n, θ, 1.0, q)
+    moment_func_gamma(n, θ, FT(1), q)
   end
   return f
 end
@@ -186,7 +186,7 @@ end
   - `q` - is a potentially real-valued order of the moment
 Returns the q-th moment of a particle mass distribution function.
 """
-function moment(dist::Distribution{FT}, q::FT) where {FT<:Real}
+function moment(dist::ParticleDistribution{FT}, q::FT) where {FT<:Real}
   moment_func(dist)(reduce(vcat, get_params(dist)[2])..., q)
 end
 
@@ -201,9 +201,9 @@ function density_func(dist::Exponential{FT}) where {FT<:Real}
   # density = n / θ * exp(-x/θ)
 
   # can reuse the density of gamma distribution
-  density_func_gamma = density_func(Gamma(1.0, 1.0, 1.0))
+  density_func_gamma = density_func(Gamma(FT(1), FT(1), FT(1)))
   function f(n, θ, x)
-    density_func_gamma(n, θ, 1.0, x)
+    density_func_gamma(n, θ, FT(1), x)
   end
   return f
 end
@@ -243,7 +243,7 @@ end
   - `x` - is a point to evaluate the density of `dist` at
 Returns the particle mass density evaluated at point `x`.
 """
-function density(dist::Distribution{FT}, x::FT) where {FT<:Real}
+function density(dist::ParticleDistribution{FT}, x::FT) where {FT<:Real}
   if any(x .< zero(x))
     error("Density can only be evaluated at nonnegative values.")
   end
@@ -311,7 +311,7 @@ function update_params(dist::Mixture{FT}, values::Array{FT}) where {FT<:Real}
 
   # create new subdistributions one dist at a time
   i = 1
-  dist_arr = Array{Distribution{FT}}([])
+  dist_arr = Array{ParticleDistribution{FT}}([])
   for d in dist.subdists
     n = nparams(d)
     push!(dist_arr, update_params(d, values[i:i+n-1]))
@@ -322,7 +322,7 @@ function update_params(dist::Mixture{FT}, values::Array{FT}) where {FT<:Real}
 end
 
 
-function update_params_from_moments(dist::Distribution{FT}, m::Array{FT}) where {FT<:Real}
+function update_params_from_moments(dist::ParticleDistribution{FT}, m::Array{FT}) where {FT<:Real}
   if length(m) != nparams(dist)
     error("Number of moments must be consistent with distribution type.")
   end
@@ -374,4 +374,4 @@ function check_moment_consistency(m::Array{FT}) where {FT<:Real}
   nothing
 end
 
-end #module Distributions.jl
+end #module ParticleDistributions.jl

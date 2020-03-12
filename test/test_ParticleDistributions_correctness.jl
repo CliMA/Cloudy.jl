@@ -1,9 +1,9 @@
-"Testing correctness of Distributions module."
+"Testing correctness of ParticleDistributions module."
 
 using SpecialFunctions: gamma, gamma_inc
-using Cloudy.Distributions
+using Cloudy.ParticleDistributions
 
-import Cloudy.Distributions: nparams, get_params, update_params,
+import Cloudy.ParticleDistributions: nparams, get_params, update_params,
                              check_moment_consistency, moment_func, density_func
 
 rtol = 1e-3
@@ -86,7 +86,7 @@ dist = update_params_from_moments(dist, [1.1, 2.423, 8.112])
 # Mixture distributions
 # Initialization
 dist = Mixture(Exponential(1.0, 1.0), Exponential(2.0, 2.0))
-@test typeof(dist.subdists) == Array{Distribution{FT}, 1}
+@test typeof(dist.subdists) == Array{ParticleDistribution{FT}, 1}
 @test length(dist.subdists) == 2
 
 # Getters and setters

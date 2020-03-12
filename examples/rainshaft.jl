@@ -4,10 +4,10 @@ using DifferentialEquations
 using Plots
 
 using Cloudy.KernelTensors
-using Cloudy.Distributions
+using Cloudy.ParticleDistributions
 using Cloudy.Sources
 
-import Cloudy.Distributions: density, nparams
+import Cloudy.ParticleDistributions: density, nparams
 
 
 FT = Float64
@@ -334,7 +334,7 @@ function plotting(time, height, moments, column_mass, surface_mass)
     label="Final condition"
   )
   savefig("first_moment.png")
-  
+
   plot(
     time / 60.0,
     surface_mass * 1e-12 * 1e6, 

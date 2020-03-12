@@ -1,8 +1,8 @@
 module Cloudy
 
-include("Kernels/KernelTensors.jl")
-include("Kernels/KernelFunctions.jl")
-include("Distributions/Distributions.jl")
-include("Sources/Sources.jl")
+include(joinpath("Kernels","KernelTensors.jl"))
+include(joinpath("Kernels","KernelFunctions.jl"))
+include(joinpath("ParticleDistributions","ParticleDistributions.jl"))
+include(joinpath("Sources","Sources.jl"))
 
 end
