@@ -14,6 +14,7 @@
 *.bckp
 
 # Data files
+*.txt
 *.dat
 *.csv
 *.tsv

@@ -11,6 +11,17 @@ module ParticleDistributions
 
 using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
+using NLPModels
+using NLPModelsIpopt
+
+# NLPModelsKnitro is a thin KNITRO wrapper for NLP (Nonlinear Programming)
+# models. KNITRO is a commercial solver but a demo version can be
+# downloaded from the Artelys website at
+# https://www.artelys.com/solvers/knitro/
+using Requires
+@init @require NLPModelsKnitro = "bec4dd0d-7755-52d5-9a02-22f0ffc7efcb" begin
+  using .NLPModelsKnitro
+end
 
 import LinearAlgebra: norm
 import Optim: optimize, LBFGS
@@ -21,13 +32,18 @@ export Primitive
 export Exponential
 export Gamma
 export Mixture
+export ExponentialMixture
+export GammaMixture
 
 # methods that query particle mass distributions
 export moment
 export density
+export nparams
+export update_params
+export update_params_from_moments
 
 # setters and getters
-export update_params_from_moments
+export get_params
 
 
 """
@@ -133,6 +149,71 @@ function Mixture(dist_arr::Array{ParticleDistribution{FT}}) where {FT<:Real}
   Mixture(dist_arr...)
 end
 
+"""
+  ExponentialMixture{FT} <: ParticleDistribution{FT}
+
+A particle mass distribution function that is a mixture of
+Exponential distributions
+
+# Constructors
+  ExponentialMixture(dists::ParticleDistribution{Real}...)
+  ExponentialMixture(dist_arr::Array{ParticleDistribution{FT}})
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
+struct ExponentialMixture{FT} <: ParticleDistribution{FT}
+  "array of exponential distributions"
+  subdists::Array{ParticleDistribution{FT}}
+
+  function ExponentialMixture(dists::ParticleDistribution{FT}...) where {FT<:Real}
+    if length(dists) < 2
+      error("need at least two subdistributions to form a mixture.")
+    end
+    if !all(typeof(dists[i])==Exponential{FT} for i in 1:length(dists))
+      error("all subdistributions need to be of type Exponential")
+    end
+    new{FT}(collect(dists))
+  end
+end
+
+function ExponentialMixture(dist_arr::Array{ParticleDistribution{FT}}) where {FT<:Real}
+  ExponentialMixture(dist_arr...)
+end
+
+
+"""
+  GammaMixture{FT} <: ParticleDistribution{FT}
+
+A particle mass distribution function that is a mixture of
+Gamma distributions
+
+# Constructors
+  GammaMixture(dists::ParticleDistribution{Real}...)
+  GammaMixture(dist_arr::Array{ParticleDistribution{FT}})
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
+struct GammaMixture{FT} <: ParticleDistribution{FT}
+  "array of Gamma distributions"
+  subdists::Array{ParticleDistribution{FT}}
+
+  function GammaMixture(dists::ParticleDistribution{FT}...) where {FT<:Real}
+    if length(dists) < 2
+      error("need at least two subdistributions to form a mixture.")
+    end
+    if !all(typeof(dists[i])==Gamma{FT} for i in 1:length(dists))
+      error("all subdistributions need to be of type Gamma")
+    end
+    new{FT}(collect(dists))
+  end
+end
+
+function GammaMixture(dist_arr::Array{ParticleDistribution{FT}}) where {FT<:Real}
+  GammaMixture(dist_arr...)
+end
+
 
 """
   moment_func(dist)
@@ -159,8 +240,9 @@ function moment_func(dist::Gamma{FT}) where {FT<:Real}
   return f
 end
 
-function moment_func(dist::Mixture{FT}) where {FT<:Real}
-  # mixture moment is sum of moments
+
+function moment_func(dist::Union{Mixture{FT}, ExponentialMixture{FT}, GammaMixture{FT}}) where {FT<:Real}
+  # mixture moment is sum of moments of subdistributions
   num_pars = [nparams(d) for d in dist.subdists]
   mom_funcs = [moment_func(d) for d in dist.subdists]
   function f(params...)
@@ -216,8 +298,8 @@ function density_func(dist::Gamma{FT}) where {FT<:Real}
   return f
 end
 
-function density_func(dist::Mixture{FT}) where {FT<:Real}
-  # mixture density is sum of densities of subdists
+function density_func(dist::Union{Mixture{FT}, ExponentialMixture{FT}, GammaMixture{FT}}) where {FT<:Real}
+  # mixture density is sum of densities of subdistributions
   num_pars = [nparams(d) for d in dist.subdists]
   dens_funcs = [density_func(d) for d in dist.subdists]
   function f(params...)
@@ -261,7 +343,7 @@ function nparams(dist::Primitive{FT}) where {FT<:Real}
   length(propertynames(dist))
 end
 
-function nparams(dist::Mixture{FT}) where {FT<:Real}
+function nparams(dist::Union{Mixture{FT}, ExponentialMixture{FT}, GammaMixture{FT}}) where {FT<:Real}
   sum([nparams(d) for d in dist.subdists])
 end
 
@@ -278,7 +360,7 @@ function get_params(dist::Primitive{FT}) where {FT<:Real}
   return params, values
 end
 
-function get_params(dist::Mixture{FT}) where {FT<:Real}
+function get_params(dist::Union{Mixture{FT}, ExponentialMixture{FT}, GammaMixture{FT}}) where {FT<:Real}
   params, values = Array{Array{Symbol, 1}}([]), Array{Array{FT, 1}}([])
   for (i, d) in enumerate(dist.subdists)
     params_sub, values_sub = get_params(d)
@@ -321,26 +403,38 @@ function update_params(dist::Mixture{FT}, values::Array{FT}) where {FT<:Real}
   Mixture(dist_arr)
 end
 
-
-function update_params_from_moments(dist::ParticleDistribution{FT}, m::Array{FT}) where {FT<:Real}
-  if length(m) != nparams(dist)
-    error("Number of moments must be consistent with distribution type.")
-  end
-  check_moment_consistency(m)
-
-  # function whose minimum defines new parameters of dist given m
-  function g(x)
-    norm(m - moment_func(dist)(exp.(x)..., collect(0:length(m)-1)))
+function update_params(dist::ExponentialMixture{FT}, values::Array{FT}) where {FT<:Real}
+  if length(values) != nparams(dist)
+    error("length of values must match number of params of dist.")
   end
 
-  # minimize g to find parameter values so that moments of dist are close to m
-  r = optimize(
-    g,
-    log.(reduce(vcat, get_params(dist)[2])) .+ 1e-6, # initial value for new dist parameters is old dist parameters
-    LBFGS()
-  );
+  # create new subdistributions one dist at a time
+  i = 1
+  dist_arr = Array{ParticleDistribution{FT}}([])
+  for d in dist.subdists
+    n = nparams(d)
+    push!(dist_arr, update_params(d, values[i:i+n-1]))
+    i += n
+  end
 
-  update_params(dist, exp.(r.minimizer))
+  ExponentialMixture(dist_arr)
+end
+
+function update_params(dist::GammaMixture{FT}, values::Array{FT}) where {FT<:Real}
+  if length(values) != nparams(dist)
+    error("length of values must match number of params of dist.")
+  end
+
+  # create new subdistributions one dist at a time
+  i = 1
+  dist_arr = Array{ParticleDistribution{FT}}([])
+  for d in dist.subdists
+    n = nparams(d)
+    push!(dist_arr, update_params(d, values[i:i+n-1]))
+    i += n
+  end
+
+  GammaMixture(dist_arr)
 end
 
 
@@ -372,6 +466,210 @@ function check_moment_consistency(m::Array{FT}) where {FT<:Real}
   end
 
   nothing
+end
+
+
+"""
+  update_params_from_moments(ODE_parameters, target_moments)
+
+  - `ODE_parameters` - ODE parameters, a Dict containing a key ":dist", whose
+                       value is the distribution at the previous time step.
+                       dist is a ParticleDistribution; it is used to calculate
+                       the diagnostic moments and also to dispatch to the
+                       moments-to-parameters mapping (done by the function
+                       moments_to_params) for the given type of distribution
+  - `target_moments` - array of moments used to update the distribution
+
+Uses the given moments to (approximately) determine the corresponding
+distribution parameters, then updates the distribution with these parameters.
+The moments-to-parameters mapping is done differently depending on the
+ParticleDistribution type - e.g., it can be done analytically (for priimtive
+ParticleDistributions), it can involve solving an optimization problem (for
+general ParticleDistributions), or it can involve solving a nonlinear system of
+equations (for GammaMixtures and ExponentialMixtures).
+For distributions where none of these methods work well, an alternative
+solution would be to train a regression model (e.g., a random forest) to learn
+the moments-to-parameters map and to write a moments_to_params function which
+uses the predictions of that model.
+"""
+function update_params_from_moments(ODE_parameters, target_moments::Array{FT}) where {FT<:Real}
+  # Extract the solution at the previous time step
+  dist_prev = ODE_parameters[:dist]
+  # Update parameters from the given target moments
+  moments_to_params(dist_prev, target_moments)
+end
+
+function moments_to_params(dist::Gamma{FT}, target_moments::Array{FT}) where {FT<:Real}
+  if length(target_moments) != nparams(dist)
+    error("Number of moments must be consistent with distribution type.")
+  end
+  check_moment_consistency(target_moments)
+
+  # target_moments[1] == M0, target_moments[2] == M1, target_moments[3] == M2
+  n = target_moments[1]
+  θ = (target_moments[1]*target_moments[3] - target_moments[2]^2) / target_moments[2]
+  k = target_moments[2]^2 / (target_moments[1]*target_moments[3] - target_moments[2]^2)
+
+  update_params(dist, [n, θ, k])
+
+end
+
+function moments_to_params(dist::Exponential{FT}, target_moments::Array{FT}) where {FT<:Real}
+  if length(target_moments) != nparams(dist)
+    error("Number of moments must be consistent with distribution type.")
+  end
+  check_moment_consistency(target_moments)
+
+  # target_moments[1] == M0, target_moments[2] == M1
+  n = target_moments[1]
+  θ = target_moments[2] / target_moments[1]
+
+  update_params(dist, [n, θ])
+
+end
+
+function moments_to_params(dist::ParticleDistribution{FT}, target_moments::Array{FT}) where {FT<:Real}
+  n_moments = length(target_moments)
+  if n_moments != nparams(dist)
+    error("Number of moments must be consistent with distribution type.")
+  end
+  check_moment_consistency(target_moments)
+
+  # Function whose minimum defines new parameters of dist given target_moments
+  function g(x)
+    norm(target_moments - moment_func(dist)(exp.(x)..., collect(0:n_moments-1)))
+  end
+
+  # Minimize g to find parameter values so that moments of dist are close to
+  # target_moments; use distribution parameters at previous time step as an
+  # initial guess for the parameters at the current time step
+  r = optimize(
+    g,
+    log.(reduce(vcat, get_params(dist)[2])) .+ 1e-6,
+    LBFGS()
+  )
+
+  update_params(dist, exp.(r.minimizer))
+end
+
+function moments_to_params(dist::Union{ExponentialMixture, GammaMixture}, target_moments::Array{FT}) where {FT<:Real}
+  # number of equations
+  n_equations = length(target_moments)
+  # number of subdistributions
+  m = length(dist.subdists)
+  # number of parameters per subdistribution
+  n_params_subdist = nparams(dist.subdists[1])
+
+  start_params = reduce(vcat, get_params(dist)[2])
+  start_params_ordered = vcat([start_params[i:n_params_subdist:end] for i in 1:n_params_subdist]...)
+  n_vars = length(start_params_ordered) # number of unknowns in the system
+
+  # Set up system of equations relating moments to the unknown parameters.
+  c(x) = construct_system(x, dist, target_moments)
+
+  # Use Ipopt as an alternative solver. By far not as good as Knitro though.
+  # TODO: Allow the user to choose the solver.
+  # Use Ipopt to solve for the unknowns. ADNLPModel is an AbstractNLPModel
+  # using ForwardDiff to compute the derivatives
+  model = ADNLPModel(x -> 0.0, start_params_ordered; c=c,
+                     lcon=zeros(n_equations), ucon=zeros(n_equations),
+                     lvar=zeros(n_vars))
+  stats = ipopt(model, print_level=0)
+  sol = stats.solution
+
+  # Get parameters in the correct order for use as input to update_params
+  params_ordered = vcat([sol[i:m:end] for i in 1:m]...)
+  # Update distribution with the new parameters
+  update_params(dist, params_ordered)
+end
+
+@init @require NLPModelsKnitro = "bec4dd0d-7755-52d5-9a02-22f0ffc7efcb" begin
+  function moments_to_params(dist::Union{ExponentialMixture, GammaMixture}, target_moments::Array{FT}) where {FT<:Real}
+    # number of equations
+    n_equations = length(target_moments)
+    # number of subdistributions
+    m = length(dist.subdists)
+    # number of parameters per subdistribution
+    n_params_subdist = nparams(dist.subdists[1])
+
+    start_params = reduce(vcat, get_params(dist)[2])
+    start_params_ordered = vcat([start_params[i:n_params_subdist:end] for i in 1:n_params_subdist]...)
+    n_vars = length(start_params_ordered) # number of unknowns in the system
+
+    # Set up system of equations relating moments to the unknown parameters.
+    c(x) = construct_system(x, dist, target_moments)
+    # Use Knitro to solve for the unknowns, formulating the problem as a
+    # nonlinear least-squares problem, and using the distribution parameters at
+    # the previous time step as an initial guess for the parameters at the
+    # current time step
+    # Note: Problem formulation includes positivity constraints on all parameters
+    model = ADNLSModel(c, start_params_ordered, n_equations, lvar=zeros(n_vars))
+    stats = knitro(model, x0=model.meta.x0, outlev=0)
+    sol = stats.solution
+
+    # Get parameters in the correct order for use as input to update_params
+    params_ordered = vcat([sol[i:m:end] for i in 1:m]...)
+    # Update distribution with the new parameters
+    update_params(dist, params_ordered)
+  end
+end
+
+
+"""
+  construct_system(x, dist, M::Array{FT})
+
+  - `x` - array of unknowns (= the distribution parameters)
+  - `dist` - ParticleDistribution
+  - `M`- array of moments
+
+Constructs a system of equations relating the moments (M) to the unknown
+parameters (x) of the given distribution
+"""
+function construct_system(x, dist::GammaMixture{FT}, M::Array{FT}) where {FT<:Real}
+  n_equations = length(M)
+  m = length(dist.subdists)
+
+  # x: [n_1, ..., n_m, θ_1, ..., θ_m, k_1, ..., k_m]
+  # Construct system of n_equations equations relating moments to parameters
+  # M[i] = n[1] * θ[1]^i * (k[1] + i-1)*(k[1] + i-2)*...*k[1]
+  #         + ...
+  #         + n[m] * θ[m]^i * (k[m] + i-1)*(k[m] + i-2)*...*k[m]
+  F = []
+  # M0 (==M[1]) is the sum of all n_j: M[1] = ∑n_j
+  F_0 = M[1] - sum(x[1:m])
+  push!(F, F_0)
+  for i in 1:(n_equations-1)
+    F_i = M[i+1]
+    for j in 1:m
+      # x[j+2*m] is k_j
+      factor = prod([(x[j+2*m]+counter) for counter in 0:(i-1)])
+      # x[j] is n_j,  x[j+m] is θ_j
+      F_i -= x[j] * x[j+m]^i * factor
+    end
+    push!(F, F_i)
+  end
+
+  return F
+end
+
+function construct_system(x, dist::ExponentialMixture{FT}, M::Array{FT}) where {FT<:Real}
+  n_equations = length(M)
+  m = length(dist.subdists)
+
+  # x: [n_1, ..., n_m, θ_1, ..., θ_m]
+  # Construct system of n_equations equations relating moments to parameters
+  # M[i] = i! * ∑(n[j] * θ[j]^i) 
+  F = []
+  # M0 (==M[1]) is the sum of all n_j: M[1] = ∑n_j
+  F_0 = M[1] - sum(x[1:m])
+  push!(F, F_0)
+  for i in 1:(n_equations-1)
+    # x[j] is n_j, x[j+m] is θ_j
+    F_i = M[i+1] - factorial(i) * sum([x[j] * x[j+m]^i for j in 1:m])
+    push!(F, F_i)
+  end
+
+  return F
 end
 
 end #module ParticleDistributions.jl
