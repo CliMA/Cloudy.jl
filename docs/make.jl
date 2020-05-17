@@ -19,7 +19,7 @@ makedocs(
 )
 
 deploydocs(
-           repo = "github.com/climate-machine/cloudy.git",
+           repo = "github.com/CliMA/cloudy.git",
            target = "build",
           )
 
