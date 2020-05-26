@@ -4,8 +4,8 @@ using SpecialFunctions: gamma, gamma_inc
 using Cloudy.ParticleDistributions
 
 import Cloudy.ParticleDistributions: nparams, get_params, update_params,
-                             check_moment_consistency, moment_func, density_func
-
+                                     check_moment_consistency, moment_func, 
+                                     density_func
 rtol = 1e-3
 
 # Exponential distribution
@@ -36,7 +36,8 @@ dist = Exponential(1.0, 2.0)
 @test_throws Exception density(dist, -3.1)
 
 ## Update params from moments
-dist = update_params_from_moments(dist, [1.1, 2.0])
+dist_dict = Dict(:dist => dist)
+dist = update_params_from_moments(dist_dict, [1.1, 2.0])
 @test moment(dist, 0.0) ≈ 1.1 rtol=rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol=rtol
 
@@ -73,19 +74,21 @@ dist = Gamma(1.0, 1.0, 2.0)
 @test_throws Exception density(dist, -3.1)
 
 # Update params from moments
-dist = update_params_from_moments(dist, [1.1, 2.0, 4.1])
+dist_dict = Dict(:dist => dist)
+dist = update_params_from_moments(dist_dict, [1.1, 2.0, 4.1])
 @test moment(dist, 0.0) ≈ 1.1 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
-@test moment(dist, 2.0) ≈ 4.1 rtol=rtol
-dist = update_params_from_moments(dist, [1.1, 2.423, 8.112])
+@test moment(dist, 1.0) ≈ 2.2 rtol=rtol
+@test moment(dist, 2.0) ≈ 4.96 rtol=rtol
+dist = update_params_from_moments(dist_dict, [1.1, 2.423, 8.112])
 @test moment(dist, 0.0) ≈ 1.1 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.423 rtol=rtol
-@test moment(dist, 2.0) ≈ 8.112 rtol=rtol
+@test moment(dist, 1.0) ≈ 2.665 rtol=rtol
+@test moment(dist, 2.0) ≈ 9.816 rtol=rtol
 
 
 # Mixture distributions
 # Initialization
 dist = Mixture(Exponential(1.0, 1.0), Exponential(2.0, 2.0))
+dist_dict = Dict(:dist => dist)
 @test typeof(dist.subdists) == Array{ParticleDistribution{FT}, 1}
 @test length(dist.subdists) == 2
 
@@ -115,22 +118,22 @@ p2 = moment(Exponential(2.0, 2.0), 2.23)
 @test_throws Exception density(dist, -3.1)
 
 # Update params from moments
-dist = update_params_from_moments(dist, [3.0 + 1e-6, 5.0 - 1e-6, 18.0, 102.0])
+dist = update_params_from_moments(dist_dict, [3.0 + 1e-6, 5.0 - 1e-6, 18.0, 102.0])
 @test moment(dist, 0.0) ≈ 3.0 rtol=rtol
 @test moment(dist, 1.0) ≈ 5.0 rtol=rtol
 @test moment(dist, 2.0) ≈ 18.0 rtol=rtol
 @test moment(dist, 3.0) ≈ 102.0 rtol=rtol
-dist2 = update_params_from_moments(dist, [3.0, 4.9, 18.0, 102.0])
+dist2 = update_params_from_moments(dist_dict, [3.0, 4.9, 18.0, 102.0])
 @test moment(dist2, 0.0) ≈ 3.0 rtol=rtol
 @test moment(dist2, 1.0) ≈ 4.9 rtol=rtol
 @test moment(dist2, 2.0) ≈ 18.0 rtol=rtol
 @test moment(dist2, 3.0) ≈ 102.0 rtol=rtol
-dist3 = update_params_from_moments(dist, [2.5, 4.9, 19.0, 104.0])
+dist3 = update_params_from_moments(dist_dict, [2.5, 4.9, 19.0, 104.0])
 @test moment(dist3, 0.0) ≈ 2.5 rtol=1e-1
 @test moment(dist3, 1.0) ≈ 4.9 rtol=1e-1
 @test moment(dist3, 2.0) ≈ 19.0 rtol=1e-1
 @test moment(dist3, 3.0) ≈ 104.0 rtol=1e-2
-dist4 = update_params_from_moments(dist, [3.0, 4.9, 18.0, 102.0])
+dist4 = update_params_from_moments(dist_dict, [3.0, 4.9, 18.0, 102.0])
 @test moment(dist4, 0.0) ≈ 3.0 rtol=rtol
 @test moment(dist4, 1.0) ≈ 4.9 rtol=rtol
 @test moment(dist4, 2.0) ≈ 18.0 rtol=rtol

@@ -18,19 +18,27 @@ export get_flux_sedimentation
 
 
 """
-  get_int_coalescence(mom_p::Array{Real}, dist::ParticleDistribution{Real}, ker::KernelTensor{Real})
+get_int_coalescence(mom_p::Array{Real}, ODE_parameters::Dict, ker::KernelTensor{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
-  - `dist` - particle mass distribution used to calculate diagnostic moments
+  - `ODE_parameters` - ODE parameters, a Dict containing a key ":dist" whose 
+                       is the distribution at the previous time step. dist is a 
+                       ParticleDistribution; it is used to calculate the 
+                       diagnostic moments and also to dispatch to the
+                       moments-to-parameters mapping (done by the function
+                       moments_to_params) for the given type of distribution
   - `ker` - coalescence kernel tensor
 Returns the coalescence integral for all moments in `mom_p`.
 """
-function get_int_coalescence(mom_p::Array{FT}, dist::ParticleDistribution{FT}, ker::KernelTensor{FT}) where {FT <: Real}
+function get_int_coalescence(mom_p::Array{FT}, ODE_parameters::Dict, ker::KernelTensor{FT}) where {FT <: Real}
   r = ker.r
   s = length(mom_p)
 
   # Need to build diagnostic moments
-  dist = update_params_from_moments(dist, mom_p)
+  dist = update_params_from_moments(ODE_parameters, mom_p)
+  # Update the distribution that is carried along in the ODE_parameters for use
+  # in next time step
+  ODE_parameters[:dist] = dist
   mom_d = Array{FT}(undef, r)
   for k in 0:r-1
     mom_d[k+1] = moment(dist, FT(s+k))
@@ -67,20 +75,28 @@ end
 
 
 """
-  get_flux_sedimentation(mom_p::Array{Real}, dist::ParticleDistribution{Real}, vel::Array{Real})
+  get_flux_sedimentation(mom_p::Array{Real}, ODE_parameters::Dict, vel::Array{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
-  - `dist` - particle mass distribution used to calculate diagnostic moments
-  _ `vel` - settling velocity coefficient tensor
+  - `ODE_parameters` - ODE parameters, a Dict containing a key ":dist" whose 
+                       is the distribution at the previous time step. dist is a 
+                       ParticleDistribution; it is used to calculate the 
+                       diagnostic moments and also to dispatch to the
+                       moments-to-parameters mapping (done by the function
+                       moments_to_params) for the given type of distribution
+  - `vel` - settling velocity coefficient tensor
 Returns the sedimentation flux for all moments in `mom_p`.
 """
-function get_flux_sedimentation(mom_p::Array{FT}, dist::ParticleDistribution{FT}, vel::Array{FT}) where {FT <: Real}
+function get_flux_sedimentation(mom_p::Array{FT}, ODE_parameters::Dict, vel::Array{FT}) where {FT <: Real}
   r = length(vel)-1
   s = length(mom_p)
 
   # Need to build diagnostic moments
-  dist = update_params_from_moments(dist, mom_p)
+  dist = update_params_from_moments(ODE_parameters, mom_p)
   mom_d = Array{FT}(undef, r)
+  # Update the distribution that is carried along in the ODE_parameters for use
+  # in next time step
+  ODE_parameters[:dist] = dist
   for k in 0:r-1
     mom_d[k+1] = moment(dist, FT(s+k))
   end
