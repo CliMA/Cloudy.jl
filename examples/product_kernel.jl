@@ -18,7 +18,7 @@ function main()
 
   # Initial condition
   moments_init = [100.0, 90.0, 100.0]
-  dist_init = Gamma(100.0, 0.21111111111111114, 4.263157894736842)
+  dist_init = GammaPrimitiveParticleDistribution(100.0, 0.211111111111, 4.2631578947)
 
   # Set up the ODE problem
   # Step 1) Define termination criterion: stop integration when one of the 
@@ -78,9 +78,8 @@ function main()
   prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
   sol = solve(prob, Tsit5(), callback=cb, reltol=tol, abstol=tol)
 
-  # Plot the solution for the 0th moment and compare to analytical solution
+  # Plot the solution for the 0th, 1st, and 2nd moment
   pyplot()
-  gr()
   time = sol.t
   moment_0 = vcat(sol.u'...)[:, 1]
   moment_1 = vcat(sol.u'...)[:, 2]

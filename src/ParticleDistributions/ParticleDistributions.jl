@@ -27,13 +27,13 @@ import LinearAlgebra: norm
 import Optim: optimize, LBFGS
 
 # particle mass distributions available for microphysics
-export ParticleDistribution
-export Primitive
-export Exponential
-export Gamma
-export Mixture
-export ExponentialMixture
-export GammaMixture
+export AbstractParticleDistribution
+export PrimitiveParticleDistribution
+export ExponentialPrimitiveParticleDistribution
+export GammaPrimitiveParticleDistribution
+export AdditiveParticleDistribution
+export ExponentialAdditiveParticleDistribution
+export GammaAdditiveParticleDistribution
 
 # methods that query particle mass distributions
 export moment
@@ -47,41 +47,41 @@ export get_params
 
 
 """
-  ParticleDistribution{FT}
+  AbstractParticleDistribution{FT}
 
 A particle mass distribution function, which can be initialized
 for various subtypes of assumed shapes in the microphysics parameterization.
 """
-abstract type ParticleDistribution{FT} end
+abstract type AbstractParticleDistribution{FT} end
 
 
 """
-  Primitive{FT}
+  PrimitiveParticleDistribution{FT}
 
 A particle mass distribution that has support on the positive real
 axis and analytic expressions for moments and partial moments.
 """
-abstract type Primitive{FT} <: ParticleDistribution{FT} end
+abstract type PrimitiveParticleDistribution{FT} <: AbstractParticleDistribution{FT} end
 
 
 """
-  Exponential{FT} <: Primitive{FT}
+  ExponentialPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
 
 Represents particle mass distribution function of exponential shape.
 
 # Constructors
-  Exponential(n::Real, θ::Real)
+  ExponentialPrimitiveParticleDistribution(n::Real, θ::Real)
 
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct Exponential{FT} <: Primitive{FT}
+struct ExponentialPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
   "normalization constant (e.g., droplet number concentration)"
   n::FT
   "scale parameter"
   θ::FT
 
-  function Exponential(n::FT, θ::FT) where {FT<:Real}
+  function ExponentialPrimitiveParticleDistribution(n::FT, θ::FT) where {FT<:Real}
     if n < 0 || θ <= 0
       error("n needs to be nonnegative. θ needs to be positive.")
     end
@@ -92,17 +92,17 @@ end
 
 
 """
-  Gamma{FT} <: Primitive{FT}
+  GammaPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
 
 Represents particle mass distribution function of gamma shape.
 
 # Constructors
-  Gamma(n::Real, θ::Real, k::Real)
+  GammaPrimitiveParticleDistribution(n::Real, θ::Real, k::Real)
 
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct Gamma{FT} <: Primitive{FT}
+struct GammaPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
   "normalization constant (e.g., droplet number concentration)"
   n::FT
   "scale parameter"
@@ -110,7 +110,7 @@ struct Gamma{FT} <: Primitive{FT}
   "shape parameter"
   k::FT
 
-  function Gamma(n::FT, θ::FT, k::FT) where {FT<:Real}
+  function GammaPrimitiveParticleDistribution(n::FT, θ::FT, k::FT) where {FT<:Real}
     if n < 0 || θ <= 0 || k <= 0
       error("n needs to be nonnegative. θ and k need to be positive.")
     end
@@ -120,23 +120,23 @@ end
 
 
 """
-  Mixture{FT} <: ParticleDistribution{FT}
+  AdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
 
 A particle mass distribution function that is a mixture of
 primitive or truncated subdistribution functions.
 
 # Constructors
-  Mixture(dists::ParticleDistribution{Real}...)
-  Mixture(dist_arr::Array{ParticleDistribution{FT}})
+  AdditiveParticleDistribution(dists::AbstractParticleDistribution{Real}...)
+  AdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}})
 
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct Mixture{FT} <: ParticleDistribution{FT}
+struct AdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
   "array of distributions"
-  subdists::Array{ParticleDistribution{FT}}
+  subdists::Array{AbstractParticleDistribution{FT}}
 
-  function Mixture(dists::ParticleDistribution{FT}...) where {FT<:Real}
+  function AdditiveParticleDistribution(dists::AbstractParticleDistribution{FT}...) where {FT<:Real}
     if length(dists) < 2
       error("need at least two subdistributions to form a mixture.")
     end
@@ -145,73 +145,73 @@ struct Mixture{FT} <: ParticleDistribution{FT}
   end
 end
 
-function Mixture(dist_arr::Array{ParticleDistribution{FT}}) where {FT<:Real}
-  Mixture(dist_arr...)
+function AdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}}) where {FT<:Real}
+  AdditiveParticleDistribution(dist_arr...)
 end
 
 """
-  ExponentialMixture{FT} <: ParticleDistribution{FT}
+  ExponentialAdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
 
 A particle mass distribution function that is a mixture of
 Exponential distributions
 
 # Constructors
-  ExponentialMixture(dists::ParticleDistribution{Real}...)
-  ExponentialMixture(dist_arr::Array{ParticleDistribution{FT}})
+  ExponentialAdditiveParticleDistribution(dists::AbstractParticleDistribution{Real}...)
+  ExponentialAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}})
 
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct ExponentialMixture{FT} <: ParticleDistribution{FT}
+struct ExponentialAdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
   "array of exponential distributions"
-  subdists::Array{ParticleDistribution{FT}}
+  subdists::Array{AbstractParticleDistribution{FT}}
 
-  function ExponentialMixture(dists::ParticleDistribution{FT}...) where {FT<:Real}
+  function ExponentialAdditiveParticleDistribution(dists::AbstractParticleDistribution{FT}...) where {FT<:Real}
     if length(dists) < 2
       error("need at least two subdistributions to form a mixture.")
     end
-    if !all(typeof(dists[i])==Exponential{FT} for i in 1:length(dists))
-      error("all subdistributions need to be of type Exponential")
+    if !all(typeof(dists[i])==ExponentialPrimitiveParticleDistribution{FT} for i in 1:length(dists))
+      error("all subdistributions need to be of type ExponentialPrimitiveParticleDistribution")
     end
     new{FT}(collect(dists))
   end
 end
 
-function ExponentialMixture(dist_arr::Array{ParticleDistribution{FT}}) where {FT<:Real}
-  ExponentialMixture(dist_arr...)
+function ExponentialAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}}) where {FT<:Real}
+  ExponentialAdditiveParticleDistribution(dist_arr...)
 end
 
 
 """
-  GammaMixture{FT} <: ParticleDistribution{FT}
+  GammaAdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
 
 A particle mass distribution function that is a mixture of
 Gamma distributions
 
 # Constructors
-  GammaMixture(dists::ParticleDistribution{Real}...)
-  GammaMixture(dist_arr::Array{ParticleDistribution{FT}})
+  GammaAdditiveParticleDistribution(dists::AbstractParticleDistribution{Real}...)
+  GammaAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}})
 
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct GammaMixture{FT} <: ParticleDistribution{FT}
+struct GammaAdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
   "array of Gamma distributions"
-  subdists::Array{ParticleDistribution{FT}}
+  subdists::Array{AbstractParticleDistribution{FT}}
 
-  function GammaMixture(dists::ParticleDistribution{FT}...) where {FT<:Real}
+  function GammaAdditiveParticleDistribution(dists::AbstractParticleDistribution{FT}...) where {FT<:Real}
     if length(dists) < 2
       error("need at least two subdistributions to form a mixture.")
     end
-    if !all(typeof(dists[i])==Gamma{FT} for i in 1:length(dists))
-      error("all subdistributions need to be of type Gamma")
+    if !all(typeof(dists[i])==GammaPrimitiveParticleDistribution{FT} for i in 1:length(dists))
+      error("all subdistributions need to be of type GammaPrimitiveParticleDistribution")
     end
     new{FT}(collect(dists))
   end
 end
 
-function GammaMixture(dist_arr::Array{ParticleDistribution{FT}}) where {FT<:Real}
-  GammaMixture(dist_arr...)
+function GammaAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}}) where {FT<:Real}
+  GammaAdditiveParticleDistribution(dist_arr...)
 end
 
 
@@ -221,18 +221,18 @@ end
   `dist` - particle mass distribution function
 Returns a function that computes the moments of `dist`.
 """
-function moment_func(dist::Exponential{FT}) where {FT<:Real}
+function moment_func(dist::ExponentialPrimitiveParticleDistribution{FT}) where {FT<:Real}
   # moment_of_dist = n * θ^q * Γ(q+1)
   # can reuse the moments of gamma distribution
 
-  moment_func_gamma = moment_func(Gamma(FT(1), FT(1), FT(1)))
+  moment_func_gamma = moment_func(GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(1)))
   function f(n, θ, q)
     moment_func_gamma(n, θ, FT(1), q)
   end
   return f
 end
 
-function moment_func(dist::Gamma{FT}) where {FT<:Real}
+function moment_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT<:Real}
   # moment_of_dist = n * θ^q * Γ(q+k) / Γ(k)
   function f(n, θ, k, q)
     n .* θ.^q .* gamma.(q .+ k) / gamma.(k)
@@ -241,7 +241,7 @@ function moment_func(dist::Gamma{FT}) where {FT<:Real}
 end
 
 
-function moment_func(dist::Union{Mixture{FT}, ExponentialMixture{FT}, GammaMixture{FT}}) where {FT<:Real}
+function moment_func(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}}) where {FT<:Real}
   # mixture moment is sum of moments of subdistributions
   num_pars = [nparams(d) for d in dist.subdists]
   mom_funcs = [moment_func(d) for d in dist.subdists]
@@ -268,7 +268,7 @@ end
   - `q` - is a potentially real-valued order of the moment
 Returns the q-th moment of a particle mass distribution function.
 """
-function moment(dist::ParticleDistribution{FT}, q::FT) where {FT<:Real}
+function moment(dist::AbstractParticleDistribution{FT}, q::FT) where {FT<:Real}
   moment_func(dist)(reduce(vcat, get_params(dist)[2])..., q)
 end
 
@@ -279,18 +279,18 @@ end
   - `dist` - is a particle mass distribution
 Returns the particle mass density function.
 """
-function density_func(dist::Exponential{FT}) where {FT<:Real}
+function density_func(dist::ExponentialPrimitiveParticleDistribution{FT}) where {FT<:Real}
   # density = n / θ * exp(-x/θ)
 
   # can reuse the density of gamma distribution
-  density_func_gamma = density_func(Gamma(FT(1), FT(1), FT(1)))
+  density_func_gamma = density_func(GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(1)))
   function f(n, θ, x)
     density_func_gamma(n, θ, FT(1), x)
   end
   return f
 end
 
-function density_func(dist::Gamma{FT}) where {FT<:Real}
+function density_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT<:Real}
   # density = n / θ^k / Γ(k) * x^(k-1) * exp(-x/θ)
   function f(n, θ, k, x)
     n .* x.^(k .- 1) ./ θ.^k ./ gamma.(k) .* exp.(-x ./ θ)
@@ -298,7 +298,7 @@ function density_func(dist::Gamma{FT}) where {FT<:Real}
   return f
 end
 
-function density_func(dist::Union{Mixture{FT}, ExponentialMixture{FT}, GammaMixture{FT}}) where {FT<:Real}
+function density_func(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}}) where {FT<:Real}
   # mixture density is sum of densities of subdistributions
   num_pars = [nparams(d) for d in dist.subdists]
   dens_funcs = [density_func(d) for d in dist.subdists]
@@ -325,7 +325,7 @@ end
   - `x` - is a point to evaluate the density of `dist` at
 Returns the particle mass density evaluated at point `x`.
 """
-function density(dist::ParticleDistribution{FT}, x::FT) where {FT<:Real}
+function density(dist::AbstractParticleDistribution{FT}, x::FT) where {FT<:Real}
   if any(x .< zero(x))
     error("Density can only be evaluated at nonnegative values.")
   end
@@ -339,11 +339,11 @@ end
   - `dist` - is a particle mass distribution
 Returns the number of settable parameters of dist.
 """
-function nparams(dist::Primitive{FT}) where {FT<:Real}
+function nparams(dist::PrimitiveParticleDistribution{FT}) where {FT<:Real}
   length(propertynames(dist))
 end
 
-function nparams(dist::Union{Mixture{FT}, ExponentialMixture{FT}, GammaMixture{FT}}) where {FT<:Real}
+function nparams(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}}) where {FT<:Real}
   sum([nparams(d) for d in dist.subdists])
 end
 
@@ -354,13 +354,13 @@ end
   - `dist` - is a particle mass distribution
 Returns the names and values of settable parameters for a dist.
 """
-function get_params(dist::Primitive{FT}) where {FT<:Real}
+function get_params(dist::PrimitiveParticleDistribution{FT}) where {FT<:Real}
   params = Array{Symbol, 1}(collect(propertynames(dist)))
   values = Array{FT, 1}([getproperty(dist, p) for p in params])
   return params, values
 end
 
-function get_params(dist::Union{Mixture{FT}, ExponentialMixture{FT}, GammaMixture{FT}}) where {FT<:Real}
+function get_params(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}}) where {FT<:Real}
   params, values = Array{Array{Symbol, 1}}([]), Array{Array{FT, 1}}([])
   for (i, d) in enumerate(dist.subdists)
     params_sub, values_sub = get_params(d)
@@ -376,65 +376,65 @@ end
 
   - `dist` - is a particle mass distribution
 Returns a new distribution of same type as input with `params` as parameters.
-If dist is of type `Mixture` then subdistributions are updated.
+If dist is of type `AdditiveParticleDistribution` then subdistributions are updated.
 """
-function update_params(dist::Exponential{FT}, values::Array{FT}) where {FT<:Real}
-  Exponential(values...)
+function update_params(dist::ExponentialPrimitiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
+  ExponentialPrimitiveParticleDistribution(values...)
 end
 
-function update_params(dist::Gamma{FT}, values::Array{FT}) where {FT<:Real}
-  Gamma(values...)
+function update_params(dist::GammaPrimitiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
+  GammaPrimitiveParticleDistribution(values...)
 end
 
-function update_params(dist::Mixture{FT}, values::Array{FT}) where {FT<:Real}
+function update_params(dist::AdditiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
   if length(values) != nparams(dist)
     error("length of values must match number of params of dist.")
   end
 
   # create new subdistributions one dist at a time
   i = 1
-  dist_arr = Array{ParticleDistribution{FT}}([])
+  dist_arr = Array{AbstractParticleDistribution{FT}}([])
   for d in dist.subdists
     n = nparams(d)
     push!(dist_arr, update_params(d, values[i:i+n-1]))
     i += n
   end
 
-  Mixture(dist_arr)
+  AdditiveParticleDistribution(dist_arr)
 end
 
-function update_params(dist::ExponentialMixture{FT}, values::Array{FT}) where {FT<:Real}
+function update_params(dist::ExponentialAdditiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
   if length(values) != nparams(dist)
     error("length of values must match number of params of dist.")
   end
 
   # create new subdistributions one dist at a time
   i = 1
-  dist_arr = Array{ParticleDistribution{FT}}([])
+  dist_arr = Array{AbstractParticleDistribution{FT}}([])
   for d in dist.subdists
     n = nparams(d)
     push!(dist_arr, update_params(d, values[i:i+n-1]))
     i += n
   end
 
-  ExponentialMixture(dist_arr)
+  ExponentialAdditiveParticleDistribution(dist_arr)
 end
 
-function update_params(dist::GammaMixture{FT}, values::Array{FT}) where {FT<:Real}
+function update_params(dist::GammaAdditiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
   if length(values) != nparams(dist)
     error("length of values must match number of params of dist.")
   end
 
   # create new subdistributions one dist at a time
   i = 1
-  dist_arr = Array{ParticleDistribution{FT}}([])
+  dist_arr = Array{AbstractParticleDistribution{FT}}([])
   for d in dist.subdists
     n = nparams(d)
     push!(dist_arr, update_params(d, values[i:i+n-1]))
     i += n
   end
 
-  GammaMixture(dist_arr)
+  GammaAdditiveParticleDistribution(dist_arr)
 end
 
 
@@ -486,7 +486,8 @@ The moments-to-parameters mapping is done differently depending on the
 ParticleDistribution type - e.g., it can be done analytically (for priimtive
 ParticleDistributions), it can involve solving an optimization problem (for
 general ParticleDistributions), or it can involve solving a nonlinear system of
-equations (for GammaMixtures and ExponentialMixtures).
+equations (for GammaAdditiveParticleDistributions and 
+ExponentialAdditiveParticleDistributions).
 For distributions where none of these methods work well, an alternative
 solution would be to train a regression model (e.g., a random forest) to learn
 the moments-to-parameters map and to write a moments_to_params function which
@@ -499,7 +500,7 @@ function update_params_from_moments(ODE_parameters, target_moments::Array{FT}) w
   moments_to_params(dist_prev, target_moments)
 end
 
-function moments_to_params(dist::Gamma{FT}, target_moments::Array{FT}) where {FT<:Real}
+function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_moments::Array{FT}) where {FT<:Real}
   if length(target_moments) != nparams(dist)
     error("Number of moments must be consistent with distribution type.")
   end
@@ -514,7 +515,7 @@ function moments_to_params(dist::Gamma{FT}, target_moments::Array{FT}) where {FT
 
 end
 
-function moments_to_params(dist::Exponential{FT}, target_moments::Array{FT}) where {FT<:Real}
+function moments_to_params(dist::ExponentialPrimitiveParticleDistribution{FT}, target_moments::Array{FT}) where {FT<:Real}
   if length(target_moments) != nparams(dist)
     error("Number of moments must be consistent with distribution type.")
   end
@@ -528,7 +529,7 @@ function moments_to_params(dist::Exponential{FT}, target_moments::Array{FT}) whe
 
 end
 
-function moments_to_params(dist::ParticleDistribution{FT}, target_moments::Array{FT}) where {FT<:Real}
+function moments_to_params(dist::AbstractParticleDistribution{FT}, target_moments::Array{FT}) where {FT<:Real}
   n_moments = length(target_moments)
   if n_moments != nparams(dist)
     error("Number of moments must be consistent with distribution type.")
@@ -552,7 +553,7 @@ function moments_to_params(dist::ParticleDistribution{FT}, target_moments::Array
   update_params(dist, exp.(r.minimizer))
 end
 
-function moments_to_params(dist::Union{ExponentialMixture, GammaMixture}, target_moments::Array{FT}) where {FT<:Real}
+function moments_to_params(dist::Union{ExponentialAdditiveParticleDistribution, GammaAdditiveParticleDistribution}, target_moments::Array{FT}) where {FT<:Real}
   # number of equations
   n_equations = length(target_moments)
   # number of subdistributions
@@ -567,10 +568,10 @@ function moments_to_params(dist::Union{ExponentialMixture, GammaMixture}, target
   # Set up system of equations relating moments to the unknown parameters.
   c(x) = construct_system(x, dist, target_moments)
 
-  # Use Ipopt as an alternative solver. By far not as good as Knitro though.
-  # TODO: Allow the user to choose the solver.
-  # Use Ipopt to solve for the unknowns. ADNLPModel is an AbstractNLPModel
-  # using ForwardDiff to compute the derivatives
+  # Use Ipopt to solve for the unknowns, using the distribution parameters at
+  # the previous time step as an initial guess for the parameters at the
+  # current time step. ADNLPModel is an AbstractNLPModel using ForwardDiff to 
+  # compute the derivative.
   model = ADNLPModel(x -> 0.0, start_params_ordered; c=c,
                      lcon=zeros(n_equations), ucon=zeros(n_equations),
                      lvar=zeros(n_vars))
@@ -584,7 +585,7 @@ function moments_to_params(dist::Union{ExponentialMixture, GammaMixture}, target
 end
 
 @init @require NLPModelsKnitro = "bec4dd0d-7755-52d5-9a02-22f0ffc7efcb" begin
-  function moments_to_params(dist::Union{ExponentialMixture, GammaMixture}, target_moments::Array{FT}) where {FT<:Real}
+  function moments_to_params(dist::Union{ExponentialAdditiveParticleDistribution, GammaAdditiveParticleDistribution}, target_moments::Array{FT}) where {FT<:Real}
     # number of equations
     n_equations = length(target_moments)
     # number of subdistributions
@@ -619,13 +620,13 @@ end
   construct_system(x, dist, M::Array{FT})
 
   - `x` - array of unknowns (= the distribution parameters)
-  - `dist` - ParticleDistribution
+  - `dist` - AbstractParticleDistribution
   - `M`- array of moments
 
 Constructs a system of equations relating the moments (M) to the unknown
 parameters (x) of the given distribution
 """
-function construct_system(x, dist::GammaMixture{FT}, M::Array{FT}) where {FT<:Real}
+function construct_system(x, dist::GammaAdditiveParticleDistribution{FT}, M::Array{FT}) where {FT<:Real}
   n_equations = length(M)
   m = length(dist.subdists)
 
@@ -652,7 +653,7 @@ function construct_system(x, dist::GammaMixture{FT}, M::Array{FT}) where {FT<:Re
   return F
 end
 
-function construct_system(x, dist::ExponentialMixture{FT}, M::Array{FT}) where {FT<:Real}
+function construct_system(x, dist::ExponentialAdditiveParticleDistribution{FT}, M::Array{FT}) where {FT<:Real}
   n_equations = length(M)
   m = length(dist.subdists)
 

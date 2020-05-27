@@ -13,7 +13,7 @@ function sm1916_array(n_steps, δt)
 
   # Initial condition
   mom = [1.0, 2.0]
-  dist = Dict(:dist => Exponential(1.0, 1.0))
+  dist = Dict(:dist => ExponentialPrimitiveParticleDistribution(1.0, 1.0))
 
   # Euler steps
   for i in 1:n_steps
@@ -31,7 +31,7 @@ function sm1916_func(n_steps, δt)
 
   # Initial condition
   mom = [1.0, 2.0]
-  dist = Dict(:dist => Exponential(1.0, 1.0))
+  dist = Dict(:dist => ExponentialPrimitiveParticleDistribution(1.0, 1.0))
 
   # Euler steps
   for i in 1:n_steps
@@ -59,6 +59,6 @@ end
 
 # Sedimentation moment flux tests
 c = [1.0, -1.0]
-dist = Dict(:dist => Exponential(1.0, 1.0))
+dist = Dict(:dist => ExponentialPrimitiveParticleDistribution(1.0, 1.0))
 mom = [1.0, 1.0]
 @test get_flux_sedimentation(mom, dist, c) ≈ [0.0, 1.0] rtol=rtol

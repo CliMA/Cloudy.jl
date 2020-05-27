@@ -10,10 +10,10 @@ rtol = 1e-3
 
 # Exponential distribution
 # Initialization
-dist = Exponential(1.0, 1.0)
+dist = ExponentialPrimitiveParticleDistribution(1.0, 1.0)
 @test (dist.n, dist.θ) == (FT(1.0), FT(1.0))
-@test_throws Exception Exponential(-1.0, 2.)
-@test_throws Exception Exponential(1.0, -2.)
+@test_throws Exception ExponentialPrimitiveParticleDistribution(-1.0, 2.)
+@test_throws Exception ExponentialPrimitiveParticleDistribution(1.0, -2.)
 
 # Getters and setters
 @test nparams(dist) == 2
@@ -24,7 +24,7 @@ dist = update_params(dist, [1.0, 2.0])
 @test_throws Exception update_params(dist, [0.2, -1.1])
 
 # Moments, moments, density
-dist = Exponential(1.0, 2.0)
+dist = ExponentialPrimitiveParticleDistribution(1.0, 2.0)
 @test moment_func(dist)(1.0, 2.0, 0.0) == 1.0
 @test moment(dist, 1.0) == 2.0
 @test moment(dist, 0.0) == 1.0
@@ -44,11 +44,11 @@ dist = update_params_from_moments(dist_dict, [1.1, 2.0])
 
 # Gamma distribution
 # Initialization
-dist = Gamma(1.0, 1.0, 2.0)
+dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 @test (dist.n, dist.θ, dist.k) == (FT(1.0), FT(1.0), FT(2.0))
-@test_throws Exception Gamma(-1.0, 2.0, 3.0)
-@test_throws Exception Gamma(1.0, -2.0, 3.0)
-@test_throws Exception Gamma(1.0, 2.0, -3.0)
+@test_throws Exception GammaPrimitiveParticleDistribution(-1.0, 2.0, 3.0)
+@test_throws Exception GammaPrimitiveParticleDistribution(1.0, -2.0, 3.0)
+@test_throws Exception GammaPrimitiveParticleDistribution(1.0, 2.0, -3.0)
 
 # Getters and settes
 @test nparams(dist) == 3
@@ -60,7 +60,7 @@ dist = update_params(dist, [1.0, 2.0, 1.0])
 @test_throws Exception update_params(dist, [0.2, 1.1, -3.4])
 
 # Moments, moments, density
-dist = Gamma(1.0, 1.0, 2.0)
+dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 @test moment_func(dist)(1.0, 1.0, 2.0, 0.0) == 1.0
 @test moment(dist, 0.0) == 1.0
 @test moment(dist, 1.0) == 2.0
@@ -85,11 +85,14 @@ dist = update_params_from_moments(dist_dict, [1.1, 2.423, 8.112])
 @test moment(dist, 2.0) ≈ 9.816 rtol=rtol
 
 
-# Mixture distributions
+# Additive distributions
 # Initialization
-dist = Mixture(Exponential(1.0, 1.0), Exponential(2.0, 2.0))
+dist = AdditiveParticleDistribution(
+            ExponentialPrimitiveParticleDistribution(1.0, 1.0), 
+            ExponentialPrimitiveParticleDistribution(2.0, 2.0)
+       )
 dist_dict = Dict(:dist => dist)
-@test typeof(dist.subdists) == Array{ParticleDistribution{FT}, 1}
+@test typeof(dist.subdists) == Array{AbstractParticleDistribution{FT}, 1}
 @test length(dist.subdists) == 2
 
 # Getters and setters
@@ -104,8 +107,8 @@ dist = update_params(dist, [0.2, 0.4, 3.1, 4.1])
 
 # Moments, moments, density
 dist = update_params(dist, [1.0, 1.0, 2.0, 2.0])
-p1 = moment(Exponential(1.0, 1.0), 2.23)
-p2 = moment(Exponential(2.0, 2.0), 2.23)
+p1 = moment(ExponentialPrimitiveParticleDistribution(1.0, 1.0), 2.23)
+p2 = moment(ExponentialPrimitiveParticleDistribution(2.0, 2.0), 2.23)
 @test moment_func(dist)(reduce(vcat, get_params(dist)[2])..., 2.23) == p1 + p2
 @test moment_func(dist)(reduce(vcat, get_params(dist)[2])..., [0.0, 1.0]) == [3.0, 5.0]
 @test moment(dist, 2.23) == p1 + p2
