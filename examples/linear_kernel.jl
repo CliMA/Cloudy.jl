@@ -19,7 +19,7 @@ function main()
 
   # Initial condition
   moments_init = [150.0, 30.0, 200.0]
-  dist_init = Gamma(150.0, 6.466666666666667, 0.030928153898493804)
+  dist_init = GammaPrimitiveParticleDistribution(150.0, 6.4666666667, 0.030928153898)
 
   # Set up the ODE problem
   # Step 1) Define termination criterion: stop integration when one of the 
@@ -79,9 +79,8 @@ function main()
   prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
   sol = solve(prob, Tsit5(), callback=cb, reltol=tol, abstol=tol)
 
-  # Plot the solution for the 0th moment and compare to analytical solution
+  # Plot the solution for the 0th, 1st and 2nd moment
   pyplot()
-  gr()
   time = sol.t
   moment_0 = vcat(sol.u'...)[:, 1]
   moment_1 = vcat(sol.u'...)[:, 2]
@@ -90,7 +89,6 @@ function main()
   plot(time,
       moment_0,
       linewidth=3,
-      title="\$C(m, m') = k(m + m')\$ vs. Climate Machine",
       xaxis="time",
       yaxis="M\$_k\$(time)",
       xlims=tspan,

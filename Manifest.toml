@@ -287,12 +287,6 @@ git-tree-sha1 = "20abc3b0b00c54e952bea32f63dd292acf03d589"
 uuid = "497a8b3b-efae-58df-a0af-a86822472b78"
 version = "1.1.10"
 
-[[DynamicPolynomials]]
-deps = ["DataStructures", "Future", "LinearAlgebra", "MultivariatePolynomials", "MutableArithmetics", "Pkg", "Reexport", "Test"]
-git-tree-sha1 = "6966ac7edc96f634f7ce0dc93709e5421b4a68e7"
-uuid = "7c1d4256-1411-5781-91ec-d7bc3513ac07"
-version = "0.3.10"
-
 [[ElasticArrays]]
 deps = ["Adapt"]
 git-tree-sha1 = "7aae93c4adb0c5df51052ade3398684b1147e8b4"
@@ -388,12 +382,6 @@ deps = ["Base64", "Dates", "IniFile", "MbedTLS", "Sockets"]
 git-tree-sha1 = "fe31f4ff144392ad8176f5c7c03cca6ba320271c"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 version = "0.8.14"
-
-[[HomotopyContinuation]]
-deps = ["DoubleFloats", "DynamicPolynomials", "ElasticArrays", "FixedPolynomials", "Latexify", "LinearAlgebra", "MixedSubdivisions", "MultivariatePolynomials", "OrderedCollections", "Parameters", "PrettyTables", "Printf", "ProjectiveVectors", "Random", "StaticArrays", "StaticPolynomials", "Test", "TreeViews"]
-git-tree-sha1 = "8f04d89a3eb8169570e9467e1c7fcb40070d4215"
-uuid = "f213a82b-91d6-5c5d-acf7-10f1c761b327"
-version = "1.4.1"
 
 [[Inflate]]
 git-tree-sha1 = "f5fc07d4e706b84f72d54eedcc1c13d92fb0871c"

@@ -18,8 +18,11 @@ function main()
   kernel = CoalescenceTensor(kernel_func, 1, 700.0)
 
   # Initial condition
-  moments_init = [1000.0, 6020.0, 56506.9, 724712.35, 1.18e7, 2.35e8]
-  dist_init = GammaMixture(Gamma(500.0, 3.5, 2.0), Gamma(500.0, 2.8, 1.8))
+  moments_init = [1000.0, 6020.0, 56506.9, 724712.35, 1.18e7]
+  dist_init = GammaAdditiveParticleDistribution(
+                    GammaPrimitiveParticleDistribution(500.0, 3.5, 2.0), 
+                    GammaPrimitiveParticleDistribution(500.0, 2.8, 1.8)
+              )
                   
   # Set up the ODE problem
   # Step 1) Define termination criterion: stop integration when one of the 
@@ -81,7 +84,6 @@ function main()
 
   # Plot the solution for the first 4 moments
   pyplot()
-  gr()
   time = sol.t
   moment_0 = vcat(sol.u'...)[:, 1]
   moment_1 = vcat(sol.u'...)[:, 2]
