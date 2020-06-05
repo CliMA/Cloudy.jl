@@ -14,14 +14,14 @@ function main()
   tol = 1e-8
 
   # Physicsal parameters
-  kernel_func = x -> 1/3.14/1e5 * x[1]*x[2]
-  kernel = CoalescenceTensor(kernel_func, 1, 1000.0)
+  kernel_func = x -> 1/3.14/1e3 * x[1]*x[2]
+  kernel = CoalescenceTensor(kernel_func, 1, 700.0)
 
   # Initial condition
-  moments_init = [1000.0, 6020.0, 56506.9, 724712.35, 1.18e7]
+  moments_init = [700.0, 1026.0, 2640.24, 9997.3296, 51511.745664, 343261.49988096]
   dist_init = GammaAdditiveParticleDistribution(
-                    GammaPrimitiveParticleDistribution(500.0, 3.5, 2.0), 
-                    GammaPrimitiveParticleDistribution(500.0, 2.8, 1.8)
+                    GammaPrimitiveParticleDistribution(300.0, 1.5, 1.0), 
+                    GammaPrimitiveParticleDistribution(400.0, 0.8, 1.8)
               )
 
   # Set up the ODE problem
@@ -83,7 +83,7 @@ function main()
   sol = solve(prob, Tsit5(), callback=cb, reltol=tol, abstol=tol)
 
   # Plot the solution for the first 4 moments
-  pyplot()
+  gr()
   time = sol.t
   moment_0 = vcat(sol.u'...)[:, 1]
   moment_1 = vcat(sol.u'...)[:, 2]
