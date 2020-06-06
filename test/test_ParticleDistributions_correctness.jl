@@ -77,12 +77,12 @@ dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 dist_dict = Dict(:dist => dist)
 dist = update_params_from_moments(dist_dict, [1.1, 2.0, 4.1])
 @test moment(dist, 0.0) ≈ 1.1 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.2 rtol=rtol
-@test moment(dist, 2.0) ≈ 4.96 rtol=rtol
+@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
+@test moment(dist, 2.0) ≈ 4.1 rtol=rtol
 dist = update_params_from_moments(dist_dict, [1.1, 2.423, 8.112])
 @test moment(dist, 0.0) ≈ 1.1 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.665 rtol=rtol
-@test moment(dist, 2.0) ≈ 9.816 rtol=rtol
+@test moment(dist, 1.0) ≈ 2.423 rtol=rtol
+@test moment(dist, 2.0) ≈ 8.112 rtol=rtol
 
 
 # Additive distributions

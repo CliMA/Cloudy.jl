@@ -119,7 +119,7 @@ function main()
             yaxis="M3",
   )         
   plot(p0, p1, p2, p3, layout=(2, 2), legend=false)
-  savefig("mixture_dist_product_kernel_example.png")
+  savefig("additive_dist_product_kernel_example.png")
 end
 
 main()
