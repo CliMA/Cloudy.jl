@@ -507,9 +507,12 @@ function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_
   check_moment_consistency(target_moments)
 
   # target_moments[1] == M0, target_moments[2] == M1, target_moments[3] == M2
-  n = target_moments[1]
-  θ = (target_moments[1]*target_moments[3] - target_moments[2]^2) / target_moments[2]
-  k = target_moments[2]^2 / (target_moments[1]*target_moments[3] - target_moments[2]^2)
+   M0 = target_moments[1]
+   M1 = target_moments[2]
+   M2 = target_moments[3]
+   n = M0
+   θ = -(M1^2 - M0*M2)/(M0*M1)
+   k = -M1^2/(M1^2 - M0*M2)
 
   update_params(dist, [n, θ, k])
 
@@ -522,8 +525,10 @@ function moments_to_params(dist::ExponentialPrimitiveParticleDistribution{FT}, t
   check_moment_consistency(target_moments)
 
   # target_moments[1] == M0, target_moments[2] == M1
-  n = target_moments[1]
-  θ = target_moments[2] / target_moments[1]
+  M0 = target_moments[1]
+  M1 = target_moments[2]
+  n = M0
+  θ = M1/M0
 
   update_params(dist, [n, θ])
 
