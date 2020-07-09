@@ -507,7 +507,7 @@ function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_
 
   # target_moments[1] == M0, target_moments[2] == M1, target_moments[3] == M2
   # Add epsilon to the denominator to help counteract issues
-  epsilon = 5e3
+  epsilon = 0
    M0 = target_moments[1]
    M1 = target_moments[2]
    M2 = target_moments[3]

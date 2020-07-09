@@ -28,36 +28,18 @@ function main()
 
   ODE_parameters = Dict(:dist => dist_init)
 
-  # implement callbacks
-  function out_of_bounds(m, t, integrator)
-    for i in 1:3
-      if m[i] < 0
-        return true
-      else
-        return false
-      end
-    end
+  # implement callbacks to halt the integration
+  function condition(m,t,integrator) 
+    println("Condition checked")
+    integrator.t>=1e-9
   end
 
-  function condition(m,t,integrator)
-    m[2]
+  function affect!(integrator) 
+    terminate!(integrator)
   end
-
-  function affect!(integrator)
-    integrator.u[2] = FT(0)
-  end
-  #function affect!(integrator)
-  #  ddt_try = get_proposed_dt(integrator)
-  #  set_proposed_dt!(integrator, dt_try/2)
-  #end
-
-  #function affect!(integrator)
-  #  for i in 1:3
-  #    if integrator.
-
 
   #condition(m, t, integrator) = out_of_bounds(m, t, integrator)
-  cb=ContinuousCallback(condition, affect!)
+  cb=DiscreteCallback(condition, affect!)
   #cb = PositiveDomain()
 
   # set up ODE
@@ -66,7 +48,7 @@ function main()
   # solve the ODE
   println("Solving ODE...")
   prob = ODEProblem(rhs, moments_S_init, tspan, ODE_parameters)
-  alg = AutoDP5(Rodas5())
+  alg = Tsit5()
   sol = solve(prob, alg, reltol = tol, abstol = tol, callback=cb)
   #sol = solve(prob, callback=cb)
   #sol = solve(prob, reltol = tol, abstol = tol, isoutofdomain = (m,par,t) -> any(x->x<0, m))
@@ -127,33 +109,39 @@ function get_aerosol_growth_3mom(mom_p::Array{FT}, ODE_parameters::Dict, t::FT, 
   println("time: ", t)
   println("prognostic moments: ", mom_p)
 
-  dist = update_params_from_moments(ODE_parameters, mom_p[1:3])
-  ODE_parameters[:dist] = dist
-  println("Distribution: ", dist)
-
-  mom_d = Array{FT}(undef, 4)
-  S = mom_p[end]
-
-  # compute the diagnostic moments: M-1 through M-4
-  s = 5; #add to moment indexing
-  for k in -4:-1
-    mom_d[k+s] = moment(dist, FT(k))
+  try
+    dist = update_params_from_moments(ODE_parameters, mom_p[1:3])
+    ODE_parameters[:dist] = dist
+    println("Distribution: ", dist)
+  
+    mom_d = Array{FT}(undef, 4)
+    S = mom_p[end]
+  
+    # compute the diagnostic moments: M-1 through M-4
+    s = 5; #add to moment indexing
+    for k in -4:-1
+      mom_d[k+s] = moment(dist, FT(k))
+    end
+    mom = vcat(mom_d, mom_p)
+    println("diagnostic moments: ", mom_d)
+  
+    coeffs = get_aerosol_coefficients(FT)
+    ddt = Array{FT}(undef,4)
+  
+    # compute the time rate of change
+    ddt[1] = 0;
+    ddt[2] = coeffs[1]*S*mom[-1+s] + coeffs[2]*mom[-2+s] + coeffs[3]*mom[-4+s]
+    ddt[3] = 2*(coeffs[1]*S*mom[0+s] + coeffs[2]*mom[-1+s] + coeffs[3]*mom[-3+s])
+    # dS/dt
+    ddt[end] = coeffs[4]*v_up - coeffs[5]*(coeffs[1]*S*mom[1+s] + coeffs[2]*mom[0+s] + coeffs[3]*mom[-2+s])
+    println("Derivative wrt  time: ", ddt)
+    println()
+    return ddt
+  catch e
+    ddt = [Inf, Inf, Inf, Inf]
+    return ddt
   end
-  mom = vcat(mom_d, mom_p)
-  println("diagnostic moments: ", mom_d)
 
-  coeffs = get_aerosol_coefficients(FT)
-  ddt = Array{FT}(undef,4)
-
-  # compute the time rate of change
-  ddt[1] = 0;
-  ddt[2] = coeffs[1]*S*mom[-1+s] + coeffs[2]*mom[-2+s] + coeffs[3]*mom[-4+s]
-  ddt[3] = 2*(coeffs[1]*S*mom[0+s] + coeffs[2]*mom[-1+s] + coeffs[3]*mom[-3+s])
-  # dS/dt
-  ddt[end] = coeffs[4]*v_up - coeffs[5]*(coeffs[1]*S*mom[1+s] + coeffs[2]*mom[0+s] + coeffs[3]*mom[-2+s])
-  println("Derivative wrt  time: ", ddt)
-  println()
-  return ddt
 end
 
 """

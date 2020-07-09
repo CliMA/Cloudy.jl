@@ -7,6 +7,7 @@ function f(du,u,p,t)
 end
 
 function condition(u,t,integrator) # Event when event_f(u,t) == 0
+    println("Condition called")
     u[1]
 end
 
