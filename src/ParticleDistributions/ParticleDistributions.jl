@@ -45,7 +45,6 @@ export update_params_from_moments
 # setters and getters
 export get_params
 
-
 """
   AbstractParticleDistribution{FT}
 
@@ -507,12 +506,14 @@ function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_
   check_moment_consistency(target_moments)
 
   # target_moments[1] == M0, target_moments[2] == M1, target_moments[3] == M2
+  # Add epsilon to the denominator to help counteract issues
+  epsilon = 5e3
    M0 = target_moments[1]
    M1 = target_moments[2]
    M2 = target_moments[3]
    n = M0
    θ = -(M1^2 - M0*M2)/(M0*M1)
-   k = -M1^2/(M1^2 - M0*M2)
+   k = -M1^2/(M1^2 - M0*M2 - epsilon^2)
 
   update_params(dist, [n, θ, k])
 
