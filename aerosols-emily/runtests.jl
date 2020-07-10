@@ -27,21 +27,17 @@ function main()
   println()
 
   ODE_parameters = Dict(:dist => dist_init)
-
   # implement callbacks to halt the integration
   function condition(m,t,integrator) 
     println("Condition checked")
-    integrator.t>=1e-9
+    t>=1e-9
   end
 
   function affect!(integrator) 
     terminate!(integrator)
   end
-
-  #condition(m, t, integrator) = out_of_bounds(m, t, integrator)
+  
   cb=DiscreteCallback(condition, affect!)
-  #cb = PositiveDomain()
-
   # set up ODE
   rhs(m, par, t) = get_aerosol_growth_3mom(m, par, t, v_up)
 
@@ -49,8 +45,7 @@ function main()
   println("Solving ODE...")
   prob = ODEProblem(rhs, moments_S_init, tspan, ODE_parameters)
   alg = Tsit5()
-  sol = solve(prob, alg, reltol = tol, abstol = tol, callback=cb)
-  #sol = solve(prob, callback=cb)
+  sol = solve(prob, alg, dt=1e-6, callback=cb)
   #sol = solve(prob, reltol = tol, abstol = tol, isoutofdomain = (m,par,t) -> any(x->x<0, m))
 
   # Plot the solution for the 0th moment

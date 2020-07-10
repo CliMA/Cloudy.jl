@@ -6,16 +6,17 @@ function f(du,u,p,t)
     du[2] = -p
 end
 
-function condition(u,t,integrator) # Event when event_f(u,t) == 0
-    println("Condition called")
-    u[1]
+# implement callbacks to halt the integration
+function condition(m,t,integrator) 
+    println("Condition checked")
+    t>=1e-9
 end
 
-function affect!(integrator)
-    integrator.u[2] = -integrator.u[2]
+function affect!(integrator) 
+    terminate!(integrator)
 end
 
-cb = ContinuousCallback(condition,affect!)
+cb=DiscreteCallback(condition, affect!)
 
 u0 = [50.0,0.0]
 tspan = (0.0,15.0)
