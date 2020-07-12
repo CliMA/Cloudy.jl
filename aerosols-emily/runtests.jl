@@ -14,7 +14,11 @@ function main()
   # Initial condition:
   S_init = FT(0.05)
   dist_init = GammaPrimitiveParticleDistribution(FT(340), FT(28.0704505), FT(3.8564))
-  v_up = FT(1)
+  dry_dist = dist_init
+  kappa=0.6
+  M3_dry = moment(dist_init, FT(3))
+  print(M3_dry)
+  v_up = FT(0)
   tspan = (FT(0), FT(1))
 
   moments_S_init = FT[0.0, 0.0, 0.0, S_init]
@@ -27,26 +31,49 @@ function main()
   println()
 
   ODE_parameters = Dict(:dist => dist_init)
-  # implement callbacks to halt the integration
-  function condition(m,t,integrator) 
+  
+  # implement callbacks to halt the integration: maximum step in parameter space
+  function param_change(m,t,integrator; max_param_change=[Inf, Inf, Inf]) 
     println("Condition checked")
-    t>=1e-9
+    
+    # find the propose change
+    dist_prev = deepcopy(integrator.p)
+    dist_next = deepcopy(integrator.p)
+
+    dist_prev = update_params_from_moments(dist_prev, integrator.uprev[1:3])
+    param_prev = get_params(dist_prev)[2]
+  
+    dist_next = update_params_from_moments(dist_next, integrator.u[1:3])
+    param_next = get_params(dist_next)[2]
+
+    d_param = minimum(max_param_change - abs.(param_prev - param_next))
+
+    return d_param
+  end
+
+  function what_time(m,t,integrator)
+    println("Condition checked")
+    t2 = 10*t
+    return t2-1e-6
   end
 
   function affect!(integrator) 
-    terminate!(integrator)
+    integrator.set_proposed_dt!(integrator.get_proposed_dt/2)
   end
   
-  cb=DiscreteCallback(condition, affect!)
+  max_param_change1 = [0.0, 2.0, 2.0]
+  #condition(m,t,integrator) = what_time(m,t,integrator)
+  condition(m, t, integrator) = param_change(m, t, integrator; max_param_change=max_param_change1)
+  cb=ContinuousCallback(condition, affect!)
+  
   # set up ODE
-  rhs(m, par, t) = get_aerosol_growth_3mom(m, par, t, v_up)
+  rhs(m, par, t) = get_aerosol_growth_3mom(m, par, t, v_up, kappa, M3_dry)
 
   # solve the ODE
   println("Solving ODE...")
   prob = ODEProblem(rhs, moments_S_init, tspan, ODE_parameters)
   alg = Tsit5()
-  sol = solve(prob, alg, dt=1e-6, callback=cb)
-  #sol = solve(prob, reltol = tol, abstol = tol, isoutofdomain = (m,par,t) -> any(x->x<0, m))
+  sol = solve(prob, alg, dt=1e-7, callback=cb)
 
   # Plot the solution for the 0th moment
   pyplot()
@@ -100,14 +127,16 @@ get_aerosol_growth_3mom(mom_p::Array{Float64}, v_up::Float64=1)
   - 'a' = [G, GA, -G k rd^3, alpha, gamma] [=] [m2/sec, m3/sec, m5/sec, 1/m2, 1/m3]
 
 """
-function get_aerosol_growth_3mom(mom_p::Array{FT}, ODE_parameters::Dict, t::FT, v_up::FT=1.0) where {FT}
-  println("time: ", t)
-  println("prognostic moments: ", mom_p)
+function get_aerosol_growth_3mom(mom_p::Array{FT}, ODE_parameters::Dict, t::FT, v_up::FT, kappa::FT, M3_dry::FT) where {FT}
+  #println("time: ", t)
+  #println("prognostic moments: ", mom_p)
+  @show t
+  @show mom_p
 
   try
     dist = update_params_from_moments(ODE_parameters, mom_p[1:3])
     ODE_parameters[:dist] = dist
-    println("Distribution: ", dist)
+    #println("Distribution: ", dist)
   
     mom_d = Array{FT}(undef, 4)
     S = mom_p[end]
@@ -118,9 +147,9 @@ function get_aerosol_growth_3mom(mom_p::Array{FT}, ODE_parameters::Dict, t::FT, 
       mom_d[k+s] = moment(dist, FT(k))
     end
     mom = vcat(mom_d, mom_p)
-    println("diagnostic moments: ", mom_d)
+    #println("diagnostic moments: ", mom_d)
   
-    coeffs = get_aerosol_coefficients(FT)
+    coeffs = get_aerosol_coefficients(kappa, M3_dry)
     ddt = Array{FT}(undef,4)
   
     # compute the time rate of change
@@ -130,10 +159,11 @@ function get_aerosol_growth_3mom(mom_p::Array{FT}, ODE_parameters::Dict, t::FT, 
     # dS/dt
     ddt[end] = coeffs[4]*v_up - coeffs[5]*(coeffs[1]*S*mom[1+s] + coeffs[2]*mom[0+s] + coeffs[3]*mom[-2+s])
     println("Derivative wrt  time: ", ddt)
-    println()
+    #println()
     return ddt
   catch e
-    ddt = [Inf, Inf, Inf, Inf]
+    ddt = [0,0,0,0]
+    println("failed")
     return ddt
   end
 
@@ -151,9 +181,7 @@ end
  - 'a' = [G, GA, -G k rd^3, alpha, gamma] [=] [m2/sec, m3/sec, m5/sec, 1/m2, 1/m3]
 
 """
-function get_aerosol_coefficients(::Type{FT};
-  kappa::FT=0.6,
-  rd::FT=10.0,
+function get_aerosol_coefficients(kappa::FT, M3_dry::FT;
   T::FT=285.0,
   P::FT=95000.0,
   V::FT=1.0e-6
@@ -200,7 +228,7 @@ function get_aerosol_coefficients(::Type{FT};
   a = Array{FT}(undef, 5)
   a[1] = G;               #nm2/sec
   a[2] = G*A;             #nm3/sec
-  a[3] = -G*kappa*rd^3;   #nm5/sec
+  a[3] = -G*kappa*M3_dry;   #nm5/sec
   a[4] = alpha;           #1/m
   a[5] = gamma2;          #1/nm3
 
