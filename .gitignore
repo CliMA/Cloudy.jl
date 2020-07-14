@@ -1,6 +1,6 @@
 # Plots
 *.eps
-*.png
+#*.png
 *.jpg
 *.pdf
 

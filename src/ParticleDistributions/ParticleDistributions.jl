@@ -38,6 +38,7 @@ export GammaAdditiveParticleDistribution
 # methods that query particle mass distributions
 export moment
 export density
+export density_array
 export nparams
 export update_params
 export update_params_from_moments
@@ -329,6 +330,20 @@ function density(dist::AbstractParticleDistribution{FT}, x::FT) where {FT<:Real}
     error("Density can only be evaluated at nonnegative values.")
   end
   density_func(dist)(reduce(vcat, get_params(dist)[2])..., x)
+end
+
+"""
+  density(dist, X)
+
+  - `dist` - is a particle mass distribution
+  - `X` - is an array of points to evaluate the density of `dist` at
+Returns the particle mass density evaluated at points `S`.
+"""
+function density(dist::AbstractParticleDistribution{FT}, X::Array{FT}) where {FT<:Real}
+  if any(X .< zero(X))
+    error("Density can only be evaluated at nonnegative values.")
+  end
+  density_func(dist).(reduce(vcat, get_params(dist)[2])..., X)
 end
 
 
