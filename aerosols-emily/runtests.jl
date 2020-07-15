@@ -13,7 +13,7 @@ function main()
   tol = FT(1e-8)
 
   # Initial condition:
-  S_init = FT(0.05)
+  S_init = FT(0.001)
   v_up = FT(1)
   dist_init = GammaPrimitiveParticleDistribution(FT(340), FT(28.0704505), FT(3.8564))
   dry_dist = dist_init
@@ -32,7 +32,7 @@ function main()
   println()
 
   ODE_parameters = Dict(:dist => dist_init)
-  
+  println("coeffs: ", get_aerosol_coefficients(kappa, M3_dry))
   # implement callbacks to halt the integration: maximum step in parameter space
   function param_change(m,t,integrator; max_param_change=[Inf, Inf, Inf]) 
     #println("Condition checked")
@@ -85,7 +85,6 @@ function main()
 
   # Plot the solution for the 0th moment
   pyplot()
-  gr()
   time = sol.t
   mom = vcat(sol.u'...)
   moment_0 = mom[:, 1]
@@ -94,45 +93,44 @@ function main()
   S = vcat(sol.u'...)[:,4]
 
   plot(time,
-      moment_0/moments_S_init[1],
+      moment_0,
       linewidth=3,
       xaxis="time",
-      yaxis="M\$_k\$(time) / M\$_{k_0}\$",
-      xlims=(0, 1.0),
-      ylims=(0, 1000.0),
+      yaxis="M\$_k\$(time)",
       label="M\$_0\$ CLIMA"
   )
-  plot!(time,
-      moment_1/moments_S_init[2],
+  savefig("aerosols-emily/M0.png")
+
+  plot(time,
+      moment_1,
       linewidth=3,
       label="M\$_1\$ CLIMA"
   )
-  plot!(time,
-      moment_2/moments_S_init[3],
+  savefig("aerosols-emily/M1.png")
+
+  plot(time,
+      moment_2,
       linewidth=3,
       label="M\$_2\$ CLIMA"
   )
-  savefig("aerosols-emily/aerosol_growth.png")
+  savefig("aerosols-emily/M2.png")
 
   # Plot the solution for the supersaturation
-  pyplot()
-  gr()
   plot(time,
       S,
       linewidth=3,
       label="S CLIMA")
-  savefig("aerosols-emily/aerosol_growth_S.png")
+  savefig("aerosols-emily/S.png")
 
   # Plot the initial and final Distribution
   tstops=[0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0]
   x = range(1.0, stop=1000.0, step=1.0) |> collect
   dist_plot = dist_init
   ODE_parameters = Dict(:dist => dist_plot)
-  pyplot()
-  gr()
   for time in tstops
     moments = sol(time)
     dist_plot = update_params_from_moments(ODE_parameters, moments[1:3])
+    println("time: ", time, ";   parameters: ", get_params(dist_plot)[2])
     pdf = ParticleDistributions.density(dist_plot, x)
     plot!(x,
         pdf,
@@ -183,6 +181,7 @@ function get_aerosol_growth_3mom(mom_p::Array{FT}, ODE_parameters::Dict, t::FT, 
     # compute the time rate of change
     ddt[1] = 0;
     ddt[2] = coeffs[1]*S*mom[-1+s] + coeffs[2]*mom[-2+s] + coeffs[3]*mom[-4+s]
+    
     ddt[3] = 2*(coeffs[1]*S*mom[0+s] + coeffs[2]*mom[-1+s] + coeffs[3]*mom[-3+s])
     # dS/dt
     ddt[end] = coeffs[4]*v_up - coeffs[5]*(coeffs[1]*S*mom[1+s] + coeffs[2]*mom[0+s] + coeffs[3]*mom[-2+s])
