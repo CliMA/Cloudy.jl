@@ -13,6 +13,7 @@ using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
 using NLPModels
 using NLPModelsIpopt
+using QuadGK
 
 # NLPModelsKnitro is a thin KNITRO wrapper for NLP (Nonlinear Programming)
 # models. KNITRO is a commercial solver but a demo version can be
@@ -260,6 +261,18 @@ function moment_func(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAd
   return f
 end
 
+"""
+  moment_num(dist, q, xmin, xmax)
+
+  - `dist` - distribution of which the partial moment `q` is taken
+  - `q` - is a potentially real-valued order of the moment
+  - 'xmin' - lower bound for integral evaluation
+  - 'xmax' - upper bound for integral evaluation
+Returns the q-th moment of a particle mass distribution function, calculated numerically with given bounds.
+"""
+#function moment_num(dist, q; xmin=1, xmax=1e4)
+
+#end
 
 """
   moment(dist, q)
@@ -521,14 +534,16 @@ function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_
   check_moment_consistency(target_moments)
 
   # target_moments[1] == M0, target_moments[2] == M1, target_moments[3] == M2
-  # Add epsilon to the denominator to help counteract issues
-  epsilon = 0
    M0 = target_moments[1]
    M1 = target_moments[2]
    M2 = target_moments[3]
+
+   # don't allow k to go below 4
    n = M0
-   θ = -(M1^2 - M0*M2)/(M0*M1)
-   k = -M1^2/(M1^2 - M0*M2 - epsilon^2)
+   k = max(5.0, -M1^2/(M1^2 - M0*M2))
+   θ = M1/n/k
+   #θ = -(M1^2 - M0*M2)/(M0*M1)
+
 
   update_params(dist, [n, θ, k])
 

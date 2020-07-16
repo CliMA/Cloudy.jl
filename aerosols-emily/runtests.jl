@@ -15,11 +15,11 @@ function main()
   # Initial condition:
   S_init = FT(0.001)
   v_up = FT(1)
-  dist_init = GammaPrimitiveParticleDistribution(FT(340), FT(28.0704505), FT(3.8564))
+  dist_init = GammaPrimitiveParticleDistribution(FT(340), FT(28.0), FT(6.1))
   dry_dist = dist_init
   kappa=0.6
   M3_dry = moment(dist_init, FT(3))/moment(dist_init, FT(0))
-  print(M3_dry)
+  println(M3_dry)
   tspan = (FT(0), FT(1))
 
   moments_S_init = FT[0.0, 0.0, 0.0, S_init]
@@ -33,6 +33,7 @@ function main()
 
   ODE_parameters = Dict(:dist => dist_init)
   println("coeffs: ", get_aerosol_coefficients(kappa, M3_dry))
+
   # implement callbacks to halt the integration: maximum step in parameter space
   function param_change(m,t,integrator; max_param_change=[Inf, Inf, Inf]) 
     #println("Condition checked")
@@ -53,7 +54,7 @@ function main()
       d_param = 0
     end
     return d_param
-  end
+  end 
 
   function what_time(m,t,integrator)
     println("Condition checked")
@@ -65,7 +66,7 @@ function main()
     integrator.set_proposed_dt!(integrator.get_proposed_dt/2)
   end
   
-  max_param_change1 = [0.0, 2.0, 2.0]
+  max_param_change1 = [NaN, NaN, 1.0]
   #condition(m,t,integrator) = what_time(m,t,integrator)
   condition(m, t, integrator) = param_change(m, t, integrator; max_param_change=max_param_change1)
   cb=ContinuousCallback(condition, affect!)
