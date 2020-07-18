@@ -38,6 +38,7 @@ export GammaAdditiveParticleDistribution
 
 # methods that query particle mass distributions
 export moment
+export moment_num
 export density
 export density_array
 export nparams
@@ -270,9 +271,11 @@ end
   - 'xmax' - upper bound for integral evaluation
 Returns the q-th moment of a particle mass distribution function, calculated numerically with given bounds.
 """
-#function moment_num(dist, q; xmin=1, xmax=1e4)
-
-#end
+function moment_num(dist::AbstractParticleDistribution{FT}, q::FT; xmin::FT=1.0, xmax::FT=10000.0) where {FT<:Real}
+  f = x-> x^q * density_func(dist)(reduce(vcat, get_params(dist)[2])..., x)
+  I, E = quadgk(f, xmin, xmax)
+  return I
+end
 
 """
   moment(dist, q)
