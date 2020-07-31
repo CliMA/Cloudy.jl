@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 Coverage = "a2441757-f6aa-5fb2-8edb-039e3f45d037"
+Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"

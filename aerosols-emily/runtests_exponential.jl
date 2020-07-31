@@ -1,4 +1,4 @@
-# Single aerosol species MOM evolution
+# Single aerosol species MOM evolution: exponential distribution
 
 using Test
 using DifferentialEquations
@@ -13,18 +13,19 @@ function main()
   tol = FT(1e-8)
 
   # Initial condition:
-  S_init = FT(0.001)
+  S_init = FT(0.1)
   v_up = FT(1)
-  dist_init = GammaPrimitiveParticleDistribution(FT(340), FT(28.0), FT(6.1))
+  dist_init = ExponentialPrimitiveParticleDistribution(FT(100), FT(50.0))
   dry_dist = dist_init
   kappa=0.6
   M3_dry = moment(dist_init, FT(3))/moment(dist_init, FT(0))
   println(M3_dry)
-  tspan = (FT(0), FT(1))
+  tspan = (FT(0), FT(1e-6))
 
-  moments_S_init = FT[0.0, 0.0, 0.0, S_init]
+  # track only 0th and 1st moments
+  moments_S_init = FT[0.0, 0.0, S_init]
   println("Initializing with moments:")
-  for k in 0:2
+  for k in 0:1
     moments_S_init[k+1] = moment(dist_init, FT(k))
     println(moments_S_init[k+1])
   end
@@ -35,7 +36,7 @@ function main()
   println("coeffs: ", get_aerosol_coefficients(kappa, M3_dry))
 
   # implement callbacks to halt the integration: maximum step in parameter space
-  function param_change(m,t,integrator; max_param_change=[Inf, Inf, Inf]) 
+  function param_change2(m,t,integrator; max_param_change=[Inf, Inf]) 
     #println("Condition checked")
     
     # find the propose change
@@ -54,44 +55,58 @@ function main()
       d_param = 0
     end
     return d_param
-  end 
-
-  function what_time(m,t,integrator)
-    println("Condition checked")
-    t2 = 10*t
-    return t2-1e-6
   end
 
-  function affect!(integrator) 
+  # enforce that the 1st moment (i.e. mass or mean radius) cannot decrease from the dry radius
+  function mass_increase(m,t,integrator, M1_init)
+    println("called")
+    # find the proposed change
+    M1_next = m[2]
+    return M1_next - M1_init + 1e-10 # >= 0 is good
+  end
+
+  function affect1!(integrator) 
     integrator.set_proposed_dt!(integrator.get_proposed_dt/2)
   end
+
+  function affect2!(integrator, M1_init)
+    integrator.u[2] = M1_init
+  end
   
-  max_param_change1 = [NaN, NaN, 1.0]
-  #condition(m,t,integrator) = what_time(m,t,integrator)
-  condition(m, t, integrator) = param_change(m, t, integrator; max_param_change=max_param_change1)
-  cb=ContinuousCallback(condition, affect!)
-  
+  max_param_change1 = [NaN, 1.0]
+  #condition(m, t, integrator) = param_change2(m, t, integrator; max_param_change=max_param_change1)
+  #cb=ContinuousCallback(condition, affect1!)
+  condition(m,t,integrator) = mass_increase(m,t,integrator, moments_S_init[2])
+  affect!(integrator) = affect2!(integrator, moments_S_init[2])
+  cb = ContinuousCallback(condition, affect!)
+
   # set up ODE
-  rhs(m, par, t) = get_aerosol_growth_3mom(m, par, t, v_up, kappa, M3_dry)
+  rhs(m, par, t) = get_aerosol_growth_2mom(m, par, t, v_up, kappa, M3_dry)
 
   # solve the ODE
   println("Solving ODE...")
   prob = ODEProblem(rhs, moments_S_init, tspan, ODE_parameters)
   alg = CVODE_BDF()
-  sol = solve(prob, alg, callback=cb)
+  sol = solve(prob, alg, callbacks = cb)
 
   println("Finished solving")
   println("Final state:")
   println(sol.u[end,:])
 
-  # Plot the solution for the 0th moment
+  #for (tstep, ustep) in (sol.t, sol.u)
+  #  println(tstep, ustep)
+  #end
+  for tstep in sol.t
+    println(tstep, sol(tstep))
+  end
+
+  # Plot the solution for the 0th & 1st moment
   pyplot()
   time = sol.t
   mom = vcat(sol.u'...)
   moment_0 = mom[:, 1]
   moment_1 = mom[:, 2]
-  moment_2 = mom[:, 3]
-  S = vcat(sol.u'...)[:,4]
+  S = vcat(sol.u'...)[:,3]
 
   plot(time,
       moment_0,
@@ -100,28 +115,21 @@ function main()
       yaxis="M\$_k\$(time)",
       label="M\$_0\$ CLIMA"
   )
-  savefig("aerosols-emily/M0.png")
+  savefig("aerosols-emily/M0_exp.png")
 
   plot(time,
       moment_1,
       linewidth=3,
       label="M\$_1\$ CLIMA"
   )
-  savefig("aerosols-emily/M1.png")
-
-  plot(time,
-      moment_2,
-      linewidth=3,
-      label="M\$_2\$ CLIMA"
-  )
-  savefig("aerosols-emily/M2.png")
+  savefig("aerosols-emily/M1_exp.png")
 
   # Plot the solution for the supersaturation
   plot(time,
       S,
       linewidth=3,
       label="S CLIMA")
-  savefig("aerosols-emily/S.png")
+  savefig("aerosols-emily/S_exp.png")
 
   # Plot the initial and final Distribution
   tstops=[0, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0]
@@ -130,20 +138,20 @@ function main()
   ODE_parameters = Dict(:dist => dist_plot)
   for time in tstops
     moments = sol(time)
-    dist_plot = update_params_from_moments(ODE_parameters, moments[1:3])
-    println("time: ", time, ";   parameters: ", get_params(dist_plot)[2])
+    dist_plot = update_params_from_moments(ODE_parameters, moments[1:2])
+    println("time: ", time, ";   parameters: ", get_params(dist_plot)[2], ";    supersaturation: ", moments[3])
     pdf = ParticleDistributions.density(dist_plot, x)
     plot!(x,
         pdf,
         linewidth=3,
         label=time)
-    savefig("aerosols-emily/distributionchange.png")
+    savefig("aerosols-emily/distributionchange_exp.png")
   end
 
 end
 
 """
-get_aerosol_growth_3mom(mom_p::Array{Float64}, v_up::Float64=1)
+get_aerosol_growth_2mom(mom_p::Array{Float64}, v_up::Float64=1)
 
   - 'T' - temperature in K
   - 'P' - pressure in Pa
@@ -154,14 +162,14 @@ get_aerosol_growth_3mom(mom_p::Array{Float64}, v_up::Float64=1)
   - 'a' = [G, GA, -G k rd^3, alpha, gamma] [=] [m2/sec, m3/sec, m5/sec, 1/m2, 1/m3]
 
 """
-function get_aerosol_growth_3mom(mom_p::Array{FT}, ODE_parameters::Dict, t::FT, v_up::FT, kappa::FT, M3_dry::FT) where {FT}
+function get_aerosol_growth_2mom(mom_p::Array{FT}, ODE_parameters::Dict, t::FT, v_up::FT, kappa::FT, M3_dry::FT) where {FT}
   #println("time: ", t)
   #println("prognostic moments: ", mom_p)
   #@show t
   #@show mom_p
 
   try
-    dist = update_params_from_moments(ODE_parameters, mom_p[1:3])
+    dist = update_params_from_moments(ODE_parameters, mom_p[1:2])
     ODE_parameters[:dist] = dist
     #println("Distribution: ", dist)
   
@@ -171,26 +179,25 @@ function get_aerosol_growth_3mom(mom_p::Array{FT}, ODE_parameters::Dict, t::FT, 
     # compute the diagnostic moments: M-1 through M-4
     s = 5; #add to moment indexing
     for k in -4:-1
-      mom_d[k+s] = moment(dist, FT(k))
+      mom_d[k+s] = moment_num(dist, FT(k))
     end
     mom = vcat(mom_d, mom_p)
     #println("diagnostic moments: ", mom_d)
   
     coeffs = get_aerosol_coefficients(kappa, M3_dry)
-    ddt = Array{FT}(undef,4)
+    ddt = Array{FT}(undef,3)
   
     # compute the time rate of change
     ddt[1] = 0;
     ddt[2] = coeffs[1]*S*mom[-1+s] + coeffs[2]*mom[-2+s] + coeffs[3]*mom[-4+s]
     
-    ddt[3] = 2*(coeffs[1]*S*mom[0+s] + coeffs[2]*mom[-1+s] + coeffs[3]*mom[-3+s])
     # dS/dt
     ddt[end] = coeffs[4]*v_up - coeffs[5]*(coeffs[1]*S*mom[1+s] + coeffs[2]*mom[0+s] + coeffs[3]*mom[-2+s])
-    #println("Derivative wrt  time: ", ddt)
+    println("Derivative wrt  time: ", ddt)
     #println()
     return ddt
   catch e
-    ddt = [Inf, Inf, Inf, Inf]
+    ddt = [Inf, Inf, Inf]
     #println("failed")
     return ddt
   end
@@ -259,7 +266,6 @@ function get_aerosol_coefficients(kappa::FT, M3_dry::FT;
   a[3] = -G*kappa*M3_dry; #nm5/sec
   a[4] = alpha;           #1/m
   a[5] = gamma2;          #1/nm3
-
   return a
 end
 
