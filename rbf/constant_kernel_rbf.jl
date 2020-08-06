@@ -1,9 +1,6 @@
 "Constant coalescence kernel example"
 
 using Plots
-using Cloudy.KernelTensors
-using Cloudy.ParticleDistributions
-using Cloudy.Sources
 using Cloudy.BasisFunctions
 using Cloudy.Galerkin
 using DifferentialEquations
@@ -59,7 +56,7 @@ function main()
   c_final = sol.u[end,:][1]
   dist_galerkin = evaluate(basis, c_final, x)
   plot!(x, dist_galerkin, label="Galerkin approximation: final state")
-  savefig("rbf/plot.png")
+  savefig("rbf/initial_final.png")
 
 
   mass_dist0 = x->evaluate(basis,c0,x)*x

@@ -64,13 +64,19 @@ function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, ke
     for i=1:Nb
         for j=1:Nb
             for k=1:Nb
-                integrand = x -> 1/2*basis_func(basis[k])(x[1]-x[2]) * basis_func(basis[j])(x[2]) * kernel([x[1]-x[2],x[2]]) * basis_func(basis[i])(x[1])
-                M[i,j,k] = hcubature(integrand, [xstart, xstart], [xstop, xstop])[1]
+                integrand = x -> inner_integrand(basis[k], basis[j], kernel, x)*basis_func(basis[i])(x)
+                M[i, j, k] = quadgk(integrand, xstart, xstop)[1]
             end
         end
     end
+
     return M
 end
 
+function inner_integrand(basis_k::PrimitiveUnivariateBasisFunc, basis_j::PrimitiveUnivariateBasisFunc, kernel::Function, x::FT; xstart::FT = eps()) where {FT <: Real}
+    inner_fn = y -> 1/2*basis_func(basis_k)(x - y) * basis_func(basis_j)(y) * kernel([x-y, x])
+    inner_int = quadgk(inner_fn, xstart, x)[1]
+    return inner_int
+end
 
 end
