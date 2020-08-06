@@ -22,9 +22,11 @@ function main()
   dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log.(x)-mu)^2/(2*sigma^2))
 
   # Choose the basis functions
-  Nb = 3
-  rbf_mu = [3.0, 5.0, 10.0]
-  rbf_sigma = [exp(sigma), exp(sigma), exp(sigma)]
+  Nb = 5
+  mu_start = 5.0
+  mu_stop = 25.0
+  rbf_mu = collect(range(mu_start, stop=mu_stop, length=Nb))
+  rbf_sigma = repeat([mu_start/2], Nb)
   basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
   for i = 1:Nb
     basis[i] = GaussianBasisFunction(rbf_mu[i], rbf_sigma[i])
@@ -56,8 +58,6 @@ function main()
   c_final = sol.u[end,:][1]
   dist_galerkin = evaluate(basis, c_final, x)
   plot!(x, dist_galerkin, label="Galerkin approximation: final state")
-  savefig("rbf/initial_final.png")
-
 
   mass_dist0 = x->evaluate(basis,c0,x)*x
   mass_distf = x->evaluate(basis,c_final,x)*x
@@ -68,6 +68,10 @@ function main()
   mf = quadgk(mass_distf, xstart, xstop)[1]
   println("Starting mass: ", m0)
   println("Ending mass: ", mf)
+  annotate!([(15.0, 20.0, Plots.text(string("Starting mass: ", m0), 12))])
+  annotate!([(15.0, 15.0, Plots.text(string("Ending mass: ", mf), 12))])
+
+  savefig("rbf/initial_final.png")
 end
 
 function collision_coaelescence(c, A, M, N)
@@ -83,4 +87,5 @@ function collision_coaelescence(c, A, M, N)
   return g
 end
 
+@time
 main()

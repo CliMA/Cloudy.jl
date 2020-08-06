@@ -3,7 +3,7 @@ module Galerkin
 using Cloudy.BasisFunctions
 using Cloudy.KernelTensors
 using QuadGK
-using Cubature
+using NonNegLeastSquares
 using LinearAlgebra
 
 export get_rbf_inner_products
@@ -28,7 +28,7 @@ end
 
 function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
     # c0 is given by A*c0 = b, with b_i = <u0, basis[i]>
-    
+    # must enforce a positivty constraint
     # calculate the b_i vector
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
@@ -37,8 +37,9 @@ function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1},
         b[i] = quadgk(integrand, xstart, xstop)[1]
     end
 
-    # calculate c0
-    c0 = A \ b
+    # calculate c0, enforcing positivity
+    #c0 = A \ b
+    c0 = nonneg_lsq(A, b)
     return c0
 end
 
