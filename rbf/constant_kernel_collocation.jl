@@ -2,8 +2,7 @@
 
 using Plots
 using Cloudy.BasisFunctions
-using Cloudy.Galerkin
-using DifferentialEquations
+using Cloudy.Collocation
 using QuadGK
 
 function main()
@@ -22,7 +21,7 @@ function main()
   dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log.(x)-mu)^2/(2*sigma^2))
 
   # Choose the basis functions
-  Nb = 5
+  Nb = 3
   mu_start = 5.0
   mu_stop = 25.0
   rbf_mu = collect(range(mu_start, stop=mu_stop, length=Nb))
@@ -37,27 +36,34 @@ function main()
   # Precompute the various matrices
   A = get_rbf_inner_products(basis)
   c0 = get_IC_vec(dist_init, basis, A)
-  Source = get_kernel_rbf_source(basis, kernel_func)
-  Sink = get_kernel_rbf_sink(basis, kernel_func)
+  Source = get_kernel_rbf_source(basis, rbf_mu, kernel_func)
+  Sink = get_kernel_rbf_sink(basis, rbf_mu, kernel_func)
 
-  # set up the ODE
+  # set up the explicit time stepper
   tspan = (0.0, 1.0)
-  rhs(c, par, t) = collision_coaelescence(c, A, Source, Sink)
-  prob = ODEProblem(rhs, c0, tspan)
-  sol = solve(prob, reltol=tol, abstol=tol)
+  dt = 1e-3
+  tsteps = range(tspan[1], stop=tspan[2], step=dt)
+  nj = dist_init.(rbf_mu)
+  dndt = ni->collision_coalescence(ni, A, Source, Sink)
 
+  for t in tsteps
+    nj += dndt(nj)*dt
+  end
+
+  c_final = A\nj
+
+  ##PLOTTING
   # plot the initial distribution
-  x = range(1.0, stop=25.0, step=0.1) |> collect
+  x = range(1.0, stop=50.0, step=0.1) |> collect
   dist_exact = dist_init.(x)
   dist_galerkin = evaluate(basis, c0, x)
   pyplot()
   plot(x, dist_exact, label="Exact", title="Constant Kernel")
-  plot!(x, dist_galerkin, label="Galerkin approximation")
+  plot!(x, dist_galerkin, label="Collocation approximation")
 
   # plot the final distribution
-  c_final = sol.u[end,:][1]
   dist_galerkin = evaluate(basis, c_final, x)
-  plot!(x, dist_galerkin, label="Galerkin approximation: final state")
+  plot!(x, dist_galerkin, label="Collocation approximation: final state")
 
   mass_dist0 = x->evaluate(basis,c0,x)*x
   mass_distf = x->evaluate(basis,c_final,x)*x
@@ -71,21 +77,7 @@ function main()
   annotate!([(15.0, 20.0, Plots.text(string("Starting mass: ", m0), 12))])
   annotate!([(15.0, 15.0, Plots.text(string("Ending mass: ", mf), 12))])
 
-  savefig("rbf/initial_final.png")
+  savefig("rbf/initial_final_collocation.png")
 end
 
-function collision_coaelescence(c, A, M, N)
-  Nb = length(c)
-
-  # compute F, the quadratic vector for source/sink
-  F = zeros(FT, Nb)
-  for i=1:Nb
-    F[i] = c'*M[i,:,:]*c - c'*N[i,:,:]*c
-  end
-
-  g = A \ F
-  return g
-end
-
-@time
-main()
+@time main()
