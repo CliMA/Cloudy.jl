@@ -3,6 +3,8 @@
 using Plots
 using Cloudy.BasisFunctions
 using Cloudy.Collocation
+using Cloudy.ParticleDistributions
+using NonNegLeastSquares
 using QuadGK
 
 function main()
@@ -14,14 +16,21 @@ function main()
   coalescence_coeff = 1/3.14/4
   kernel_func = x -> coalescence_coeff
 
-  # Initial condition: any function; here we choose a lognormal distribution
-  N = 150.0
-  mu = 1.5
-  sigma = 0.5
-  dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log.(x)-mu)^2/(2*sigma^2))
+  # Initial condition: lognormal distribution
+  #N = 150.0
+  #mu = 1.5
+  #sigma = 0.5
+  #dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log.(x)-mu)^2/(2*sigma^2))
+
+  # Initial condition: gamma distribution
+  n = 150.0
+  k = 4.26
+  theta = 1.0
+  gamma_dist = GammaPrimitiveParticleDistribution(n, theta, k)
+  dist_init = x -> density_eval(gamma_dist, x)
 
   # Choose the basis functions
-  Nb = 10
+  Nb = 5
   mu_start = 5.0
   mu_stop = 25.0
   rbf_mu = collect(range(mu_start, stop=mu_stop, length=Nb))
@@ -82,7 +91,7 @@ function main()
   annotate!([(15.0, 20.0, Plots.text(string("Starting mass: ", m0), 12))])
   annotate!([(15.0, 15.0, Plots.text(string("Ending mass: ", mf), 12))])
 
-  savefig("rbf/initial_final_collocation_masscons.png")
+  savefig("rbf/gamma_constant_collocation_masscons.png")
 end
 
 @time main()
