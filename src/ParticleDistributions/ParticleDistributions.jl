@@ -43,6 +43,7 @@ export density_eval
 export nparams
 export update_params
 export update_params_from_moments
+export update_params_from_rbfs
 
 # setters and getters
 export get_params
@@ -507,14 +508,12 @@ end
                        moments-to-parameters mapping (done by the function
                        moments_to_params) for the given type of distribution
 """
-function update_params_from_rbfs(ODE_parameters, rbf_vals::Array{FT}, rbf_locs::Array{FT}) where {FT <: Real}
+function update_params_from_rbfs(dist::GammaPrimitiveParticleDistribution{FT}, rbf_vals::Array{FT}, rbf_locs::Array{FT}) where {FT <: Real}
   if (length(rbf_vals) != length(rbf_locs))
     error("Invalid rbf quadrature specified")
   end
 
-  dist_prev = ODE_parameters[:dist]
-
-  rbfs_to_params(dist_prev, rbf_vals, rbf_locs)
+  rbfs_to_params(dist, rbf_vals, rbf_locs)
 end
 
 function rbfs_to_params(dist::GammaPrimitiveParticleDistribution{FT}, rbf_vals::Array{FT}, rbf_locs::Array{FT}) where {FT<:Real}
@@ -525,22 +524,25 @@ function rbfs_to_params(dist::GammaPrimitiveParticleDistribution{FT}, rbf_vals::
   F = []
   # M0 (==M[1]) is the sum of all n_j: M[1] = ∑n_j
   for i in 1:(n_equations)
-    F_i = x -> (rbf_vals[i] - (x[1]*rbf_locs[i]^(x[3]-1)*exp(-rbf_locs[i]/x[2])/(x[2]^x[1]*gamma(x[3]))))
+    F_i = x -> (rbf_vals[i] - (x[1]*rbf_locs[i]^(x[3]-1)*exp(-rbf_locs[i]/x[2])/((x[2]^x[1]*gamma(x[3])))))
     push!(F, F_i)
   end
 
-  # Use Ipopt to solve for the unknowns, using the distribution parameters at
-  # the previous time step as an initial guess for the parameters at the
-  # current time step. ADNLPModel is an AbstractNLPModel using ForwardDiff to 
-  # compute the derivative.
-  model = ADNLPModel(x -> 0.0, start_params_ordered; c=F,
-                     lcon=zeros(n_equations), ucon=zeros(n_equations),
-                     lvar=zeros(n_vars))
+  function c(x)
+    return sum(F[i](x)^2 for i=1:n_equations)
+  end
+
+  start_params = reduce(vcat, get_params(dist)[2])
+
+  # standard "optimize" does not work b/c doesn't allow constrained optimization
+  # TODO: fix hard-set variable limits
+  model = ADNLPModel(c, start_params; lvar=[0.0, 0.0, 0.0], uvar=[150.0, 100.0, 100.0])
   stats = ipopt(model, print_level=0)
   sol = stats.solution
 
   # Get parameters in the correct order for use as input to update_params
-  params_ordered = vcat([sol[i:m:end] for i in 1:m]...)
+  params_ordered = sol
+  #println(params_ordered)
   # Update distribution with the new parameters
   update_params(dist, params_ordered)
 end

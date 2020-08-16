@@ -11,6 +11,7 @@ export get_kernel_rbf_sink
 export get_kernel_rbf_source
 export get_mass_cons_term
 export collision_coalescence
+export get_constants_vec
 
 function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
     # A_ij = <basis[i], basis[j]>
@@ -141,6 +142,17 @@ function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, 
     end
 
     return dndt
+end
+
+function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
+    Nb = length(nj)
+    # first calculate c(t)
+    A2 = vcat(A, J')
+    nj2 = vcat(nj, mass)
+
+    c = nonneg_lsq(A2, nj2)[:,1]
+
+    return c
 end
 
 end
