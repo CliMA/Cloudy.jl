@@ -4,6 +4,8 @@ using Cloudy.BasisFunctions
 using QuadGK
 using NonNegLeastSquares
 using LinearAlgebra
+using Convex
+using SCS
 
 export get_rbf_inner_products
 export get_IC_vec
@@ -134,6 +136,26 @@ function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, 
     nj2 = vcat(nj, mass)
 
     c = nonneg_lsq(A2, nj2)[:,1]
+
+    # time rate of change: dn/dt|_xj, t
+    dndt = zeros(FT, Nb)
+    for i=1:Nb
+        dndt[i] = (1/2*c'*M[i,:,:]*c - c'*N[i,:,:]*c)
+    end
+
+    return dndt
+end
+
+function collision_coalescence_QP(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, N::Array{FT,3}, J::Array{FT,1}, mass::FT) where {FT <: Real}
+    Nb = length(nj)
+    # first calculate c(t); here x is the coefficients
+    x = Variable(Nb)
+    objective = sumsquares(A*x - nj)
+    constraint1 = x >= 0
+    constraint2 = J*x == mass
+    problem = minimize(objective, constraint1, constraint2)
+    solve!(problem, SCS.Optimizer)
+    c = problem.optval
 
     # time rate of change: dn/dt|_xj, t
     dndt = zeros(FT, Nb)
