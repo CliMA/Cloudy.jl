@@ -4,7 +4,7 @@ export AbstractBasisFunc
 export PrimitiveUnivariateBasisFunc
 export GaussianBasisFunction
 export basis_func
-export evaluate
+export evaluate_rbf
 
 
 """
@@ -71,7 +71,7 @@ function get_params(basis_func::AbstractBasisFunc{FT}) where {FT<:Real}
   return params, values
 end
 
-function evaluate(basis::Array{PrimitiveUnivariateBasisFunc,1}, c::Array{FT}, x::Array{FT}) where {FT<:Real}
+function evaluate_rbf(basis::Array{PrimitiveUnivariateBasisFunc,1}, c::Array{FT}, x::Array{FT}) where {FT<:Real}
   Nb = length(basis)
   if (length(c) != Nb)
     error("Number of coefficients must match number of basis functions")
@@ -85,7 +85,7 @@ function evaluate(basis::Array{PrimitiveUnivariateBasisFunc,1}, c::Array{FT}, x:
   return approx
 end
 
-function evaluate(basis::Array{PrimitiveUnivariateBasisFunc,1}, c::Array{FT}, x::FT) where {FT<:Real}
+function evaluate_rbf(basis::Array{PrimitiveUnivariateBasisFunc,1}, c::Array{FT}, x::FT) where {FT<:Real}
   Nb = length(basis)
   if (length(c) != Nb)
     error("Number of coefficients must match number of basis functions")

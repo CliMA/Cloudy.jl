@@ -56,17 +56,17 @@ function main()
   # plot the initial distribution
   x = range(1.0, stop=50.0, step=0.1) |> collect
   dist_exact = dist_init.(x)
-  dist_galerkin = evaluate(basis, c0, x)
+  dist_galerkin = evaluate_rbf(basis, c0, x)
   pyplot()
   plot(x, dist_exact, label="Exact", title="Constant Kernel")
   plot!(x, dist_galerkin, label="Collocation approximation")
 
   # plot the final distribution
-  dist_galerkin = evaluate(basis, c_final, x)
+  dist_galerkin = evaluate_rbf(basis, c_final, x)
   plot!(x, dist_galerkin, label="Collocation approximation: final state")
 
-  mass_dist0 = x->evaluate(basis,c0,x)*x
-  mass_distf = x->evaluate(basis,c_final,x)*x
+  mass_dist0 = x->evaluate_rbf(basis,c0,x)*x
+  mass_distf = x->evaluate_rbf(basis,c_final,x)*x
 
   xstart = eps()
   xstop = 1000.0

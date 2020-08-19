@@ -54,13 +54,13 @@ function main()
   dt = 1e-3
   tsteps = range(tspan[1], stop=tspan[2], step=dt)
   nj = dist_init.(rbf_mu)
-  dndt = ni->collision_coalescence(ni, A, Source, Sink, mass_cons, mass)
+  dndt = ni->collision_coalescence_QP(ni, A, Source, Sink, mass_cons, mass)
 
   for t in tsteps
     nj += dndt(nj)*dt
     dist = update_params_from_rbfs(dist, nj, rbf_mu)
     (cj, mass) = get_IC_vec(x-> density_eval(dist, x), basis, A, mass_cons)
-    nj = evaluate(basis, cj, rbf_mu)
+    nj = evaluate_rbf(basis, cj, rbf_mu)
   end
 
   c_final = cj
@@ -70,17 +70,17 @@ function main()
   # plot the initial distribution
   x = range(1.0, stop=50.0, step=0.1) |> collect
   dist_exact = density_eval(GammaPrimitiveParticleDistribution(n, theta, k), x)
-  dist_galerkin = evaluate(basis, c0, x)
+  dist_galerkin = evaluate_rbf(basis, c0, x)
   pyplot()
   plot(x, dist_exact, label="Exact", title="Constant Kernel")
   plot!(x, dist_galerkin, label="Collocation approximation")
 
   # plot the final distribution
-  dist_galerkin = evaluate(basis, c_final, x)
+  dist_galerkin = evaluate_rbf(basis, c_final, x)
   plot!(x, dist_galerkin, label="Collocation approximation: final state")
 
-  mass_dist0 = x->evaluate(basis,c0,x)*x
-  mass_distf = x->evaluate(basis,c_final,x)*x
+  mass_dist0 = x->evaluate_rbf(basis,c0,x)*x
+  mass_distf = x->evaluate_rbf(basis,c_final,x)*x
 
   xstart = eps()
   xstop = 1000.0

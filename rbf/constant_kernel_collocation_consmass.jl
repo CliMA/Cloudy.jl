@@ -17,20 +17,20 @@ function main()
   kernel_func = x -> coalescence_coeff
 
   # Initial condition: lognormal distribution
-  #N = 150.0
-  #mu = 1.5
-  #sigma = 0.5
-  #dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log.(x)-mu)^2/(2*sigma^2))
+  N = 150.0
+  mu = 1.5
+  sigma = 0.5
+  dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log.(x)-mu)^2/(2*sigma^2))
 
   # Initial condition: gamma distribution
-  n = 150.0
-  k = 4.26
-  theta = 1.0
-  gamma_dist = GammaPrimitiveParticleDistribution(n, theta, k)
-  dist_init = x -> density_eval(gamma_dist, x)
+  #n = 150.0
+  #k = 4.26
+  #theta = 1.0
+  #gamma_dist = GammaPrimitiveParticleDistribution(n, theta, k)
+  #dist_init = x -> density_eval(gamma_dist, x)
 
   # Choose the basis functions
-  Nb = 5
+  Nb = 3
   mu_start = 5.0
   mu_stop = 25.0
   rbf_mu = collect(range(mu_start, stop=mu_stop, length=Nb))
@@ -49,38 +49,41 @@ function main()
   mass_cons = get_mass_cons_term(basis)
   (c0, mass) = get_IC_vec(dist_init, basis, A, mass_cons)
 
+  println(c0)
+  println("Mass: ", mass, ";  initial collocation mass: ", mass_cons'*c0)
+  println("Percent error: ", (mass_cons'*c0 - mass)/mass*100, "%")
+
   # set up the explicit time stepper
   tspan = (0.0, 1.0)
   dt = 1e-3
   tsteps = range(tspan[1], stop=tspan[2], step=dt)
   nj = dist_init.(rbf_mu)
-  dndt = ni->collision_coalescence(ni, A, Source, Sink, mass_cons, mass)
+  dndt = ni->collision_coalescence_QP(ni, A, Source, Sink, mass_cons, mass)
 
   for t in tsteps
     nj += dndt(nj)*dt
   end
 
-  A2 = vcat(A, mass_cons')
-  nj2 = vcat(nj, mass)
+  #A2 = vcat(A, mass_cons')
+  #nj2 = vcat(nj, mass)
 
-  c_final = nonneg_lsq(A2, nj2)[:,1]
-  #c_final = A\nj
+  c_final = get_constants_vec2(nj, A, mass_cons, mass)
 
   ##PLOTTING
   # plot the initial distribution
   x = range(1.0, stop=50.0, step=0.1) |> collect
   dist_exact = dist_init.(x)
-  dist_galerkin = evaluate(basis, c0, x)
+  dist_galerkin = evaluate_rbf(basis, c0, x)
   pyplot()
   plot(x, dist_exact, label="Exact", title="Constant Kernel")
   plot!(x, dist_galerkin, label="Collocation approximation")
 
   # plot the final distribution
-  dist_galerkin = evaluate(basis, c_final, x)
+  dist_galerkin = evaluate_rbf(basis, c_final, x)
   plot!(x, dist_galerkin, label="Collocation approximation: final state")
 
-  mass_dist0 = x->evaluate(basis,c0,x)*x
-  mass_distf = x->evaluate(basis,c_final,x)*x
+  mass_dist0 = x->evaluate_rbf(basis,c0,x)*x
+  mass_distf = x->evaluate_rbf(basis,c_final,x)*x
 
   xstart = eps()
   xstop = 1000.0
@@ -91,7 +94,7 @@ function main()
   annotate!([(15.0, 20.0, Plots.text(string("Starting mass: ", m0), 12))])
   annotate!([(15.0, 15.0, Plots.text(string("Ending mass: ", mf), 12))])
 
-  savefig("rbf/gamma_constant_collocation_masscons.png")
+  savefig("rbf/log_const_coll_QP3.png")
 end
 
 @time main()

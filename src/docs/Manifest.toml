@@ -1,0 +1,12 @@
+[[Libdl]]
+uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+
+[[LinearAlgebra]]
+deps = ["Libdl"]
+uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[[src]]
+deps = ["LinearAlgebra"]
+path = "/Users/emilydejong/Documents/Cloudy.jl/src"
+uuid = "14ec9285-ff7d-5059-98f8-97676e6c56e6"
+version = "0.0.0"

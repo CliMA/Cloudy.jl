@@ -13,7 +13,9 @@ export get_kernel_rbf_sink
 export get_kernel_rbf_source
 export get_mass_cons_term
 export collision_coalescence
+export collision_coalescence_QP
 export get_constants_vec
+export get_constants_vec2
 
 function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
     # A_ij = <basis[i], basis[j]>
@@ -55,19 +57,15 @@ function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1},
     # must enforce a positivty constraint
     # calculate the b_i vector
     Nb = length(basis)
-    b = Array{FT}(undef, Nb+1)
+    b = Array{FT}(undef, Nb)
     for i=1:Nb
         integrand = x-> u0.(x)*basis_func(basis[i])(x)
         b[i] = quadgk(integrand, xstart, xstop)[1]
     end
     mass = quadgk(x->u0.(x)*x, xstart, xstop)[1]
-    b[Nb+1] = mass
-    A2 = vcat(A, J')
-
-    # calculate c0, enforcing positivity
-    #c0 = A \ b
-    c0 = nonneg_lsq(A2, b)
-    return c0[:,1], mass
+    
+    c0 = get_constants_vec2(b, A, J, mass)
+    return (c0, mass)
 end
 
 function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}
@@ -148,14 +146,8 @@ end
 
 function collision_coalescence_QP(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, N::Array{FT,3}, J::Array{FT,1}, mass::FT) where {FT <: Real}
     Nb = length(nj)
-    # first calculate c(t); here x is the coefficients
-    x = Variable(Nb)
-    objective = sumsquares(A*x - nj)
-    constraint1 = x >= 0
-    constraint2 = J*x == mass
-    problem = minimize(objective, constraint1, constraint2)
-    solve!(problem, SCS.Optimizer)
-    c = problem.optval
+    # first calculate c(t); 
+    c = get_constants_vec2(nj, A, J, mass)
 
     # time rate of change: dn/dt|_xj, t
     dndt = zeros(FT, Nb)
@@ -166,15 +158,35 @@ function collision_coalescence_QP(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3
     return dndt
 end
 
-function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
+function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}, mass::FT; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
     Nb = length(nj)
-    # first calculate c(t)
+    # calculate c(t)
+
     A2 = vcat(A, J')
     nj2 = vcat(nj, mass)
-
     c = nonneg_lsq(A2, nj2)[:,1]
 
     return c
+end
+
+function get_constants_vec2(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}, mass::FT; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
+    Nb = length(nj)
+    # calculate c(t)
+
+    #A2 = vcat(A, J')
+    #nj2 = vcat(nj, mass)
+    #c = nonneg_lsq(A2, nj2)[:,1]
+
+    # here x is the coefficients
+    x = Variable(Nb)
+    objective = sumsquares(A*x - nj)
+    constraint1 = x >= 0
+    constraint2 = J'*x == mass
+    problem = minimize(objective, constraint1, constraint2)
+    solve!(problem, SCS.Optimizer(verbose=false))
+    c = x.value
+
+    return c[:,1]
 end
 
 end
