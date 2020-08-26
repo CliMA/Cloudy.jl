@@ -17,24 +17,22 @@ function main()
   kernel_func = x -> coalescence_coeff
 
   # Initial condition: lognormal distribution
-  N = 150.0
-  mu = 1.5
-  sigma = 0.5
-  dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log.(x)-mu)^2/(2*sigma^2))
+  #N = 150.0
+  #mu = 1.5
+  #sigma = 0.5
+  #dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log.(x)-mu)^2/(2*sigma^2))
 
   # Initial condition: gamma distribution
-  #n = 150.0
-  #k = 4.26
-  #theta = 1.0
-  #gamma_dist = GammaPrimitiveParticleDistribution(n, theta, k)
-  #dist_init = x -> density_eval(gamma_dist, x)
+  gamma_dist = GammaPrimitiveParticleDistribution(150.0, 3.0, 2.0)
+  dist_init = x -> density_eval(gamma_dist, x)
 
   # Choose the basis functions
-  Nb = 3
+  Nb = 5
   mu_start = 5.0
   mu_stop = 25.0
-  rbf_mu = collect(range(mu_start, stop=mu_stop, length=Nb))
-  rbf_sigma = repeat([mu_start/2], Nb)
+  #rbf_mu = collect(range(mu_start, stop=mu_stop, length=Nb))
+  rbf_mu = exp.(collect(range(log(mu_start), stop = log(mu_stop), length=Nb)))
+  rbf_sigma = repeat([(rbf_mu[2] - rbf_mu[1])/2], Nb)
   basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
   for i = 1:Nb
     basis[i] = GaussianBasisFunction(rbf_mu[i], rbf_sigma[i])
@@ -94,7 +92,7 @@ function main()
   annotate!([(15.0, 20.0, Plots.text(string("Starting mass: ", m0), 12))])
   annotate!([(15.0, 15.0, Plots.text(string("Ending mass: ", mf), 12))])
 
-  savefig("rbf/log_const_coll_QP3.png")
+  savefig("rbf/log_const_coll_QP10linspace.png")
 end
 
 @time main()
