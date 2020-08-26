@@ -1,10 +1,12 @@
 module BasisFunctions
 
+using QuadGK
 export AbstractBasisFunc
 export PrimitiveUnivariateBasisFunc
 export GaussianBasisFunction
 export basis_func
 export evaluate_rbf
+export get_moment
 
 
 """
@@ -40,6 +42,7 @@ struct GaussianBasisFunction{FT} <: PrimitiveUnivariateBasisFunc{FT}
         new{FT}(μ, σ)
     end
 end
+
 
 """
   basis_func(dist)
@@ -97,6 +100,17 @@ function evaluate_rbf(basis::Array{PrimitiveUnivariateBasisFunc,1}, c::Array{FT}
   end
 
   return approx
+end
+
+function get_moment(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}
+  Nb = length(basis)
+  moms = zeros(FT, Nb)
+  for i=1:Nb
+    integrand = x-> basis_func(basis[i])(x)*x^q
+    moms[i] = quadgk(integrand, xstart, xstop)[1]
+  end
+
+  return moms
 end
 
 end
