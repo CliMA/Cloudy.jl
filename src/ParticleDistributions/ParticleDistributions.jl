@@ -35,6 +35,7 @@ export GammaPrimitiveParticleDistribution
 export AdditiveParticleDistribution
 export ExponentialAdditiveParticleDistribution
 export GammaAdditiveParticleDistribution
+export GaussianPrimitiveParticleDistribution
 
 # methods that query particle mass distributions
 export moment
@@ -117,6 +118,33 @@ struct GammaPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{F
       error("n needs to be nonnegative. θ and k need to be positive.")
     end
     new{FT}(n, θ, k)
+  end
+end
+
+"""
+  GaussianPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+
+Represents particle mass distribution function of gaussian shape.
+
+# Constructors
+  GaussianPrimitiveParticleDistribution(n::Real, μ::Real, σ::Real)
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
+struct GaussianPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+  "normalization constant (e.g., droplet number concentration)"
+  n::FT
+  "mean parameter"
+  μ::FT
+  "shape parameter"
+  σ::FT
+
+  function GaussianPrimitiveParticleDistribution(n::FT, μ::FT, σ::FT) where {FT<:Real}
+    if n < 0 || μ <= 0 || σ <= 0
+      error("n needs to be nonnegative. μ and σ need to be positive.")
+    end
+    new{FT}(n, μ, σ)
   end
 end
 
@@ -242,6 +270,15 @@ function moment_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT<:Re
   return f
 end
 
+function moment_func(dist::GaussianPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  # moment_of_dist: no easy analytic form, so use quadgk
+  function f(n, μ, σ, q)
+    integrand = x-> n/σ/sqrt(2*pi)*exp(-1/2*((x - μ)/σ)^2)*x^q
+    return quadgk(integrand, eps(), FT(μ+10*σ))[1]
+  end
+  return f
+end
+
 
 function moment_func(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}}) where {FT<:Real}
   # mixture moment is sum of moments of subdistributions
@@ -310,6 +347,14 @@ function density_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT<:R
   # density = n / θ^k / Γ(k) * x^(k-1) * exp(-x/θ)
   function f(n, θ, k, x)
     n .* x.^(k .- 1) ./ θ.^k ./ gamma.(k) .* exp.(-x ./ θ)
+  end
+  return f
+end
+
+function density_func(dist::GaussianPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  # density = n/σ/sqrt(2π)*exp(-1/2*((x-μ)/σ)^2)
+  function f(n, μ, σ, x)
+    n ./ σ ./ sqrt(2*pi).*exp(-1/2*((x-μ)./σ).^2)
   end
   return f
 end
@@ -414,6 +459,10 @@ end
 
 function update_params(dist::GammaPrimitiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
   GammaPrimitiveParticleDistribution(values...)
+end
+
+function update_params(dist::GaussianPrimitiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
+  GaussianPrimitiveParticleDistribution(values...)
 end
 
 function update_params(dist::AdditiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
@@ -591,9 +640,10 @@ function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_
 
    # don't allow k to go below 4
    n = M0
-   k = max(5.0, -M1^2/(M1^2 - M0*M2))
-   θ = M1/n/k
-   #θ = -(M1^2 - M0*M2)/(M0*M1)
+   #k = max(5.0, -M1^2/(M1^2 - M0*M2))
+   k = -M1^2/(M1^2-M0*M2)
+   #θ = M1/n/k
+   θ = -(M1^2 - M0*M2)/(M0*M1)
 
 
   update_params(dist, [n, θ, k])
@@ -613,6 +663,25 @@ function moments_to_params(dist::ExponentialPrimitiveParticleDistribution{FT}, t
   θ = M1/M0
 
   update_params(dist, [n, θ])
+
+end
+
+function moments_to_params(dist::GaussianPrimitiveParticleDistribution{FT}, target_moments::Array{FT}) where {FT<:Real}
+  if length(target_moments) != nparams(dist)
+    error("Number of moments must be consistent with distribution type.")
+  end
+  check_moment_consistency(target_moments)
+
+   # target_moments[1] == M0, target_moments[2] == M1, target_moments[3] == M2
+   M0 = target_moments[1]
+   M1 = target_moments[2]
+   M2 = target_moments[3]
+
+   n = M0
+   μ = M1/M0
+   σ = sqrt(M2/M0 - (M1/M0)^2)
+
+   update_params(dist, [n, μ, σ])
 
 end
 
