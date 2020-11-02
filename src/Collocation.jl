@@ -69,14 +69,14 @@ function select_rbf_locs(u0::Function, xmax::FT, nlocs::Int64; nsample::Int64 = 
     return locs
 end
 
-function select_rbf_shapes(rbf_locs::Array{FT}) where {FT <: Real}
+function select_rbf_shapes(rbf_locs::Array{FT}, smoothing_factor::FT = 1.6) where {FT <: Real}
     nlocs = length(rbf_locs)
     rbf_shapes = zeros(FT, nlocs)
     rbf_locs_tmp = vcat(0.0, rbf_locs, rbf_locs[end]+eps())
 
     for i=1:nlocs
-        s1 = (rbf_locs_tmp[i+1] - rbf_locs_tmp[i])/1.6
-        s2 = (rbf_locs_tmp[i+2] - rbf_locs_tmp[i+1])/1.6
+        s1 = (rbf_locs_tmp[i+1] - rbf_locs_tmp[i])/smoothing_factor
+        s2 = (rbf_locs_tmp[i+2] - rbf_locs_tmp[i+1])/smoothing_factor
         rbf_shapes[i] = max(s1, s2)
     end
 
@@ -203,7 +203,7 @@ function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}, mass:
     constraint1 = x >= 0
     constraint2 = J'*x == mass
     problem = minimize(objective, constraint1, constraint2)
-    solve!(problem, SCS.Optimizer(verbose=false))
+    solve!(problem, SCS.Optimizer(verbose=false), verbose=false)
     c = x.value
 
     return c[:,1]

@@ -1,4 +1,4 @@
-"Constant coalescence kernel example"
+"Constant coalescence kernel example: gaussian PSD closure"
 
 using DifferentialEquations
 using Plots
@@ -13,13 +13,13 @@ function main()
   FT = Float64
   tol = 1e-8
 
-  # Physicsal parameters
-  coalescence_coeff = 0.01
+  # Physical parameters
+  coalescence_coeff = 8e-5
   kernel_func = x -> coalescence_coeff
   kernel = CoalescenceTensor(kernel_func, 0, 100.0)
 
   # Initial condition: Gaussian distribution
-  N0 = 1000.0
+  N0 = 1e5
   mu = 15.0
   sigma = 5.0
   dist_init = GaussianPrimitiveParticleDistribution(N0, mu, sigma)
@@ -128,10 +128,10 @@ function main()
       ls=:dash,
       label="M\$_2\$ Exact"
   )
-  savefig("Cloudy_constant_kernel_gaussian.png")
+  savefig("rbf/Comparison/constKern_Cloudy_constant_kernel_gaussian_N1e5.png")
 
 # plot the actual distribution
-tplot = [0.0, 0.5, 1.0]
+tplot = [0.0, 1.0]
 x = collect(range(eps(), stop=250.0, length=1000))
 plot(x, 
     density_eval(dist_init, x)/N0,
@@ -147,10 +147,17 @@ for i=2:length(tplot)
   dist = update_params_from_moments(ODE_parameters, moments)
   plot!(x,
       density_eval(dist, x)/moments[1],
-      linewidth=2)
+      linewidth=2,
+      label=tplot[i])
 end
-savefig("Cloudy_constant_kernel_gaussiandist.png")
+savefig("rbf/Comparison/constKern_Cloudy_constant_kernel_gaussiandist_N1e5.png")
+
+# print out the final moment and the initial and final distribution parameters
+println("Initial moments: ", moments_init)
+println("Final moments: ", vcat(sol.u'...)[end,:])
+println("Initial distribution: ", dist_init)
+println("Final distribution: ", update_params_from_moments(ODE_parameters, sol(tplot[end])[1:3]))
 
 end
 
-main()
+@time main()
