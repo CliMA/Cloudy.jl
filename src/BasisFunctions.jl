@@ -4,6 +4,7 @@ using QuadGK
 export AbstractBasisFunc
 export PrimitiveUnivariateBasisFunc
 export GaussianBasisFunction
+export LognormalBasisFunction
 export basis_func
 export evaluate_rbf
 export get_moment
@@ -24,9 +25,9 @@ A 1D basis function over R, which can take a variety of forms.
 abstract type PrimitiveUnivariateBasisFunc{FT} <: AbstractBasisFunc{FT} end
 
 """
-    PrimitiveUnivariateBasisFunc{FT}
+   GaussianBasisFunction{FT}
 
-A 1D basis function over R, which can take a variety of forms.
+A normal distribution.
 """
 struct GaussianBasisFunction{FT} <: PrimitiveUnivariateBasisFunc{FT}
     "center of the basis function"
@@ -45,12 +46,32 @@ end
 
 
 """
+   LognormalBasisFunction{FT}
+
+A normal distribution.
+"""
+struct LognormalBasisFunction{FT} <: PrimitiveUnivariateBasisFunc{FT}
+    "mean of log(x)"
+    μ::FT
+    "std dev of log(x)"
+    σ::FT
+
+    function LognormalBasisFunction(μ::FT, σ::FT) where {FT <: Real}
+        if σ <= 0
+          error("σ needs to be positive")
+        end
+      
+        new{FT}(μ, σ)
+    end
+end
+
+
+"""
   basis_func(dist)
 
-  `rbf` - Gaussian Basis Function
+  `rbf` - Radial Basis Function
 Returns a function that computes the moments of `dist`.
 """
-
 function basis_func(rbf::GaussianBasisFunction{FT}) where {FT <: Real}
     p = get_params(rbf)[2]
     μ = p[1]
@@ -60,6 +81,17 @@ function basis_func(rbf::GaussianBasisFunction{FT}) where {FT <: Real}
     end
     g = x-> f(μ, σ, x)
     return g
+end
+
+function basis_func(rbf::LognormalBasisFunction{FT}) where {FT <: Real}
+  p = get_params(rbf)[2]
+  μ = p[1]
+  σ = p[2]
+  function f(μ, σ, x)
+      1/x/σ/sqrt(2*pi)*exp(-(log(x)-μ)^2/2/σ^2)
+  end
+  g = x-> f(μ, σ, x)
+  return g
 end
 
 """
@@ -108,6 +140,19 @@ function get_moment(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; xstart
   for i=1:Nb
     integrand = x-> basis_func(basis[i])(x)*x^q
     moms[i] = quadgk(integrand, xstart, xstop)[1]
+  end
+
+  return moms
+end
+
+function get_moment(basis::Array{LognormalBasisFunction, 1}, q::FT) where {FT <: Real}
+  Nb = length(basis)
+  moms = zeros(FT, Nb)
+  for i=1:Nb
+    params = get_params(basis[i])
+    mu = params[1]
+    sigma = params[2]
+    moms[i] = exp(q*mu+q^2*sigma^2/2)
   end
 
   return moms
