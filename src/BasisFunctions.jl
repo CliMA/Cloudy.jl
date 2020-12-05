@@ -1,10 +1,13 @@
 module BasisFunctions
 
 using QuadGK
+using SpecialFunctions: gamma
+
 export AbstractBasisFunc
 export PrimitiveUnivariateBasisFunc
 export GaussianBasisFunction
 export LognormalBasisFunction
+export GammaBasisFunction
 export basis_func
 export evaluate_rbf
 export get_moment
@@ -48,7 +51,7 @@ end
 """
    LognormalBasisFunction{FT}
 
-A normal distribution.
+A lognormal distribution.
 """
 struct LognormalBasisFunction{FT} <: PrimitiveUnivariateBasisFunc{FT}
     "mean of log(x)"
@@ -62,6 +65,26 @@ struct LognormalBasisFunction{FT} <: PrimitiveUnivariateBasisFunc{FT}
         end
       
         new{FT}(μ, σ)
+    end
+end
+
+"""
+   GammaBasisFunction{FT}
+
+A normal distribution.
+"""
+struct GammaBasisFunction{FT} <: PrimitiveUnivariateBasisFunc{FT}
+    "shape parameter"
+    k::FT
+    "scale parameter"
+    θ::FT
+
+    function GammaBasisFunction(k::FT, θ::FT) where {FT <: Real}
+        if θ <= 0
+          error("θ needs to be positive")
+        end
+      
+        new{FT}(k, θ)
     end
 end
 
@@ -91,6 +114,17 @@ function basis_func(rbf::LognormalBasisFunction{FT}) where {FT <: Real}
       1/x/σ/sqrt(2*pi)*exp(-(log(x)-μ)^2/2/σ^2)
   end
   g = x-> f(μ, σ, x)
+  return g
+end
+
+function basis_func(rbf::GammaBasisFunction{FT}) where {FT <: Real}
+  p = get_params(rbf)[2]
+  k = p[1]
+  θ = p[2]
+  function f(k, θ, x)
+      x^(k-1)*exp(-x/θ)/θ^k/gamma(k)
+  end
+  g = x-> f(k, θ, x)
   return g
 end
 
@@ -153,6 +187,19 @@ function get_moment(basis::Array{LognormalBasisFunction, 1}, q::FT) where {FT <:
     mu = params[1]
     sigma = params[2]
     moms[i] = exp(q*mu+q^2*sigma^2/2)
+  end
+
+  return moms
+end
+
+function get_moment(basis::Array{GammaBasisFunction, 1}, q::FT) where {FT <: Real}
+  Nb = length(basis)
+  moms = zeros(FT, Nb)
+  for i=1:Nb
+    params = get_params(basis[i])
+    k = params[1]
+    theta = params[2]
+    moms[i] = gamma(k+q)/gamma(k)*theta^q
   end
 
   return moms

@@ -1,5 +1,3 @@
-"Golovin coalescence kernel example"
-
 using Plots
 using Cloudy.BasisFunctions
 using Cloudy.Collocation
@@ -10,8 +8,8 @@ function main()
   FT = Float64
 
   # Physical parameters: Kernel
-  b = 8e-7
-  kernel_func = x -> b*(x[1]+x[2])
+  b = 8e-8
+  kernel_func = x -> b
 
   ################## COLLOCATION APPROACH ###################
   # Initial condition: lognormal
@@ -23,7 +21,7 @@ function main()
   # Choose the basis functions
   Nb = 3
   rbf_mu = [log(15), log(50), log(150)]
-  rbf_sigma = (log(5), 1.0, 0.1)
+  rbf_sigma = (log(5), 1.0, 0.5)
   basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
   for i = 1:Nb
     basis[i] = LognormalBasisFunction(rbf_mu[i], rbf_sigma[i])
@@ -39,6 +37,8 @@ function main()
   (c0, mass) = get_IC_vec(dist_init, basis, A, mass_cons)
   println("precomputation complete")
 
+  print(A)
+  
   # set up the explicit time stepper
   tspan = (0.0, 1.0)
   dt = 1e-3
