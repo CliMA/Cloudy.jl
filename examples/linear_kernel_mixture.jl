@@ -1,4 +1,4 @@
-"Constant coalescence kernel example"
+"Linear coalescence kernel example"
 
 using DifferentialEquations
 using LinearAlgebra
@@ -14,13 +14,13 @@ seed!(123)
 
 function main()
   # Numerical parameters
-  tol = 2e-4
+  tol = 1e-4
   n_samples = 10
-  n_inducing = 4
+  n_inducing = 10
 
   # Physicsal parameters
-  coalescence_coeff = 1e-3
-  kernel_func = ConstantKernelFunction(coalescence_coeff)
+  coalescence_coeff = 1.0e-2
+  kernel_func = LinearKernelFunction(coalescence_coeff)
   
   # Parameter transform used to transform native distribution
   # parameters to the real axis
@@ -31,10 +31,14 @@ function main()
   # Initial condition
   # We carrry transformed parameters in our time stepper for
   # stability purposes
-  particle_number = 100.0
-  mean_particles_mass = 10.0
-  particle_mass_std = 5.0
-  pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
+  particle_number1 = 1e6
+  particle_number2 = 1e5
+  mean_particles_mass1 = 20.0e-6
+  mean_particles_mass2 = 40.0e-6
+  particle_mass_std1 = 20.0e-6
+  particle_mass_std2 = 40.0e-6
+  pars_init = [particle_number1; particle_number2;
+               particle_mass_std1^2/mean_particles_mass1; particle_mass_std2^2/mean_particles_mass2]
   state_init = trafo.(pars_init) 
 
   # Set up the ODE problem
@@ -49,7 +53,7 @@ function main()
     native_state = inv_trafo.(state)
 
     # Evaluate processes at inducing points using a closure distribution
-    pdist = GammaParticleDistribution(native_state[1], native_state[2], native_state[3])
+    pdist = AdditiveExponentialParticleDistribution(native_state[1], native_state[2], native_state[3], native_state[4])
     inducing_points = sample(pdist, n_inducing)
     coal_int = get_coalescence_integral(inducing_points, kernel_func, pdist, n_samples)
 
@@ -70,7 +74,7 @@ function main()
   end
 
   # Step 3) Solve the ODE
-  tspan = (0.0, 1000.0)
+  tspan = (0.0, 5.0)
   prob = ODEProblem(rhs!, state_init, tspan)
   sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
 
@@ -78,14 +82,15 @@ function main()
   time = sol.t
 
   # Get the native distribution parameters
-  n = inv_trafo.(vcat(sol.u'...)[:, 1])
-  k = inv_trafo.(vcat(sol.u'...)[:, 2])
-  θ = inv_trafo.(vcat(sol.u'...)[:, 3])
+  n1 = inv_trafo.(vcat(sol.u'...)[:, 1])
+  n2 = inv_trafo.(vcat(sol.u'...)[:, 2])
+  θ1 = inv_trafo.(vcat(sol.u'...)[:, 3])
+  θ2 = inv_trafo.(vcat(sol.u'...)[:, 4])
 
   # Calculate moments for plotting
-  moment_0 = n
-  moment_1 = n.*k.*θ
-  moment_2 = n.*k.*(k.+1.0).*θ.^2
+  moment_0 = n1 .+ n2
+  moment_1 = n1.*θ1 .+ n2.*θ2
+  moment_2 = 2.0.*n1.*θ1.^2 .+ 2.0.*n2.*θ2.^2
 
   p1 = plot(time,
       moment_0,
@@ -97,7 +102,7 @@ function main()
       label="M0 CLIMA"
   )
   plot!(p1, time,
-      t-> (1 / moment_0[1] + 0.5 * kernel_func.coll_coal_rate * t)^(-1),
+      t-> (moment_0[1] * exp(-moment_1[1] * kernel_func.coll_coal_rate * t)),
       lw=3,
       ls=:dash,
       label="M0 Exact"
@@ -126,13 +131,13 @@ function main()
       label="M2 CLIMA"
   )
   plot!(p3, time,
-      t-> moment_2[1] + moment_1[1]^2 * kernel_func.coll_coal_rate * t,
-      lw=3,
+  t-> (moment_2[1] * exp(2 * moment_1[1] * kernel_func.coll_coal_rate * t)),
+  lw=3,
       ls=:dash,
       label="M2 Exact"
   )
   plot(p1, p2, p3, layout=(1, 3), size=(1000, 375), margin=5Plots.mm)
-  savefig("constant_kernel_test.png")
+  savefig("linear_kernel_test_mixture.png")
 end
 
 main()

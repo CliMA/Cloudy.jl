@@ -1,4 +1,4 @@
-"Constant coalescence kernel example"
+"Long-1974 coalescence kernel example"
 
 using DifferentialEquations
 using LinearAlgebra
@@ -14,13 +14,15 @@ seed!(123)
 
 function main()
   # Numerical parameters
-  tol = 2e-4
-  n_samples = 10
-  n_inducing = 4
+  tol = 1e-4
+  n_samples = 5
+  n_inducing = 5
 
   # Physicsal parameters
-  coalescence_coeff = 1e-3
-  kernel_func = ConstantKernelFunction(coalescence_coeff)
+  cloud_coalescence_coeff = 1.0e-2
+  rain_coalescence_coeff = 0.5e-2
+  size_threshold = 50.0e-6
+  kernel_func = LongKernelFunction(cloud_coalescence_coeff, rain_coalescence_coeff, size_threshold)
   
   # Parameter transform used to transform native distribution
   # parameters to the real axis
@@ -31,9 +33,9 @@ function main()
   # Initial condition
   # We carrry transformed parameters in our time stepper for
   # stability purposes
-  particle_number = 100.0
-  mean_particles_mass = 10.0
-  particle_mass_std = 5.0
+  particle_number = 1e6
+  mean_particles_mass = 20.0e-6
+  particle_mass_std = 10.0e-6
   pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
   state_init = trafo.(pars_init) 
 
@@ -70,7 +72,7 @@ function main()
   end
 
   # Step 3) Solve the ODE
-  tspan = (0.0, 1000.0)
+  tspan = (0.0, 100.0)
   prob = ODEProblem(rhs!, state_init, tspan)
   sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
 
@@ -96,13 +98,6 @@ function main()
       ylims=(0, 1.5*maximum(moment_0)),
       label="M0 CLIMA"
   )
-  plot!(p1, time,
-      t-> (1 / moment_0[1] + 0.5 * kernel_func.coll_coal_rate * t)^(-1),
-      lw=3,
-      ls=:dash,
-      label="M0 Exact"
-  )
-
   p2 = plot(time,
       moment_1,
       linewidth=3,
@@ -110,12 +105,6 @@ function main()
       yaxis="M1",
       ylims=(0, 1.5*maximum(moment_1)),
       label="M1 CLIMA"
-  )
-  plot!(p2, time,
-      t-> moment_1[1],
-      lw=3,
-      ls=:dash,
-      label="M1 Exact"
   )
   p3 = plot(time,
       moment_2,
@@ -125,14 +114,8 @@ function main()
       ylims=(0, 1.5*maximum(moment_2)),
       label="M2 CLIMA"
   )
-  plot!(p3, time,
-      t-> moment_2[1] + moment_1[1]^2 * kernel_func.coll_coal_rate * t,
-      lw=3,
-      ls=:dash,
-      label="M2 Exact"
-  )
   plot(p1, p2, p3, layout=(1, 3), size=(1000, 375), margin=5Plots.mm)
-  savefig("constant_kernel_test.png")
+  savefig("long_kernel_test.png")
 end
 
 main()
