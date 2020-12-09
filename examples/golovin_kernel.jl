@@ -1,4 +1,4 @@
-"Linear coalescence kernel example"
+"Linear (Golovin) coalescence kernel example"
 
 using DifferentialEquations
 using LinearAlgebra
@@ -15,11 +15,17 @@ seed!(123)
 function main()
   # Numerical parameters
   tol = 1e-4
-  n_samples = 10
-  n_inducing = 10
+  n_samples = 25
+  n_inducing = 5
 
   # Physicsal parameters
-  coalescence_coeff = 1.0e-2
+  # Mass has been rescaled below by a factor of 1e3 so that 1 gram = 1e3 milligram 
+  # Time has been rescaled below by a factor of 1e1 so that 1 sec = 10 deciseconds
+  mass_scale = 1e3
+  time_scale = 1e1
+  
+  T_end = 3 * time_scale #3 s
+  coalescence_coeff = 5.78e3 / mass_scale / time_scale #5.78e3 cm^3 g^-1 s-1  
   kernel_func = LinearKernelFunction(coalescence_coeff)
   
   # Parameter transform used to transform native distribution
@@ -31,14 +37,10 @@ function main()
   # Initial condition
   # We carrry transformed parameters in our time stepper for
   # stability purposes
-  particle_number1 = 1e6
-  particle_number2 = 1e5
-  mean_particles_mass1 = 20.0e-6
-  mean_particles_mass2 = 40.0e-6
-  particle_mass_std1 = 20.0e-6
-  particle_mass_std2 = 40.0e-6
-  pars_init = [particle_number1; particle_number2;
-               particle_mass_std1^2/mean_particles_mass1; particle_mass_std2^2/mean_particles_mass2]
+  particle_number = 1e4
+  mean_particles_mass = 1e-8 * mass_scale #1e-7 g
+  particle_mass_std = 0.5e-8 * mass_scale #0.5e-7 g
+  pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
   state_init = trafo.(pars_init) 
 
   # Set up the ODE problem
@@ -53,7 +55,7 @@ function main()
     native_state = inv_trafo.(state)
 
     # Evaluate processes at inducing points using a closure distribution
-    pdist = AdditiveExponentialParticleDistribution(native_state[1], native_state[2], native_state[3], native_state[4])
+    pdist = GammaParticleDistribution(native_state[1], native_state[2], native_state[3])
     inducing_points = sample(pdist, n_inducing)
     coal_int = get_coalescence_integral(inducing_points, kernel_func, pdist, n_samples)
 
@@ -74,35 +76,34 @@ function main()
   end
 
   # Step 3) Solve the ODE
-  tspan = (0.0, 5.0)
+  tspan = (0.0, T_end)
   prob = ODEProblem(rhs!, state_init, tspan)
   sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
 
   # Step 4) Plot the results
-  time = sol.t
+  time = sol.t / time_scale
 
   # Get the native distribution parameters
-  n1 = inv_trafo.(vcat(sol.u'...)[:, 1])
-  n2 = inv_trafo.(vcat(sol.u'...)[:, 2])
-  θ1 = inv_trafo.(vcat(sol.u'...)[:, 3])
-  θ2 = inv_trafo.(vcat(sol.u'...)[:, 4])
+  n = inv_trafo.(vcat(sol.u'...)[:, 1])
+  k = inv_trafo.(vcat(sol.u'...)[:, 2])
+  θ = inv_trafo.(vcat(sol.u'...)[:, 3])
 
   # Calculate moments for plotting
-  moment_0 = n1 .+ n2
-  moment_1 = n1.*θ1 .+ n2.*θ2
-  moment_2 = 2.0.*n1.*θ1.^2 .+ 2.0.*n2.*θ2.^2
+  moment_0 = n
+  moment_1 = n.*k.*θ
+  moment_2 = n.*k.*(k.+1.0).*θ.^2
 
   p1 = plot(time,
       moment_0,
       linewidth=3,
-      xaxis="time",
-      yaxis="M0",
-      xlims=tspan,
+      xaxis="time [s]",
+      yaxis="M0 [1/cm^3]",
+      xlims=(0, maximum(time)),
       ylims=(0, 1.5*maximum(moment_0)),
       label="M0 CLIMA"
   )
   plot!(p1, time,
-      t-> (moment_0[1] * exp(-moment_1[1] * kernel_func.coll_coal_rate * t)),
+      t-> (moment_0[1] * exp(-moment_1[1] * coalescence_coeff * t * time_scale)),
       lw=3,
       ls=:dash,
       label="M0 Exact"
@@ -111,8 +112,8 @@ function main()
   p2 = plot(time,
       moment_1,
       linewidth=3,
-      xaxis="time",
-      yaxis="M1",
+      xaxis="time [s]",
+      yaxis="M1 [milligrams/cm^3]",
       ylims=(0, 1.5*maximum(moment_1)),
       label="M1 CLIMA"
   )
@@ -125,19 +126,19 @@ function main()
   p3 = plot(time,
       moment_2,
       linewidth=3,
-      xaxis="time",
-      yaxis="M2",
+      xaxis="time [s]",
+      yaxis="M2 [milligrams^2/cm^3]",
       ylims=(0, 1.5*maximum(moment_2)),
       label="M2 CLIMA"
   )
   plot!(p3, time,
-  t-> (moment_2[1] * exp(2 * moment_1[1] * kernel_func.coll_coal_rate * t)),
+  t-> (moment_2[1] * exp(2 * moment_1[1] * coalescence_coeff * t * time_scale)),
   lw=3,
       ls=:dash,
       label="M2 Exact"
   )
   plot(p1, p2, p3, layout=(1, 3), size=(1000, 375), margin=5Plots.mm)
-  savefig("linear_kernel_test_mixture.png")
+  savefig("golovin_kernel_test.png")
 end
 
 main()
