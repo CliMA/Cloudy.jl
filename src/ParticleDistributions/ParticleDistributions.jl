@@ -10,7 +10,7 @@ module ParticleDistributions
 using Distributions: Distribution, Gamma, Exponential, MixtureModel, pdf, components
 using ForwardDiff
 using DocStringExtensions
-using SpecialFunctions: polygamma
+using SpecialFunctions: polygamma, gamma_inc, gamma
 using Random: rand
 
 # particle mass distributions available for microphysics
@@ -22,6 +22,7 @@ export AdditiveExponentialParticleDistribution
 
 # methods that query particle mass distributions
 export sample
+export moment
 export density_gradient
 export normal_mass_constraint
 
@@ -197,6 +198,37 @@ Returns samples from the implied probability distribution.
 """
 function sample(pdist::ParticleDistribution{FT}, n_samples::Int) where {FT<:Real}
   return rand(pdist.dist, n_samples)
+end
+
+
+"""
+  moment(pdist::ParticleDistribution{FT}, q::Int, a::FT, b::FT)
+
+  - `pdist` - is a particle mass distribution
+  - `q` - is the order of the moment
+  - `a` - is the lower boundary for the incomplete integral
+  - `b` - is the lower boundary for the incomplete integral
+Returns the incomplete moment.
+"""
+function moment(pdist::GammaParticleDistribution{FT}, q::Int, a::FT, b::FT) where {FT<:Real}
+  n = pdist.n
+  k = pdist.k
+  θ = pdist.θ
+  
+  g1, __ = gamma_inc(k+q, a/θ, 0)
+  __, g2 = gamma_inc(k+q, b/θ, 0)
+
+  return n*θ^q*gamma(k+q)/gamma(k)*(1 - g1 - g2)
+end
+
+function moment(pdist::ExponentialParticleDistribution{FT}, q::Int, a::FT, b::FT) where {FT<:Real}
+  n = pdist.n
+  θ = pdist.θ
+  
+  g1, __ = gamma_inc(1+q, a/θ, 0)
+  __, g2 = gamma_inc(1+q, b/θ, 0)
+
+  return n*θ^q*gamma(1+q)*(1 - g1 - g2)
 end
 
 

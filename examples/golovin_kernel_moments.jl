@@ -15,16 +15,14 @@ seed!(123)
 function main()
   # Numerical parameters
   tol = 1e-4
-  n_samples = 75
+  n_samples = 100
 
   # Physicsal parameters
-  # Mass has been rescaled below by a factor of 1e2 so that 1 gram = 1e2 centigram 
   # Time has been rescaled below by a factor of 1e1 so that 1 sec = 10 deciseconds
-  mass_scale = 1e4
-  time_scale = 1e1
+  time_scale = 1e6
   
-  T_end = 3 * time_scale #3 s
-  coalescence_coeff = 5.78e3 / mass_scale / time_scale #5.78e3 cm^3 g^-1 s-1  
+  T_end = 120 * time_scale
+  coalescence_coeff = 5.78e3 / time_scale #5.78e3 cm^3 g^-1 s-1
   kernel_func = LinearKernelFunction(coalescence_coeff)
   
   # Parameter transform used to transform native distribution
@@ -34,8 +32,8 @@ function main()
 
   # Initial condition
   particle_number = 1e4
-  mean_particles_mass = 1e-8 * mass_scale #1e-7 g
-  particle_mass_std = 0.5e-8 * mass_scale #0.5e-7 g
+  mean_particles_mass = 0.33e-9 #0.33e-9 g = 2.5e-6 m radius
+  particle_mass_std = 0.33e-9 #0.33e-9 g
   pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
   state_init = trafo(pars_init) 
 
@@ -76,6 +74,18 @@ function main()
   moment_1 = vcat(sol.u'...)[:, 2]
   moment_2 = vcat(sol.u'...)[:, 3]
 
+  # Calculate the rain rain fraction
+  rain_threshold = 5e-8 #5e-8 g
+  rain_frac = similar(moment_0)
+  for i in 1:length(rain_frac)
+    n, k, θ = inv_trafo([moment_0[i], moment_1[i], moment_2[i]])
+    pdist = GammaParticleDistribution(n, k, θ)
+    rain_frac[i] = moment(pdist, 1, rain_threshold, 100.0) / moment_1[i]
+  end
+
+  println("Rain fraction at end of simulation:")
+  println(rain_frac[end])
+
   p1 = plot(time,
       moment_0,
       linewidth=3,
@@ -96,7 +106,7 @@ function main()
       moment_1,
       linewidth=3,
       xaxis="time [s]",
-      yaxis="M1 [milligrams/cm^3]",
+      yaxis="M1 [grams/cm^3]",
       ylims=(0, 1.5*maximum(moment_1)),
       label="M1 CLIMA"
   )
@@ -110,7 +120,7 @@ function main()
       moment_2,
       linewidth=3,
       xaxis="time [s]",
-      yaxis="M2 [milligrams^2/cm^3]",
+      yaxis="M2 [grams^2/cm^3]",
       ylims=(0, 1.5*maximum(moment_2)),
       label="M2 CLIMA"
   )

@@ -9,24 +9,22 @@ using Cloudy.KernelFunctions
 using Cloudy.ParticleDistributions
 using Cloudy.Sources
 
-seed!(124)
+seed!(126)
 
 
 function main()
   # Numerical parameters
   tol = 1e-4
-  n_samples = 75
+  n_samples = 100
  
   # Physicsal parameters
-  # Mass has been rescaled below by a factor of 1e2 so that 1 gram = 1e3 milligram 
   # Time has been rescaled below by a factor of 1e1 so that 1 sec = 10 deciseconds
-  mass_scale = 1e3
-  time_scale = 1e1
+  time_scale = 1e6
 
-  T_end = 30 * time_scale #30 s
-  cloud_coalescence_coeff = 9.44e9 / mass_scale^2 / time_scale #9.44e9 cm^3 g^-2 s-1
-  rain_coalescence_coeff = 5.78e3 / mass_scale / time_scale #5.78e3 cm^3 g^-1 s-1
-  mass_threshold = 5e-7 * mass_scale #5e-7 g
+  T_end = 15 * 60 * time_scale
+  cloud_coalescence_coeff = 9.44e9 / time_scale #9.44e9 cm^3 g^-2 s-1
+  rain_coalescence_coeff = 5.78e3 / time_scale #5.78e3 cm^3 g^-1 s-1
+  mass_threshold = 5e-7 #5e-7 g
   kernel_func = LongKernelFunction(cloud_coalescence_coeff, rain_coalescence_coeff, mass_threshold)
   
   # Parameter transform used to transform native distribution
@@ -36,10 +34,10 @@ function main()
 
   # Initial condition
   particle_number = 1e4
-  mean_particles_mass = 1e-8 * mass_scale #1e-7 g
-  particle_mass_std = 0.5e-8 * mass_scale #0.5e-7 g
+  mean_particles_mass = 1.2e-9 #1.2e-9 g
+  particle_mass_std = 1.2e-9 #1.2e-9 g
   pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
-  state_init = trafo(pars_init) 
+  state_init = trafo(pars_init)
 
   # Set up the ODE problem
   # Step 1) Define termination criterion: stop integration when one of the 
@@ -48,6 +46,8 @@ function main()
   nothing
 
   # Step 2) Set up the right hand side of ODE
+
+
   function rhs!(dstate, state, p, t)
     # Transform state to native distribution parameters
     native_state = inv_trafo(state)
@@ -78,6 +78,18 @@ function main()
   moment_1 = vcat(sol.u'...)[:, 2]
   moment_2 = vcat(sol.u'...)[:, 3]
 
+  # Calculate the rain rain fraction
+  rain_threshold = 5e-8 #5e-8 g
+  rain_frac = similar(moment_0)
+  for i in 1:length(rain_frac)
+    n, k, θ = inv_trafo([moment_0[i], moment_1[i], moment_2[i]])
+    pdist = GammaParticleDistribution(n, k, θ)
+    rain_frac[i] = moment(pdist, 1, rain_threshold, 100.0) / moment_1[i]
+  end
+
+  println("Rain fraction at end of simulation:")
+  println(rain_frac[end])
+
   p1 = plot(time,
       moment_0,
       linewidth=3,
@@ -91,7 +103,7 @@ function main()
       moment_1,
       linewidth=3,
       xaxis="time",
-      yaxis="M1 [milligrams / cm^3]",
+      yaxis="M1 [grams / cm^3]",
       ylims=(0, 1.5*maximum(moment_1)),
       label="M1 CLIMA"
   )
@@ -99,7 +111,7 @@ function main()
       moment_2,
       linewidth=3,
       xaxis="time",
-      yaxis="M2 [milligrams^2 / cm^3]",
+      yaxis="M2 [grams^2 / cm^3]",
       ylims=(0, 1.5*maximum(moment_2)),
       label="M2 CLIMA"
   )
