@@ -11,6 +11,7 @@ export GammaBasisFunction
 export basis_func
 export evaluate_rbf
 export get_moment
+export get_first_moment
 
 
 """
@@ -166,6 +167,16 @@ function evaluate_rbf(basis::Array{PrimitiveUnivariateBasisFunc,1}, c::Array{FT}
   end
 
   return approx
+end
+
+function evaluate_rbf(basisfun::PrimitiveUnivariateBasisFunc, x::FT) where {FT<:Real}
+  return basis_func(basisfun)(x)
+end
+
+function get_moment(rbf::PrimitiveUnivariateBasisFunc, q::FT; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}
+  integrand = x-> basis_func(rbf)(x)*x^q
+  mom = quadgk(integrand, xstart, xstop)[1]
+  return mom
 end
 
 function get_moment(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}

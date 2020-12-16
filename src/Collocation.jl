@@ -83,21 +83,19 @@ function select_rbf_shapes(rbf_locs::Array{FT}, smoothing_factor::FT = 1.6) wher
     return rbf_shapes
 end
 
-function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
-    # A_ij = <basis[i], basis[j]>
+function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; fake::FT = 0.0) where {FT <: Real}
+    # Φ_ij = Φ_i(x_j)
     Nb = length(basis)
-    A = zeros(FT, Nb, Nb)
-    for i=1:Nb
-        for j=i:Nb
-            integrand = x-> basis_func(basis[i])(x)*basis_func(basis[j])(x)
-            A[i,j] = quadgk(integrand, xstart, xstop)[1]
-            A[j,i] = A[i,j]
+    Φ = zeros(FT, Nb, Nb)
+    for j=1:Nb
+        xj = get_moment(basis[j], 1.0)
+        for i=1:Nb
+            Φ[i,j] = evaluate_rbf(basis[i], xj)
         end
     end
-    
-    return A
-end
 
+    return Φ
+end
 
 """
 mass conserving form
