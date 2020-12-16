@@ -35,7 +35,7 @@ function main()
   #println("Basis:  ", basis)
 
   # Precompute the various matrices
-  A = get_rbf_inner_products(basis)
+  A = get_rbf_inner_products(basis) 
   Source = get_kernel_rbf_source(basis, rbf_mu, kernel_func)
   Sink = get_kernel_rbf_sink(basis, rbf_mu, kernel_func)
   mass_cons = get_mass_cons_term(basis)
@@ -110,7 +110,7 @@ function main()
       ls=:dash,
       label="M\$_2\$ Exact"
   )
-  savefig("rbf/Comparison/COL_constant_kernel_gaussian_lowres.png")
+  savefig("rbf/FIXED_constant_kernel_gaussian.png")
 
 
   # Plot the distributions
@@ -160,7 +160,7 @@ function main()
       label="Basis fn")
   end
 
-  savefig("rbf/Comparison/COL_constant_kernel_gaussiandist_lowres.png")
+  savefig("rbf/FIXED_constant_kernel_gaussiandist.png")
 end
 
 @time main()
