@@ -69,6 +69,10 @@ function select_rbf_locs(u0::Function, xmax::FT, nlocs::Int64; nsample::Int64 = 
     return locs
 end
 
+"""
+Given a set of RBF locations, set up shape parameters based on distance between
+adjacent rbfs 
+"""
 function select_rbf_shapes(rbf_locs::Array{FT}, smoothing_factor::FT = 1.6) where {FT <: Real}
     nlocs = length(rbf_locs)
     rbf_shapes = zeros(FT, nlocs)
@@ -83,6 +87,9 @@ function select_rbf_shapes(rbf_locs::Array{FT}, smoothing_factor::FT = 1.6) wher
     return rbf_shapes
 end
 
+""" 
+For conversion between collocation point and constants vector
+"""
 function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; fake::FT = 0.0) where {FT <: Real}
     # Φ_ij = Φ_i(x_j)
     Nb = length(basis)
@@ -98,18 +105,30 @@ function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; f
 end
 
 """
-mass conserving form
+Calculating the initial condition vector: non-mass conserving form
 """
-
-function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
-    # c0 is given by A*c0 = b, with b_i = <u0, basis[i]>
-    # must enforce a positivty constraint
-    # calculate the b_i vector
+function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}) where {FT<:Real}
+    # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
     for i=1:Nb
-        integrand = x-> u0.(x)*basis_func(basis[i])(x)
-        b[i] = quadgk(integrand, xstart, xstop)[1]
+        xi = get_moment(basis[i], 1.0)
+        b[i] = u0(xi)
+    end
+    c0 = get_constants_vec(b, A)
+    return c0
+end
+
+"""
+Calculating the initial condition vector: mass conserving form
+"""
+function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
+    # c0 is given by A*c0 = b, with b_i = u0(xi)
+    Nb = length(basis)
+    b = Array{FT}(undef, Nb)
+    for i=1:Nb
+        xi = get_moment(basis[i], 1.0)
+        b[i] = u0(xi)
     end
     mass = quadgk(x->u0.(x)*x, xstart, xstop)[1]
     
@@ -159,10 +178,13 @@ function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstar
     return J
 end
 
+"""
+Collision coalescnece rate of change: non-mass conserving form
+"""
 function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, N::Array{FT,3}) where {FT <: Real}
     Nb = length(nj)
     # first calculate c(t)
-    c = nonneg_lsq(A, nj)[:,1]
+    c = get_constants_vec(nj, A)
 
     # time rate of change: dn/dt|_xj, t
     dndt = zeros(FT, Nb)
@@ -174,9 +196,8 @@ function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, 
 end
 
 """
-mass conserving form
+Collision coalescnece rate of change: mass conserving form
 """
-
 function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, N::Array{FT,3}, J::Array{FT,1}, mass::FT) where {FT <: Real}
     Nb = length(nj)
     # first calculate c(t); 
@@ -191,7 +212,11 @@ function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, 
     return dndt
 end
 
-function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}, mass::FT; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
+""" 
+Retrieves constants vector from a set of values at the collocation points with conservation
+of the first moment
+"""
+function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}, mass::FT) where {FT<:Real}
     Nb = length(nj)
     # calculate c(t)
 
@@ -205,6 +230,13 @@ function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}, mass:
     c = x.value
 
     return c[:,1]
+end
+
+""" 
+Retrieves constants vector from a set of values at the collocation points without mass conservation
+"""
+function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}) where {FT<:Real}
+    return nonneg_lsq(A, nj)[:,1]
 end
 
 end
