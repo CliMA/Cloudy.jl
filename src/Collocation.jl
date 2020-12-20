@@ -20,52 +20,10 @@ export collision_coalescence
 export get_constants_vec
 
 """
-Sample points from the initial distribution and select locations via clustering; 
-add additional locations up to the maximum
+Logarithmically spaced between xmin and xmax
 """
-function select_rbf_locs(u0::Function, xmax::FT, nlocs::Int64; nsample::Int64 = 1000, xmin::FT = eps()) where {FT <: Real}
-    Random.seed!(123)
-    sampler = Uniform(xmin, xmax)
-    accepter = Uniform(0,1)
-    Npdf = quadgk(u0, xmin, xmax)[1]
-    pdf = x-> u0(x)/Npdf
-
-    locs = zeros(FT, nlocs)
-
-    samples = zeros(FT, nsample)
-
-    # generate the random samples
-    max_iter = 100
-    for i=1:nsample
-        count = 0
-        while count < max_iter
-            isample = rand(sampler,1)
-            p_accept = rand(accepter, 1)
-            if (p_accept[1] > pdf(isample[1]))
-                samples[i] = isample[1]
-                break
-            end
-            count += 1
-        end
-        if (count == max_iter)
-            error("Could not randomly sample from PDF")
-        end
-    end
-
-    # cluster the points
-    nclusters = Int64(round((maximum(samples))/xmax*nlocs - 1))
-    R = kmeans(vcat(samples'), nclusters)
-    locs[1:nclusters] = sort(R.centers[1,:])
-
-    # fill in the remaining
-    nother = nlocs - nclusters
-    if (nother == 1)
-        locs[end] = FT(xmax)
-    else
-        other_pts = collect(range(locs[nclusters], stop=FT(xmax), length=nother))
-        locs[nclusters+1:end] = other_pts
-    end
-
+function select_rbf_locs(xmin::FT, xmax::FT, nlocs::Int64) where {FT <: Real}
+    locs = exp.(range(log(xmin), stop=log(xmax), length=nlocs) |> collect)
     return locs
 end
 
@@ -73,18 +31,12 @@ end
 Given a set of RBF locations, set up shape parameters based on distance between
 adjacent rbfs 
 """
-function select_rbf_shapes(rbf_locs::Array{FT}, smoothing_factor::FT = 1.6) where {FT <: Real}
-    nlocs = length(rbf_locs)
-    rbf_shapes = zeros(FT, nlocs)
-    rbf_locs_tmp = vcat(0.0, rbf_locs, rbf_locs[end]+eps())
-
-    for i=1:nlocs
-        s1 = (rbf_locs_tmp[i+1] - rbf_locs_tmp[i])/smoothing_factor
-        s2 = (rbf_locs_tmp[i+2] - rbf_locs_tmp[i+1])/smoothing_factor
-        rbf_shapes[i] = max(s1, s2)
-    end
-
-    return rbf_shapes
+function select_rbf_shapes(rbf_locs::Array{FT}; smoothing_factor::FT = 2.0) where {FT <: Real}
+    rbf_pts = append!([0.0], rbf_locs)
+    rbf_sigma = zeros(length(rbf_locs))
+    rbf_sigma[1] = rbf_locs[1]/smoothing_factor
+    rbf_sigma[2:end] = (rbf_locs[2:end] - rbf_pts[1:end-2])/smoothing_factor
+    return rbf_sigma
 end
 
 """ 
@@ -122,7 +74,7 @@ end
 """
 Calculating the initial condition vector: mass conserving form
 """
-function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
+function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1e6) where {FT<:Real}
     # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
@@ -136,7 +88,7 @@ function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1},
     return (c0, mass)
 end
 
-function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}
+function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
     # N_ijk = <basis[k](x), basis[j](x'), K(x, x'), basis[i](x) dx' dx 
     Nb = length(basis)
     N = zeros(FT, Nb, Nb, Nb)
@@ -167,7 +119,7 @@ function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rb
     return M
 end
 
-function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT=1000.0) where {FT <: Real}
+function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT=1e6) where {FT <: Real}
     Nb = length(basis)
     J = zeros(FT, Nb)
     for i=1:Nb
