@@ -110,7 +110,7 @@ function main()
       ls=:dash,
       label="M\$_2\$ Exact"
   )
-  savefig("rbf/FIXED_constant_kernel_gaussian.png")
+  savefig("rbf/fixing_galerkin_ghosts/FIXED_constant_kernel_gaussian.png")
 
 
   # Plot the distributions
@@ -160,7 +160,7 @@ function main()
       label="Basis fn")
   end
 
-  savefig("rbf/FIXED_constant_kernel_gaussiandist.png")
+  savefig("rbf/fixing_galerkin_ghosts/FIXED_constant_kernel_gaussiandist.png")
 end
 
 @time main()

@@ -35,20 +35,17 @@ function main()
   println("sigma", rbf_sigma)
 
   # Precompute the various matrices
-  #A = get_rbf_collocation_matrix(basis)
-  A = get_rbf_collocation_matrix(basis)
+  A = get_rbf_inner_products(basis)
   Source = get_kernel_rbf_source(basis, rbf_mu, kernel_func)
   Sink = get_kernel_rbf_sink(basis, rbf_mu, kernel_func)
-  mass_cons = get_mass_cons_term(basis)
-  (c0, mass) = get_IC_vec(dist_init, basis, A, mass_cons)
-  println("precomputation complete")
+  c0 = get_IC_vec(dist_init, basis, A)
 
   # set up the explicit time stepper
   tspan = (0.0, 1.0)
   dt = 1e-2
   tsteps = range(tspan[1], stop=tspan[2], step=dt)
   nj = dist_init.(rbf_mu)
-  dndt = ni->collision_coalescence(ni, A, Source, Sink, mass_cons, mass)
+  dndt = ni->collision_coalescence(ni, A, Source, Sink)
 
   # track the moments
   basis_mom = vcat(get_moment(basis, 0.0)', get_moment(basis, 1.0)', get_moment(basis, 2.0)')
@@ -61,7 +58,7 @@ function main()
 
   for (i,t) in enumerate(tsteps)
     nj += dndt(nj)*dt
-    cj = get_constants_vec(nj, A, mass_cons, mass)
+    cj = get_constants_vec(nj, A)
     mom_coll[i+1,:] = (basis_mom*cj)'
   end
 
@@ -95,7 +92,7 @@ function main()
         label="basis_fn")
     end
   
-    savefig("rbf/FIXED_golovin_gaussiandist3.png")
+    savefig("rbf/fixing_galerkin_ghosts/NOMASSCONS_golovin_gaussiandist.png")
   
     # plot the moments
   pyplot()
@@ -128,15 +125,15 @@ function main()
   plot!(t_coll, mom_coll[1:end-1,1]/moments_init[1], lw=3, label="M\$_0\$ RBF")
   plot!(t_coll, mom_coll[1:end-1,2]/moments_init[2], lw=3, label="M\$_1\$ RBF")
   plot!(t_coll, mom_coll[1:end-1,3]/moments_init[3], lw=3, label="M\$_2\$ RBF")
-  savefig("rbf/FIXED_golovin_gaussian3.png")
+  savefig("rbf/fixing_galerkin_ghosts/NOMASSCONS_golovin_gaussian3.png")
 
   # print out the final moment and the initial and final distribution parameters
-  println("Initial moments: ", mom_coll[1,:])
-  println("Final moments: ", mom_coll[end,:])
-  println("Initial distribution constants: ", c0)
-  println("Normalized: ", c0/sum(c0))
-  println("Final distribution constants: ", cj)
-  println("Normalized: ", cj/sum(cj))
+  #println("Initial moments: ", mom_coll[1,:])
+  #println("Final moments: ", mom_coll[end,:])
+  #println("Initial distribution constants: ", c0)
+  #println("Normalized: ", c0/sum(c0))
+  #println("Final distribution constants: ", cj)
+  #println("Normalized: ", cj/sum(cj))
   
 end
 

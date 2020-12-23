@@ -22,8 +22,8 @@ function main()
   dist_init = x-> N/sigma/sqrt(2*pi)*exp(-(x-mu)^2/2/sigma^2)
 
   # Choose the basis functions
-  Nb = 10
-  xmax = 300.0
+  Nb = 20
+  xmax = 500.0
   rbf_mu = exp.(range(log(mu), stop=log(xmax), length=Nb) |>collect)
   rbf_sigma = append!([5.0], (rbf_mu[2:end]-rbf_mu[1:end-1])/1.5)
   rbf_sigma[1] = sigma
@@ -35,8 +35,7 @@ function main()
   println("sigma", rbf_sigma)
 
   # Precompute the various matrices
-  #A = get_rbf_collocation_matrix(basis)
-  A = get_rbf_collocation_matrix(basis)
+  A = get_rbf_inner_products(basis)
   Source = get_kernel_rbf_source(basis, rbf_mu, kernel_func)
   Sink = get_kernel_rbf_sink(basis, rbf_mu, kernel_func)
   mass_cons = get_mass_cons_term(basis)
@@ -95,7 +94,7 @@ function main()
         label="basis_fn")
     end
   
-    savefig("rbf/FIXED_golovin_gaussiandist3.png")
+    savefig("rbf/fixing_galerkin_ghosts/FIXED_golovin_gaussiandist3.png")
   
     # plot the moments
   pyplot()
@@ -128,15 +127,15 @@ function main()
   plot!(t_coll, mom_coll[1:end-1,1]/moments_init[1], lw=3, label="M\$_0\$ RBF")
   plot!(t_coll, mom_coll[1:end-1,2]/moments_init[2], lw=3, label="M\$_1\$ RBF")
   plot!(t_coll, mom_coll[1:end-1,3]/moments_init[3], lw=3, label="M\$_2\$ RBF")
-  savefig("rbf/FIXED_golovin_gaussian3.png")
+  savefig("rbf/fixing_galerkin_ghosts/FIXED_golovin_gaussian3.png")
 
   # print out the final moment and the initial and final distribution parameters
-  println("Initial moments: ", mom_coll[1,:])
-  println("Final moments: ", mom_coll[end,:])
-  println("Initial distribution constants: ", c0)
-  println("Normalized: ", c0/sum(c0))
-  println("Final distribution constants: ", cj)
-  println("Normalized: ", cj/sum(cj))
+  #println("Initial moments: ", mom_coll[1,:])
+  #println("Final moments: ", mom_coll[end,:])
+  #println("Initial distribution constants: ", c0)
+  #println("Normalized: ", c0/sum(c0))
+  #println("Final distribution constants: ", cj)
+  #println("Normalized: ", cj/sum(cj))
   
 end
 

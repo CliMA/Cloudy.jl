@@ -32,25 +32,18 @@ function main()
     basis[i] = GaussianBasisFunction(rbf_mu[i], rbf_sigma[i])
   end
 
-  #println("Basis:  ", basis)
-
   # Precompute the various matrices
   A = get_rbf_inner_products(basis) 
   Source = get_kernel_rbf_source(basis, rbf_mu, kernel_func)
   Sink = get_kernel_rbf_sink(basis, rbf_mu, kernel_func)
-  mass_cons = get_mass_cons_term(basis)
-  (c0, mass) = get_IC_vec(dist_init, basis, A, mass_cons)
-
-  #println(c0)
-  #println("Mass: ", mass, ";  initial collocation mass: ", mass_cons'*c0)
-  #println("Percent error: ", (mass_cons'*c0 - mass)/mass*100, "%")
+  c0   = get_IC_vec(dist_init, basis, A)
 
   # set up the explicit time stepper
   tspan = (0.0, 1.0)
   dt = 1e-3
   tsteps = range(tspan[1]+dt, stop=tspan[2], step=dt)
   nj = dist_init.(rbf_mu)
-  dndt = ni->collision_coalescence(ni, A, Source, Sink, mass_cons, mass)
+  dndt = ni->collision_coalescence(ni, A, Source, Sink)
 
   basis_mom = vcat(get_moment(basis, 0.0)', get_moment(basis, 1.0)', get_moment(basis, 2.0)')
   mom_coll = zeros(FT, length(tsteps)+1, 3)
@@ -59,7 +52,7 @@ function main()
   c05 = c0
   for (i,t) in enumerate(tsteps)
     nj += dndt(nj)*dt
-    cj = get_constants_vec(nj, A, mass_cons, mass)
+    cj = get_constants_vec(nj, A)
 
     # save intermediate time step
     if t==0.5
@@ -71,7 +64,7 @@ function main()
 
   moments_init = mom_coll[1,:]
 
-  c_final = get_constants_vec(nj, A, mass_cons, mass)
+  c_final = get_constants_vec(nj, A)
 
 
   #################### PLOTTING  ####################
@@ -110,7 +103,7 @@ function main()
       ls=:dash,
       label="M\$_2\$ Exact"
   )
-  savefig("rbf/FIXED_constant_kernel_gaussian.png")
+  savefig("rbf/NOMASSCONS_constant_kernel_gaussian.png")
 
 
   # Plot the distributions
@@ -160,7 +153,7 @@ function main()
       label="Basis fn")
   end
 
-  savefig("rbf/FIXED_constant_kernel_gaussiandist.png")
+  savefig("rbf/NOMASSCONS_constant_kernel_gaussiandist.png")
 end
 
 @time main()

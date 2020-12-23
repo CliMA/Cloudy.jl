@@ -2,48 +2,52 @@ using Plots
 using Cloudy.BasisFunctions
 using Cloudy.Collocation
 using QuadGK
+using SpecialFunctions: gamma
 
 function main()
   # Numerical parameters
   FT = Float64
 
   # Physical parameters: Kernel
-  b = 8e-8
-  kernel_func = x -> b
+  b = 8e-7
+  kernel_func = x -> b*(x[1]+x[2])
 
   ################## COLLOCATION APPROACH ###################
-  # Initial condition: lognormal
+  # Initial condition: gamma
   N = 1e5
-  mu = log(15)
-  sigma = log(5)
-  dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log(x)-mu)^2/2/sigma^2)
+  k=2
+  theta=5
+  dist_init = x-> N*x^(k-1)*exp(-x/theta)/theta^k/gamma(k)
 
   # Choose the basis functions
   Nb = 3
-  rbf_mu = [log(15), log(50), log(150)]
-  rbf_sigma = (log(5), 1.0, 0.5)
+  rbf_loc = [12.0, 50.0, 150.0]
+  rbf_stddev = (5, 20, 75)
   basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
   for i = 1:Nb
-    basis[i] = LognormalBasisFunction(rbf_mu[i], rbf_sigma[i])
+    basis[i] = GaussianBasisFunction(rbf_loc[i], rbf_stddev[i])
   end
-  println("mu", rbf_mu)
-  println("sigma", rbf_sigma)
+  println("mu", rbf_loc)
+  println("stddev", rbf_stddev)
+  println("collocation points", rbf_loc)
 
   # Precompute the various matrices
-  A = get_rbf_inner_products(basis)
-  Source = get_kernel_rbf_source(basis, rbf_mu, kernel_func)
-  Sink = get_kernel_rbf_sink(basis, rbf_mu, kernel_func)
+  Φ = get_rbf_inner_products(basis)
+
+
+
+  """ TO DO: below here: """
+  Source = get_kernel_rbf_source(basis, rbf_loc, kernel_func)
+  Sink = get_kernel_rbf_sink(basis, rbf_loc, kernel_func)
   mass_cons = get_mass_cons_term(basis)
   (c0, mass) = get_IC_vec(dist_init, basis, A, mass_cons)
   println("precomputation complete")
 
-  print(A)
-  
   # set up the explicit time stepper
   tspan = (0.0, 1.0)
   dt = 1e-3
   tsteps = range(tspan[1], stop=tspan[2], step=dt)
-  nj = dist_init.(rbf_mu)
+  nj = dist_init.(rbf_loc)
   dndt = ni->collision_coalescence(ni, A, Source, Sink, mass_cons, mass)
 
   # track the moments
@@ -90,7 +94,7 @@ function main()
         label="basis_fn")
     end
   
-    savefig("rbf/RBF_golovin_lognromal3.png")
+    savefig("rbf/RBF_golovin_gamma3.png")
   
     # plot the moments
   pyplot()
@@ -123,7 +127,7 @@ function main()
   plot!(t_coll, mom_coll[1:end-1,1]/moments_init[1], lw=3, label="M\$_0\$ RBF")
   plot!(t_coll, mom_coll[1:end-1,2]/moments_init[2], lw=3, label="M\$_1\$ RBF")
   plot!(t_coll, mom_coll[1:end-1,3]/moments_init[3], lw=3, label="M\$_2\$ RBF")
-  savefig("rbf/RBF_golovin_lognormal3.png")
+  savefig("rbf/RBF_golovin_gamma3_moments.png")
 
   # print out the final moment and the initial and final distribution parameters
   println("Initial moments: ", mom_coll[1,:])
