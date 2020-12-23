@@ -22,8 +22,8 @@ function main()
   dist_init = x-> N/sigma/sqrt(2*pi)*exp(-(x-mu)^2/2/sigma^2)
 
   # Choose the basis functions
-  Nb = 10
-  xmax = 300.0
+  Nb = 20
+  xmax = 500.0
   rbf_mu = exp.(range(log(mu), stop=log(xmax), length=Nb) |>collect)
   rbf_sigma = append!([5.0], (rbf_mu[2:end]-rbf_mu[1:end-1])/1.5)
   rbf_sigma[1] = sigma
