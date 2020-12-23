@@ -49,7 +49,7 @@ function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; f
     for j=1:Nb
         xj = get_moment(basis[j], 1.0)
         for i=1:Nb
-            Φ[i,j] = evaluate_rbf(basis[i], xj)
+            Φ[j,i] = evaluate_rbf(basis[i], xj)
         end
     end
 
@@ -74,7 +74,7 @@ end
 """
 Calculating the initial condition vector: mass conserving form
 """
-function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1e6) where {FT<:Real}
+function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
     # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
@@ -88,7 +88,7 @@ function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1},
     return (c0, mass)
 end
 
-function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
+function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}
     # N_ijk = <basis[k](x), basis[j](x'), K(x, x'), basis[i](x) dx' dx 
     Nb = length(basis)
     N = zeros(FT, Nb, Nb, Nb)
@@ -119,7 +119,7 @@ function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rb
     return M
 end
 
-function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT=1e6) where {FT <: Real}
+function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT=1000.0) where {FT <: Real}
     Nb = length(basis)
     J = zeros(FT, Nb)
     for i=1:Nb
