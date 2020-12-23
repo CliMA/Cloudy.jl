@@ -1,4 +1,4 @@
-module Collocation
+module LOGCollocation
 
 using Cloudy.BasisFunctions
 using QuadGK
@@ -41,15 +41,16 @@ end
 
 """ 
 For conversion between collocation point and constants vector
+In logspace, Φ_ij = ϕ_k(z_j) where z_j are the centers of the basis distributions
 """
 function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; fake::FT = 0.0) where {FT <: Real}
     # Φ_ij = Φ_i(x_j)
     Nb = length(basis)
     Φ = zeros(FT, Nb, Nb)
     for j=1:Nb
-        xj = get_moment(basis[j], 1.0)
+        zj = get_moment(basis[j], 1.0)
         for i=1:Nb
-            Φ[i,j] = evaluate_rbf(basis[i], xj)
+            Φ[j,i] = evaluate_rbf(basis[i], zj)
         end
     end
 
@@ -58,14 +59,15 @@ end
 
 """
 Calculating the initial condition vector: non-mass conserving form
+zj are centers of the basis functions, and correspond to ln(x_j)
 """
 function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}) where {FT<:Real}
     # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
     for i=1:Nb
-        xi = get_moment(basis[i], 1.0)
-        b[i] = u0(xi)
+        zi = get_moment(basis[i], 1.0)
+        b[i] = u0(exp(zi))
     end
     c0 = get_constants_vec(b, A)
     return c0
@@ -73,14 +75,16 @@ end
 
 """
 Calculating the initial condition vector: mass conserving form
+ - zj are centers of the basis functions, and correspond to ln(x_j)
+ - mass is calculated via an explicit integral in log space
 """
 function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1e6) where {FT<:Real}
     # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
     for i=1:Nb
-        xi = get_moment(basis[i], 1.0)
-        b[i] = u0(xi)
+        zi = get_moment(basis[i], 1.0)
+        b[i] = u0(exp(zi))
     end
     mass = quadgk(x->u0.(x)*x, xstart, xstop)[1]
     
@@ -88,30 +92,35 @@ function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1},
     return (c0, mass)
 end
 
-function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
+""" 
+Represents consumption of particles of size x_j
+Calculated via explicit integrals in log space
+"""
+
+function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; zstart::FT = -1e6, zstop::FT = 1e6) where {FT <: Real}
     # N_ijk = <basis[k](x), basis[j](x'), K(x, x'), basis[i](x) dx' dx 
     Nb = length(basis)
     N = zeros(FT, Nb, Nb, Nb)
     for i=1:Nb
         for j=1:Nb
             for k=1:Nb
-                integrand = y -> basis_func(basis[k])(y)*kernel([rbf_locs[i], y])
-                N[i,j,k] = basis_func(basis[j])(rbf_locs[i]) * quadgk(integrand, xstart, xstop)[1]
+                integrand = ξ -> basis_func(basis[k])(ξ)*kernel([exp(rbf_locs[i]), exp(ξ)])
+                N[i,j,k] = basis_func(basis[j])(log(rbf_locs[i])) * quadgk(integrand, zstart, zstop)[1]
             end
         end
     end
     return N
 end
 
-function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; xstart::FT = eps()) where {FT <: Real}
+function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; zstart::FT = -1e6) where {FT <: Real}
     # M_ijk = 1/2 <basis[k](x-x'), basis[j](x'), K(x-x', x'), basis[i](x) dx' dx 
     Nb = length(basis)
     M = zeros(FT, Nb, Nb, Nb)
     for i=1:Nb
         for j=1:Nb
             for k=1:Nb
-                integrand = y-> basis_func(basis[j])(rbf_locs[i] - y)*basis_func(basis[k])(y)* kernel([rbf_locs[i] - y, y])
-                M[i, j, k] = quadgk(integrand, xstart, rbf_locs[i])[1]
+                integrand = ξ -> basis_func(basis[j])(log(exp(rbf_locs[i]) - exp(ξ)))*basis_func(basis[k])(ξ)* kernel([rbf_locs[i] - exp(ξ), exp(ξ)])
+                M[i, j, k] = quadgk(integrand, zstart, rbf_locs[i])[1]
             end
         end
     end
@@ -119,12 +128,15 @@ function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rb
     return M
 end
 
-function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT=1e6) where {FT <: Real}
+"""
+First moment of each basis function
+"""
+function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; zstart::FT = -1e6, zstop::FT=1e6) where {FT <: Real}
     Nb = length(basis)
     J = zeros(FT, Nb)
     for i=1:Nb
-        integrand = x-> basis_func(basis[i])(x) * x
-        J[i] = quadgk(integrand, xstart, xstop)[1]
+        integrand = z -> basis_func(basis[i])(z) * exp(2*z)
+        J[i] = quadgk(integrand, zstart, zstop)[1]
     end
     
     return J

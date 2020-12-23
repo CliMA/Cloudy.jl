@@ -11,6 +11,7 @@ export GammaBasisFunction
 export basis_func
 export evaluate_rbf
 export get_moment
+export get_moment_log
 
 
 """
@@ -168,38 +169,65 @@ function evaluate_rbf(basis::Array{PrimitiveUnivariateBasisFunc,1}, c::Array{FT}
   return approx
 end
 
-function get_moment(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}
+function evaluate_rbf(basisfun::PrimitiveUnivariateBasisFunc, x::FT) where {FT<:Real}
+  return basis_func(basisfun)(x)
+end
+
+function get_moment(rbf::PrimitiveUnivariateBasisFunc, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
+  integrand = x-> basis_func(rbf)(x)*x^q
+  mom = quadgk(integrand, xstart, xstop)[1]
+  return mom
+end
+
+function get_moment(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
   Nb = length(basis)
   moms = zeros(FT, Nb)
   for i=1:Nb
-    integrand = x-> basis_func(basis[i])(x)*x^q
-    moms[i] = quadgk(integrand, xstart, xstop)[1]
+    moms[i] = get_moment(basis[i], q, xstart=xstart, xstop=xstop)
   end
 
   return moms
 end
 
-function get_moment(basis::Array{LognormalBasisFunction, 1}, q::FT) where {FT <: Real}
-  Nb = length(basis)
-  moms = zeros(FT, Nb)
-  for i=1:Nb
-    params = get_params(basis[i])
-    mu = params[1]
-    sigma = params[2]
-    moms[i] = exp(q*mu+q^2*sigma^2/2)
-  end
+function get_moment(rbf::LognormalBasisFunction, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
+    params = get_params(rbf)
+    mu = params[2][1]
+    sigma = params[2][2]
+    mom = exp(q*mu+q^2*sigma^2/2)
+    return mom
+end
 
+function get_moment(rbf::GammaBasisFunction, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
+    params = get_params(rbf)
+    k = params[2][1]
+    theta = params[2][2]
+    moms = gamma(k+q)/gamma(k)*theta^q
   return moms
 end
 
-function get_moment(basis::Array{GammaBasisFunction, 1}, q::FT) where {FT <: Real}
+function get_moment(rbf::GaussianBasisFunction, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
+  params = get_params(rbf)
+  mu = params[2][1]
+  sigma = params[2][2]
+  if q == 0.0
+    return 1.0
+  elseif q == 1.0
+    return mu
+  elseif q == 2.0
+    return mu^2 + sigma^2
+  else
+    integrand = x-> basis_func(rbf)(x)*x^q
+    mom = quadgk(integrand, xstart, xstop)[1]
+    return mom
+  end
+end
+
+function get_moment_log(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; zstart::FT = -1e6, zstop::FT = 1e6) where {FT <: Real}
   Nb = length(basis)
   moms = zeros(FT, Nb)
   for i=1:Nb
-    params = get_params(basis[i])
-    k = params[1]
-    theta = params[2]
-    moms[i] = gamma(k+q)/gamma(k)*theta^q
+    integrand = z-> basis_func(basis[i])(z)*exp(z*q)
+    moms[i] = quadgk(integrand, zstart, zstop)[1]
   end
 
   return moms
