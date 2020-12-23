@@ -49,7 +49,7 @@ function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; f
     for j=1:Nb
         xj = get_moment(basis[j], 1.0)
         for i=1:Nb
-            Φ[i,j] = evaluate_rbf(basis[i], xj)
+            Φ[j,i] = evaluate_rbf(basis[i], xj)
         end
     end
 
