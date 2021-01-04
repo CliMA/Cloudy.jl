@@ -11,11 +11,7 @@ export GammaBasisFunction
 export basis_func
 export evaluate_rbf
 export get_moment
-<<<<<<< HEAD
 export get_moment_log
-=======
-export get_first_moment
->>>>>>> f6a8534bd45b3dae972142212db01baf59585633
 
 
 """
@@ -177,21 +173,13 @@ function evaluate_rbf(basisfun::PrimitiveUnivariateBasisFunc, x::FT) where {FT<:
   return basis_func(basisfun)(x)
 end
 
-<<<<<<< HEAD
-function get_moment(rbf::PrimitiveUnivariateBasisFunc, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
-=======
 function get_moment(rbf::PrimitiveUnivariateBasisFunc, q::FT; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}
->>>>>>> f6a8534bd45b3dae972142212db01baf59585633
   integrand = x-> basis_func(rbf)(x)*x^q
   mom = quadgk(integrand, xstart, xstop)[1]
   return mom
 end
 
-<<<<<<< HEAD
-function get_moment(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
-=======
 function get_moment(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}
->>>>>>> f6a8534bd45b3dae972142212db01baf59585633
   Nb = length(basis)
   moms = zeros(FT, Nb)
   for i=1:Nb

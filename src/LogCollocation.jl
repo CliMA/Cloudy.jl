@@ -67,7 +67,7 @@ function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1},
     b = Array{FT}(undef, Nb)
     for i=1:Nb
         zi = get_moment(basis[i], 1.0)
-        b[i] = u0(exp(zi))
+        b[i] = u0(exp(zi))*exp(zi)
     end
     c0 = get_constants_vec(b, A)
     return c0
@@ -84,7 +84,7 @@ function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1},
     b = Array{FT}(undef, Nb)
     for i=1:Nb
         zi = get_moment(basis[i], 1.0)
-        b[i] = u0(exp(zi))
+        b[i] = u0(exp(zi))*exp(zi)
     end
     mass = quadgk(x->u0.(x)*x, xstart, xstop)[1]
     
@@ -97,30 +97,31 @@ Represents consumption of particles of size x_j
 Calculated via explicit integrals in log space
 """
 
-function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; zstart::FT = -1e6, zstop::FT = 1e6) where {FT <: Real}
+function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs_z::Array{FT}, kernel::Function; zstart::FT = -1e6, zstop::FT = 1e6) where {FT <: Real}
     # N_ijk = <basis[k](x), basis[j](x'), K(x, x'), basis[i](x) dx' dx 
     Nb = length(basis)
     N = zeros(FT, Nb, Nb, Nb)
     for i=1:Nb
         for j=1:Nb
             for k=1:Nb
-                integrand = ξ -> basis_func(basis[k])(ξ)*kernel([exp(rbf_locs[i]), exp(ξ)])
-                N[i,j,k] = basis_func(basis[j])(log(rbf_locs[i])) * quadgk(integrand, zstart, zstop)[1]
+                integrand = ξ -> basis_func(basis[k])(ξ)*kernel([exp(rbf_locs_z[i]), exp(ξ)])
+                N[i,j,k] = basis_func(basis[j])(rbf_locs_z[i]) * quadgk(integrand, zstart, zstop)[1]
             end
         end
     end
     return N
 end
 
-function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; zstart::FT = -1e6) where {FT <: Real}
+function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs_z::Array{FT}, kernel::Function; zstart::FT = -1e6) where {FT <: Real}
     # M_ijk = 1/2 <basis[k](x-x'), basis[j](x'), K(x-x', x'), basis[i](x) dx' dx 
     Nb = length(basis)
     M = zeros(FT, Nb, Nb, Nb)
     for i=1:Nb
         for j=1:Nb
             for k=1:Nb
-                integrand = ξ -> basis_func(basis[j])(log(exp(rbf_locs[i]) - exp(ξ)))*basis_func(basis[k])(ξ)* kernel([rbf_locs[i] - exp(ξ), exp(ξ)])
-                M[i, j, k] = quadgk(integrand, zstart, rbf_locs[i])[1]
+                integrand = ξ -> basis_func(basis[j])(log(exp(rbf_locs_z[i]) - exp(ξ)))/(exp(rbf_locs_z[i]) - exp(ξ)) * 
+                                        basis_func(basis[k])(ξ)* kernel([exp(rbf_locs_z[i]) - exp(ξ), exp(ξ)])
+                M[i, j, k] = quadgk(integrand, zstart, rbf_locs_z[i])[1]
             end
         end
     end
@@ -128,19 +129,6 @@ function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rb
     return M
 end
 
-"""
-First moment of each basis function
-"""
-function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; zstart::FT = -1e6, zstop::FT=1e6) where {FT <: Real}
-    Nb = length(basis)
-    J = zeros(FT, Nb)
-    for i=1:Nb
-        integrand = z -> basis_func(basis[i])(z) * exp(2*z)
-        J[i] = quadgk(integrand, zstart, zstop)[1]
-    end
-    
-    return J
-end
 
 """
 Collision coalescnece rate of change: non-mass conserving form

@@ -49,11 +49,7 @@ function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; f
     for j=1:Nb
         xj = get_moment(basis[j], 1.0)
         for i=1:Nb
-<<<<<<< HEAD
-            Φ[i,j] = evaluate_rbf(basis[i], xj)
-=======
             Φ[j,i] = evaluate_rbf(basis[i], xj)
->>>>>>> f6a8534bd45b3dae972142212db01baf59585633
         end
     end
 
@@ -78,11 +74,7 @@ end
 """
 Calculating the initial condition vector: mass conserving form
 """
-<<<<<<< HEAD
-function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1e6) where {FT<:Real}
-=======
 function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
->>>>>>> f6a8534bd45b3dae972142212db01baf59585633
     # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
