@@ -222,11 +222,11 @@ function get_moment(rbf::GaussianBasisFunction, q::FT; xstart::FT = eps(), xstop
   end
 end
 
-function get_moment_log(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; zstart::FT = -1e6, zstop::FT = 1e6) where {FT <: Real}
+function get_moment_log(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT, xmin::FT, ζ::FT; zstart::FT = 0.0, zstop::FT = 1.0) where {FT <: Real}
   Nb = length(basis)
   moms = zeros(FT, Nb)
   for i=1:Nb
-    integrand = z-> basis_func(basis[i])(z)*exp(z*q)
+    integrand = w -> basis_func(basis[i])(w) * (xmin*ζ^w)^q
     moms[i] = quadgk(integrand, zstart, zstop)[1]
   end
 

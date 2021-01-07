@@ -4,65 +4,70 @@ using Cloudy.LOGCollocation
 using QuadGK
 
 function main()
-  # Numerical parameters
-  FT = Float64
+  ############################ SETUP ###################################
 
-  # Physical parameters: Kernel
-  b = 8e-7
-  kernel_func = x -> b
+    # Numerical parameters
+    FT = Float64
 
-  ################## COLLOCATION APPROACH ###################
-  # Initial condition: lognormal
-  N = 1e5
-  mu = 3.44
-  sigma = 1.61
-  dist_init = x-> N/x/sigma/sqrt(2*pi)*exp(-(log(x)-mu)^2/2/sigma^2)
+    # Physical parameters
+    K     = x-> 1e-4      # kernel function in cm3 per sec 
+    
+    # Initial distribution
+    N0    = 300           # initial droplet density: number per cm^3
+    θ_v   = 1000          # volume scale factor: µm^3
+    k     = 3             # shape factor for volume size distribution 
+    ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
 
-  # Choose the basis functions: normal basis functions but in log space
-  Nb = 3
-  rbf_mu_x = select_rbf_locs(15.0, 100.0, 3)
-  rbf_sigma_x = select_rbf_shapes(rbf_mu_x, smoothing_factor=1.6)
-  rbf_mu_z = 5/3*log.(rbf_mu_x)-2/3*log.(rbf_sigma_x)
-  rbf_sigma_z = sqrt.(-1/sqrt(3)*log.((rbf_sigma_x.^2) ./ (rbf_mu_x.^2)))
-  basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
-  for i = 1:Nb
-    basis[i] = GaussianBasisFunction(rbf_mu_z[i], rbf_sigma_z[i])
-  end
-  println(basis)
+    # initial distribution in volume: gamma distribution, number per cm^3
+    n_v_init = v-> N0*v^(k-1)/θ_v^k * exp(-v/θ_v) / gamma(k)
 
-  # Precompute the various matrices
-  zstart=log(1e-12*rbf_mu_x[1])
-  zstop=log(1e12*rbf_mu_x[end])
-  A = get_rbf_inner_products(basis)
-  Source = get_kernel_rbf_source(basis, rbf_mu_z, kernel_func, zstart=zstart)
-  Sink = get_kernel_rbf_sink(basis, rbf_mu_z, kernel_func, zstart=zstart, zstop=zstop)
-  mass_cons = get_moment_log(basis, 1.0, zstart=zstart, zstop=zstop)
-  (c0, mass) = get_IC_vec(dist_init, basis, A, mass_cons, xstart=exp(zstart), xstop=exp(zstop))
-  println("precomputation complete")
+    # basis setup
+    vmin = 500
+    vmax = 4e6
+    Nb = 4
+    ζ = vmax/vmin
+    rbf_mu = select_rbf_locs(Nb)
+    rbf_sigma = select_rbf_shapes(rbf_mu, smoothing_factor=1.5)
+    basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
+    for i = 1:Nb
+      basis[i] = GaussianBasisFunction(rbf_mu[i], rbf_sigma[i])
+      println(basis[i])
+    end
 
-  # set up the explicit time stepper
-  tspan = (0.0, 0.05)
-  dt = 1e-2
-  tsteps = range(tspan[1], stop=tspan[2], step=dt)
-  nj = dist_init.(rbf_mu_x)
-  dndt = ni->collision_coalescence(ni, A, Source, Sink, mass_cons, mass)
 
-  # track the moments
-  basis_mom = vcat(get_moment_log(basis, 0.0, zstart=zstart, zstop=zstop)', get_moment_log(basis, 1.0, zstart=zstart, zstop=zstop)', get_moment_log(basis, 2.0, zstart=zstart, zstop=zstop)')
-  mom_coll = zeros(FT, length(tsteps)+1, 3)
-  mom_coll[1,:] = (basis_mom*c0)'
-  moments_init = mom_coll[1,:]
+    ################## COLLOCATION APPROACH ###################
 
-  cj = c0
+    # Precompute the various matrices
+    A = get_rbf_inner_products(basis)
+    Source = get_kernel_rbf_source(basis, rbf_mu_z, kernel_func, zstart=zstart)
+    Sink = get_kernel_rbf_sink(basis, rbf_mu_z, kernel_func, zstart=zstart, zstop=zstop)
+    mass_cons = get_moment_log(basis, 1.0, zstart=zstart, zstop=zstop)
+    (c0, mass) = get_IC_vec(dist_init, basis, A, mass_cons, xstart=exp(zstart), xstop=exp(zstop))
+    println("precomputation complete")
 
-  for (i,t) in enumerate(tsteps)
-    println(cj)
-    nj += dndt(nj)*dt
-    cj = get_constants_vec(nj, A, mass_cons, mass)
-    mom_coll[i+1,:] = (basis_mom*cj)'
-  end
+    # set up the explicit time stepper
+    tspan = (0.0, 0.05)
+    dt = 1e-2
+    tsteps = range(tspan[1], stop=tspan[2], step=dt)
+    nj = dist_init.(rbf_mu_x)
+    dndt = ni->collision_coalescence(ni, A, Source, Sink, mass_cons, mass)
 
-  t_coll = collect(tsteps)
+    # track the moments
+    basis_mom = vcat(get_moment_log(basis, 0.0, zstart=zstart, zstop=zstop)', get_moment_log(basis, 1.0, zstart=zstart, zstop=zstop)', get_moment_log(basis, 2.0, zstart=zstart, zstop=zstop)')
+    mom_coll = zeros(FT, length(tsteps)+1, 3)
+    mom_coll[1,:] = (basis_mom*c0)'
+    moments_init = mom_coll[1,:]
+
+    cj = c0
+
+    for (i,t) in enumerate(tsteps)
+      println(cj)
+      nj += dndt(nj)*dt
+      cj = get_constants_vec(nj, A, mass_cons, mass)
+      mom_coll[i+1,:] = (basis_mom*cj)'
+    end
+
+    t_coll = collect(tsteps)
 
   ############################### PLOTTING ####################################
     # plot the actual distribution

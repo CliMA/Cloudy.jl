@@ -9,7 +9,7 @@ using SCS
 using Random, Distributions
 using Clustering
 
-export select_rbf_locs
+export select_rbf_locsa
 export select_rbf_shapes
 export get_rbf_inner_products
 export get_IC_vec
@@ -20,16 +20,16 @@ export collision_coalescence
 export get_constants_vec
 
 """
-Logarithmically spaced between xmin and xmax
+Logarithmically spaced between 0 and 1
 """
-function select_rbf_locs(xmin::FT, xmax::FT, nlocs::Int64) where {FT <: Real}
-    locs = exp.(range(log(xmin), stop=log(xmax), length=nlocs) |> collect)
-    return locs
+function select_rbf_locs(nlocs::Int64; xmin::FT=eps(), xmax=1.00) where {FT <: Real}
+    locs = exp.(range(log(xmin), stop=log(xmax), length=nlocs+1) |> collect)
+    return locs[1:end-1]
 end
 
 """
 Given a set of RBF locations, set up shape parameters based on distance between
-adjacent rbfs 
+adjacent rbfs
 """
 function select_rbf_shapes(rbf_locs::Array{FT}; smoothing_factor::FT = 2.0) where {FT <: Real}
     rbf_pts = append!([0.0], rbf_locs)
@@ -41,7 +41,7 @@ end
 
 """ 
 For conversion between collocation point and constants vector
-In logspace, Φ_ij = ϕ_k(z_j) where z_j are the centers of the basis distributions
+In logspace, Φ_ij = ϕ_j(z_i) where z_i are the centers of the basis distributions
 """
 function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; fake::FT = 0.0) where {FT <: Real}
     # Φ_ij = Φ_i(x_j)
@@ -57,17 +57,29 @@ function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; f
     return Φ
 end
 
+function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}, xmin::FT, ζ::FT; zstart::FT = 0.0, zstop::FT=1.0) where {FT <: Real}
+    Nb = length(basis)
+    J = zeros(FT, Nb)
+    for i=1:Nb
+        integrand = w -> basis_func(basis[i])(w) * ζ^w
+        J[i] = quadgk(integrand, xstart, xstop)[1]*xmin
+    end
+    
+    return J
+end
+
 """
 Calculating the initial condition vector: non-mass conserving form
-zj are centers of the basis functions, and correspond to ln(x_j)
+zj are centers of the basis functions in their natural space
 """
-function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}) where {FT<:Real}
-    # c0 is given by A*c0 = b, with b_i = u0(xi)
+function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, ζ::FT, xmin::FT, A::Array{FT}) where {FT<:Real}
+    # c0 is given by A*c0 = b, with b_i = N(zi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
     for i=1:Nb
         zi = get_moment(basis[i], 1.0)
-        b[i] = u0(exp(zi))*exp(zi)
+        xi = xmin*(ζ^zi)
+        b[i] = u0(xi)*xi*log(ζ)
     end
     c0 = get_constants_vec(b, A)
     return c0
@@ -78,15 +90,16 @@ Calculating the initial condition vector: mass conserving form
  - zj are centers of the basis functions, and correspond to ln(x_j)
  - mass is calculated via an explicit integral in log space
 """
-function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1e6) where {FT<:Real}
+function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, ζ::FT, xmin::FT, A::Array{FT}, J::Array{FT,1}) where {FT<:Real}
     # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
     for i=1:Nb
         zi = get_moment(basis[i], 1.0)
-        b[i] = u0(exp(zi))*exp(zi)
+        xi = xmin*(ζ^zi)
+        b[i] = u0(xi)*xi*log(ζ)
     end
-    mass = quadgk(x->u0.(x)*x, xstart, xstop)[1]
+    mass = quadgk(x->u0.(x)*x, xmin, xmin*ζ)[1]
     
     c0 = get_constants_vec(b, A, J, mass)
     return (c0, mass)
@@ -97,14 +110,14 @@ Represents consumption of particles of size x_j
 Calculated via explicit integrals in log space
 """
 
-function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs_z::Array{FT}, kernel::Function; zstart::FT = -1e6, zstop::FT = 1e6) where {FT <: Real}
+function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, ζ::FT, xmin::FT, rbf_locs_z::Array{FT}, kernel::Function; zstart::FT = 0.0, zstop::FT = 1.0) where {FT <: Real}
     # N_ijk = <basis[k](x), basis[j](x'), K(x, x'), basis[i](x) dx' dx 
     Nb = length(basis)
     N = zeros(FT, Nb, Nb, Nb)
     for i=1:Nb
         for j=1:Nb
             for k=1:Nb
-                integrand = ξ -> basis_func(basis[k])(ξ)*kernel([exp(rbf_locs_z[i]), exp(ξ)])
+                integrand = ξ -> basis_func(basis[k])(ξ)*kernel([xmin*ζ^rbf_locs_z[i], xmin*ζ^ξ])
                 N[i,j,k] = basis_func(basis[j])(rbf_locs_z[i]) * quadgk(integrand, zstart, zstop)[1]
             end
         end
@@ -112,16 +125,16 @@ function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_
     return N
 end
 
-function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs_z::Array{FT}, kernel::Function; zstart::FT = -1e6) where {FT <: Real}
+function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, ζ::FT, xmin::FT, rbf_locs_z::Array{FT}, kernel::Function; zstart::FT = 0.0) where {FT <: Real}
     # M_ijk = 1/2 <basis[k](x-x'), basis[j](x'), K(x-x', x'), basis[i](x) dx' dx 
     Nb = length(basis)
     M = zeros(FT, Nb, Nb, Nb)
     for i=1:Nb
         for j=1:Nb
             for k=1:Nb
-                integrand = ξ -> basis_func(basis[j])(log(exp(rbf_locs_z[i]) - exp(ξ)))/(exp(rbf_locs_z[i]) - exp(ξ)) * 
-                                        basis_func(basis[k])(ξ)* kernel([exp(rbf_locs_z[i]) - exp(ξ), exp(ξ)])
-                M[i, j, k] = quadgk(integrand, zstart, rbf_locs_z[i])[1]
+                integrand = ξ -> basis_func(basis[j])(log(ζ^(rbf_locs_z[i]) - ζ^ξ)/log(ζ))/(ζ^(rbf_locs_z[i]) - ζ^ξ) * 
+                                        basis_func(basis[k])(ξ)* kernel([log(ζ^(rbf_locs_z[i]) - ζ^ξ)/log(ζ), xmin*ζ^ξ])
+                M[i, j, k] = ζ^rbf_locs_z[i] * quadgk(integrand, zstart, rbf_locs_z[i]-log(2)/log(ζ))[1]
             end
         end
     end
@@ -141,7 +154,7 @@ function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, 
     # time rate of change: dn/dt|_xj, t
     dndt = zeros(FT, Nb)
     for i=1:Nb
-        dndt[i] = (1/2*c'*M[i,:,:]*c - c'*N[i,:,:]*c)
+        dndt[i] = (c'*M[i,:,:]*c - c'*N[i,:,:]*c)
     end
 
     return dndt
