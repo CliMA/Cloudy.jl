@@ -72,11 +72,7 @@ end
 """
 Calculating the initial condition vector: mass conserving form
 """
-<<<<<<< HEAD
-function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1e6) where {FT<:Real}
-=======
 function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT,1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
->>>>>>> 798a42891f250cbd6746681242392290f6d9b38f
     # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)

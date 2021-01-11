@@ -18,39 +18,41 @@ function main()
     N     = N0            # total number density of droplets initially
     θ_r   = 10            # radius scale factor: µm
     #θ_v   = 4/3*pi*θ_r^3  # volume scale factor: µm^3
-    θ_v   = 10
+    #θ_v   = 10
     k     = 3             # shape factor for volume size distribution 
     ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
 
-    # initial distribution in volume: gamma distribution, number per cm^3
-    n_v_init = v-> N*v^(k-1)/θ_v^k * exp(-v/θ_v) / gamma(k)
+    # initial distribution in volume: gamma distribution in radius, number per cm^3
+    r = v->(3/4/pi*v)^(1/3)
+    n_v_init = v -> N*(r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
 
     # basis setup 
     Nb = 4
     rmax  = 100.0
     rmin  = 10.0
-    #vmin = rmin^3*4*pi/3
-    #vmax = rmax^3*4*pi/3
-    vmin = 10.0
-    vmax = 150.0
+    vmin = rmin^3
+    vmax = rmax^3
     rbf_mu = select_rbf_locs(vmin, vmax, Nb)
     rbf_sigma = select_rbf_shapes(rbf_mu, smoothing_factor=1.5)
     rbf_k = rbf_mu.^2 ./ rbf_sigma.^2
     rbf_θ = rbf_mu.^2 ./ rbf_sigma
     basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
     for i = 1:Nb
-      #basis[i] = GaussianBasisFunction(rbf_mu[i], rbf_sigma[i])
-      basis[i] = GammaBasisFunction(rbf_k[i], rbf_θ[i])
+      basis[i] = GaussianBasisFunction(rbf_mu[i], rbf_sigma[i])
+      #basis[i] = GammaBasisFunction(rbf_k[i], rbf_θ[i])
       println(basis[i])
     end
 
     ########################### PRECOMPUTATION ################################
+    v_start = eps()
+    v_stop = vmax
+
     # Precomputation
-    Φ = get_rbf_inner_products(basis)
-    Source = get_kernel_rbf_source(basis, rbf_mu, K)
-    Sink = get_kernel_rbf_sink(basis, rbf_mu, K, xstop=vmax*4)
-    mass_cons = get_mass_cons_term(basis, xstop=vmax*4)
-    (c0, mass) = get_IC_vec(n_v_init, basis, Φ, mass_cons, xstop=vmax*4)
+    Φ = get_rbf_inner_products(basis, rbf_mu)
+    Source = get_kernel_rbf_source(basis, rbf_mu, K, xstart = v_start)
+    Sink = get_kernel_rbf_sink(basis, rbf_mu, K, xstart = v_start, xstop=v_stop)
+    mass_cons = get_mass_cons_term(basis, xstart = v_start, xstop=v_stop)
+    (c0, mass) = get_IC_vec(n_v_init, basis, Φ, mass_cons, xstart = v_start, xstop=v_stop)
 
     ########################### DYNAMICS ################################
     tspan = (0.0, 60.0)
