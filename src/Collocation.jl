@@ -42,14 +42,13 @@ end
 """ 
 For conversion between collocation point and constants vector
 """
-function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}; fake::FT = 0.0) where {FT <: Real}
+function get_rbf_inner_products(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT,1}) where {FT <: Real}
     # Φ_ij = Φ_i(x_j)
     Nb = length(basis)
     Φ = zeros(FT, Nb, Nb)
     for j=1:Nb
-        xj = get_moment(basis[j], 1.0)
         for i=1:Nb
-            Φ[j,i] = evaluate_rbf(basis[i], xj)
+            Φ[j,i] = evaluate_rbf(basis[i], rbf_locs[j])
         end
     end
 
@@ -59,13 +58,12 @@ end
 """
 Calculating the initial condition vector: non-mass conserving form
 """
-function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}) where {FT<:Real}
+function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT,1}, A::Array{FT}) where {FT<:Real}
     # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
     for i=1:Nb
-        xi = get_moment(basis[i], 1.0)
-        b[i] = u0(xi)
+        b[i] = u0(rbf_locs[i])
     end
     c0 = get_constants_vec(b, A)
     return c0
@@ -74,13 +72,12 @@ end
 """
 Calculating the initial condition vector: mass conserving form
 """
-function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
+function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT,1}, A::Array{FT}, J::Array{FT,1}; xstart::FT = eps(), xstop::FT = 1000.0) where {FT<:Real}
     # c0 is given by A*c0 = b, with b_i = u0(xi)
     Nb = length(basis)
     b = Array{FT}(undef, Nb)
     for i=1:Nb
-        xi = get_moment(basis[i], 1.0)
-        b[i] = u0(xi)
+        b[i] = u0(rbf_locs[i])
     end
     mass = quadgk(x->u0.(x)*x, xstart, xstop)[1]
     
@@ -96,7 +93,7 @@ function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_
         for j=1:Nb
             for k=1:Nb
                 integrand = y -> basis_func(basis[k])(y)*kernel([rbf_locs[i], y])
-                N[i,j,k] = basis_func(basis[j])(rbf_locs[i]) * quadgk(integrand, xstart, xstop)[1]
+                N[i,j,k] = basis_func(basis[j])(rbf_locs[i]) * quadgk(integrand, xstart, max(xstop - rbf_locs[i], xstart))[1]
             end
         end
     end
