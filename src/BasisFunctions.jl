@@ -11,7 +11,7 @@ export GammaBasisFunction
 export basis_func
 export evaluate_rbf
 export get_moment
-export get_first_moment
+export get_moment_log
 
 
 """
@@ -219,6 +219,15 @@ function get_moment(rbf::GaussianBasisFunction, q::FT; xstart::FT = eps(), xstop
     integrand = x-> basis_func(rbf)(x)*x^q
     mom = quadgk(integrand, xstart, xstop)[1]
     return mom
+  end
+end
+
+function get_moment_log(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT, xmin::FT, ζ::FT; zstart::FT = 0.0, zstop::FT = 1.0) where {FT <: Real}
+  Nb = length(basis)
+  moms = zeros(FT, Nb)
+  for i=1:Nb
+    integrand = w -> basis_func(basis[i])(w) * (xmin*ζ^w)^q
+    moms[i] = quadgk(integrand, zstart, zstop)[1]
   end
 end
 
