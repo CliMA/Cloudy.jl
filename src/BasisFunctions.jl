@@ -8,6 +8,7 @@ export PrimitiveUnivariateBasisFunc
 export GaussianBasisFunction
 export LognormalBasisFunction
 export GammaBasisFunction
+export GaussianBasisFunctionCubeRoot
 export basis_func
 export evaluate_rbf
 export get_moment
@@ -89,6 +90,26 @@ struct GammaBasisFunction{FT} <: PrimitiveUnivariateBasisFunc{FT}
     end
 end
 
+"""
+   GammaBasisFunction{FT}
+
+A normal distribution.
+"""
+struct GaussianBasisFunctionCubeRoot{FT} <: PrimitiveUnivariateBasisFunc{FT}
+    "shape parameter"
+    k::FT
+    "scale parameter"
+    θ::FT
+
+    function GaussianBasisFunctionCubeRoot(k::FT, θ::FT) where {FT <: Real}
+        if θ <= 0
+          error("θ needs to be positive")
+        end
+      
+        new{FT}(k, θ)
+    end
+end
+
 
 """
   basis_func(dist)
@@ -126,6 +147,18 @@ function basis_func(rbf::GammaBasisFunction{FT}) where {FT <: Real}
       x^(k-1)*exp(-x/θ)/θ^k/gamma(k)
   end
   g = x-> f(k, θ, x)
+  return g
+end
+
+function basis_func(rbf::GaussianBasisFunctionCubeRoot{FT}) where {FT <: Real}
+  p = get_params(rbf)[2]
+    μ = p[1]
+    σ = p[2]
+    function f(μ, σ, x)
+        r = x-> ((3/4/pi)*x)^(1/3)
+        return exp(-((r(x)-μ)/σ)^2/2)/σ/sqrt(2*pi)/4/pi/r(x)^2
+    end
+    g = x-> f(μ, σ, x)
   return g
 end
 
