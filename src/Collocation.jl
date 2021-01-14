@@ -151,7 +151,6 @@ function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, 
     Nb = length(nj)
     # first calculate c(t); 
     c = get_constants_vec(nj, A, J, mass)
-
     # time rate of change: dn/dt|_xj, t
     dndt = zeros(FT, Nb)
     for i=1:Nb
