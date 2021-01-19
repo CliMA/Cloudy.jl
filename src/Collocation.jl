@@ -171,9 +171,10 @@ function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}, mass:
     # here x is the coefficients
     x = Variable(Nb)
     objective = sumsquares(A*x - nj)
-    constraint1 = x >= 0
+    #constraint1 = x >= 0
     constraint2 = J'*x == mass
-    problem = minimize(objective, constraint1, constraint2)
+    #problem = minimize(objective, constraint1, constraint2)
+    problem = minimize(objective, constraint2)
     solve!(problem, SCS.Optimizer(verbose=false), verbose=false)
     c = x.value
 
@@ -185,6 +186,7 @@ Retrieves constants vector from a set of values at the collocation points withou
 """
 function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}) where {FT<:Real}
     return nonneg_lsq(A, nj)[:,1]
+    #return A\nj
 end
 
 end
