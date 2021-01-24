@@ -66,8 +66,7 @@ function main()
     
     ########################### DYNAMICS ################################
     nj_init = n_v_init.(rbf_mu)
-    tspan = (0.0, 3600.0)
-
+    tspan = (0.0, 100.0)
 
     # Implicit time step
     function dndt(ni,t,p)
@@ -76,24 +75,21 @@ function main()
     end
     prob = ODEProblem(dndt, nj_init, tspan)
     sol = solve(prob)
-    println(sol)
 
-    t_coll = range(tspan[1], stop=tspan[2], length=10)
+    t_coll = sol.t
 
     # track the moments and constants
     basis_mom = vcat(get_moment(basis, 0.0, xstart=v_start, xstop=v_stop)', get_moment(basis, 1.0, xstart=v_start, xstop=v_stop)', get_moment(basis, 2.0, xstart=v_start, xstop=v_stop)')
     c_coll = zeros(FT, length(t_coll), Nb)
-    for (i,t) in enumerate(t_coll)
-      nj_t = sol(t)
-      #c_coll[i,:] = get_constants_vec(nj_t, Φ, first_moments, mass)
+
+    for (i,t) in enumerate(sol.t)
+      nj_t = sol.u[i]
       c_coll[i,:] = get_constants_vec(nj_t, Φ)
+      println(c_coll[i,:].*first_moments)
     end
     mom_coll = (c_coll*basis_mom')
-    println("Initial constants: ", c0)
-    println("Final constants: ", c_coll[end,:])
 
     plot_nv_result(vmin*0.1, vmax*0.05, basis, c0, c_coll[Int(end/2),:], c_coll[end,:], plot_exact=true, n_v_init=n_v_init)  
-    #plot_nr_result(rmin*0.1, rmax*1.2, basis, c0, c_coll[end,:], plot_exact=true, n_v_init=n_v_init) 
 
     M_0_exact = zeros(FT, 3)
     for p=1:3

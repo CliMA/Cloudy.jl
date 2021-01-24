@@ -222,7 +222,7 @@ function get_moment(basis::Array{PrimitiveUnivariateBasisFunc, 1}, q::FT; xstart
   return moms
 end
 
-function get_moment(rbf::LognormalBasisFunction, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
+function get_moment(rbf::LognormalBasisFunction, q::FT) where {FT <: Real}
     params = get_params(rbf)
     mu = params[2][1]
     sigma = params[2][2]
@@ -230,7 +230,7 @@ function get_moment(rbf::LognormalBasisFunction, q::FT; xstart::FT = eps(), xsto
     return mom
 end
 
-function get_moment(rbf::GammaBasisFunction, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
+function get_moment(rbf::GammaBasisFunction, q::FT) where {FT <: Real}
     params = get_params(rbf)
     k = params[2][1]
     theta = params[2][2]
@@ -238,7 +238,7 @@ function get_moment(rbf::GammaBasisFunction, q::FT; xstart::FT = eps(), xstop::F
   return moms
 end
 
-function get_moment(rbf::GaussianBasisFunction, q::FT; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
+function get_moment(rbf::GaussianBasisFunction, q::FT) where {FT <: Real}
   params = get_params(rbf)
   mu = params[2][1]
   sigma = params[2][2]
@@ -249,9 +249,7 @@ function get_moment(rbf::GaussianBasisFunction, q::FT; xstart::FT = eps(), xstop
   elseif q == 2.0
     return mu^2 + sigma^2
   else
-    integrand = x-> basis_func(rbf)(x)*x^q
-    mom = quadgk(integrand, xstart, xstop)[1]
-    return mom
+    error("Must define integration bounds for Gaussian moment > order 2")
   end
 end
 

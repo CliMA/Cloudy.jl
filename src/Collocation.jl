@@ -160,6 +160,40 @@ function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, 
     return dndt
 end
 
+"""
+Collision coalescnece rate of change: mass conserving form
+"""
+function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, N::Array{FT,3}, J::Array{FT,1}, mass::FT) where {FT <: Real}
+    Nb = length(nj)
+    # first calculate c(t); 
+    c = get_constants_vec(nj, A, J, mass)
+    # time rate of change: dn/dt|_xj, t
+    dndt = zeros(FT, Nb)
+    for i=1:Nb
+        dndt[i] = (1/2*c'*M[i,:,:]*c - c'*N[i,:,:]*c)
+    end
+
+    return dndt
+end
+
+"""
+Collision coalescence with mass-nudging source term
+γ = step size (in units of 1/mass time)
+"""
+function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, N::Array{FT,3}, J::Array{FT,1}, mass::FT, γ::FT = 1e-15) where {FT <: Real}
+    Nb = length(nj)
+    c = A\nj
+    J_tilde = A'\J 
+    grad_R = -2*(mass - nj'*J_tilde)*(J_tilde)
+    
+    dndt = zeros(FT, Nb)
+    for i=1:Nb
+        dndt[i] = (1/2*c'*M[i,:,:]*c - c'*N[i,:,:]*c) - γ*grad_R[i]
+    end
+
+    return dndt
+end
+
 """ 
 Retrieves constants vector from a set of values at the collocation points with conservation
 of the first moment
@@ -171,10 +205,10 @@ function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, J::Array{FT,1}, mass:
     # here x is the coefficients
     x = Variable(Nb)
     objective = sumsquares(A*x - nj)
-    #constraint1 = x >= 0
+    constraint1 = x >= 0
     constraint2 = J'*x == mass
-    #problem = minimize(objective, constraint1, constraint2)
-    problem = minimize(objective, constraint2)
+    problem = minimize(objective, constraint1, constraint2)
+    #problem = minimize(objective, constraint2)
     solve!(problem, SCS.Optimizer(verbose=false), verbose=false)
     c = x.value
 
@@ -185,8 +219,8 @@ end
 Retrieves constants vector from a set of values at the collocation points without mass conservation
 """
 function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}) where {FT<:Real}
-    return nonneg_lsq(A, nj)[:,1]
-    #return A\nj
+    #return nonneg_lsq(A, nj)[:,1]
+    return A\nj
 end
 
 end

@@ -21,15 +21,7 @@ function main()
     k     = 2             # shape factor for volume size distribution 
     ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
 
-    μ_r   = k*θ_r
-    σ_r   = sqrt(k)*θ_r
-
     # initial distribution in volume: gamma distribution in radius, number per cm^3
-    #r = v->(3/4/pi*v)^(1/3)
-    #drdv = v-> 1/4/pi/(r(v)^2)
-    #n_r_init = R -> N0*(R^(k-1))/θ_r^k * exp(-R/θ_r) / gamma(k)
-    #n_v_init = v -> n_r_init(r(v))*drdv(v)
-    #n_v_init = v -> N0/σ_r/2/pi*exp(-(r(v) - μ_r)^2/2/σ_r^2)*drdv(v)
     n_v_init = v -> N0*v^(k-1)/θ_v^k * exp(-v / θ_v) / gamma(k)
 
     # basis setup 
@@ -40,16 +32,12 @@ function main()
     vmax = 4/3*pi*rmax^3
     rbf_mu = select_rbf_locs(vmin, vmax, Nb)
     rbf_sigma = select_rbf_shapes(rbf_mu, smoothing_factor=1.2)
-    #rbf_mu = select_rbf_locs(rmin, rmax, Nb)
-    #rbf_sigma = select_rbf_shapes(rbf_mu, smoothing_factor=1.2)
-    #rbf_k = rbf_mu.^2 ./ rbf_sigma.^2
-    #rbf_θ = rbf_mu.^2 ./ rbf_sigma
     basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
     for i = 1:Nb
       #basis[i] = GaussianBasisFunctionCubeRoot(rbf_mu[i], rbf_sigma[i])
       basis[i] = GaussianBasisFunction(rbf_mu[i], rbf_sigma[i])
       #basis[i] = GammaBasisFunction(rbf_k[i], rbf_θ[i])
-      println(basis[i])
+      #println(basis[i])
     end
 
     ########################### PRECOMPUTATION ################################
@@ -66,19 +54,20 @@ function main()
     
     ########################### DYNAMICS ################################
     nj_init = n_v_init.(rbf_mu)
-    tspan = (0.0, 3600.0)
-
+    tspan = (0.0, 100.0)
+    γ = 1e-15
 
     # Implicit time step
     function dndt(ni,t,p)
-      #return collision_coalescence(ni, Φ, Source, Sink, first_moments, mass)
-      return collision_coalescence(ni, Φ, Source, Sink)
+      return collision_coalescence(ni, Φ, Source, Sink, first_moments, mass, γ)
+      #return collision_coalescence(ni, Φ, Source, Sink)
     end
+    dndt(nj_init, 0.0, [0.0])
     prob = ODEProblem(dndt, nj_init, tspan)
     sol = solve(prob)
-    println(sol)
+    #println(sol)
 
-    t_coll = range(tspan[1], stop=tspan[2], length=10)
+    t_coll = range(tspan[1], stop=tspan[2], length=30)
 
     # track the moments and constants
     basis_mom = vcat(get_moment(basis, 0.0, xstart=v_start, xstop=v_stop)', get_moment(basis, 1.0, xstart=v_start, xstop=v_stop)', get_moment(basis, 2.0, xstart=v_start, xstop=v_stop)')
@@ -89,10 +78,12 @@ function main()
       c_coll[i,:] = get_constants_vec(nj_t, Φ)
     end
     mom_coll = (c_coll*basis_mom')
-    println("Initial constants: ", c0)
+    println("Initial constants: ", c_coll[1,:])
+    println("initial mass: ", mass)
     println("Final constants: ", c_coll[end,:])
+    println("final mass: ", c_coll[end,:]'*first_moments)
 
-    plot_nv_result(vmin*0.1, vmax*0.05, basis, c0, c_coll[Int(end/2),:], c_coll[end,:], plot_exact=true, n_v_init=n_v_init)  
+    #plot_nv_result(vmin*0.1, vmax*0.05, basis, c0, c_coll[Int(end/2),:], c_coll[end,:], plot_exact=true, n_v_init=n_v_init)  
     #plot_nr_result(rmin*0.1, rmax*1.2, basis, c0, c_coll[end,:], plot_exact=true, n_v_init=n_v_init) 
 
     M_0_exact = zeros(FT, 3)
@@ -262,6 +253,5 @@ function plot_moments(tsteps::Array{FT}, moments::Array{FT, 2}; plot_exact::Bool
     savefig(string("rbf_paper/moments",i-1,".png"))
   end
 end
-
 
 main()
