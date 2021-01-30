@@ -12,19 +12,19 @@ function main()
   # Physical parameters: Kernel
   b = 1e-4
   kernel_func = x -> b*(x[1]+x[2])
-  tracked_moments = [0, 1]
+  tracked_moments = [0.0, 1.0]
 
   ################## COLLOCATION APPROACH ###################
   # Initial condition: gamma
   N = 300
   k=2
-  theta=1
+  theta=5
   dist_init = x-> N*x^(k-1)*exp(-x/theta)/theta^k/gamma(k)
 
   # Choose the basis functions
   Nb = 5
-  xmin_loc = 1.0
-  xmax_loc = 20.0
+  xmin_loc = 10.0
+  xmax_loc = 300.0
   rbf_loc = select_rbf_locs(xmin_loc, xmax_loc, Nb)
   rbf_stddev = select_rbf_shapes(rbf_loc)
   basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
@@ -41,17 +41,16 @@ function main()
   
   # computation
   A = get_rbf_inner_products(basis, rbf_loc, tracked_moments)
-  Source = get_kernel_rbf_source(basis, rbf_loc, kernel_func, tracked_moments, xstart=x_min)
-  Sink = get_kernel_rbf_sink(basis, rbf_loc, kernel_func, tracked_moments, xstart=x_min, xstop=x_max)
+  Source = get_kernel_rbf_source(basis, rbf_loc, tracked_moments, kernel_func, xstart=x_min)
+  Sink = get_kernel_rbf_sink(basis, rbf_loc, tracked_moments, kernel_func, xstart=x_min, xstop=x_max)
 
   # INITIAL CONDITION
-  c0 = get_IC_vec(dist_init, basis, rbf_loc, A, tracked_moments)
-
+  (c0, nj_init) = get_IC_vecs(dist_init, basis, rbf_loc, A, tracked_moments)
+  println(c0, nj_init)
   println("precomputation complete")
 
   # Implicit Time stepping
   tspan = (0.0, 10.0)
-  nj_init = initial_condition(dist_init, rbf_loc, tracked_moments)
   
   function dndt(ni,t,p)
     return collision_coalescence(ni, A, Source, Sink)
@@ -59,7 +58,7 @@ function main()
 
   prob = ODEProblem(dndt, nj_init, tspan)
   sol = solve(prob)
-  println(sol)
+  #println(sol)
 
   t_coll = sol.t
 
@@ -73,6 +72,7 @@ function main()
   end
   
   mom_coll = (basis_mom*c_coll')'
+  #println(mom_coll)
   moments_init = mom_coll[1,:]
 
   ############################### PLOTTING ####################################
