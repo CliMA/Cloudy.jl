@@ -12,27 +12,30 @@ function main()
   # Physical parameters: Kernel
   b = 1e-4
   kernel_func = x -> b*(x[1]+x[2])
-  tracked_moments = [0.0, 1.0]
+  tracked_moments = [1.0]
 
   ################## COLLOCATION APPROACH ###################
   # Initial condition: gamma
   N = 300
   k=2
-  theta=5
+  theta=1
   dist_init = x-> N*x^(k-1)*exp(-x/theta)/theta^k/gamma(k)
 
-  # Choose the basis functions
-  Nb = 5
-  xmin_loc = 10.0
-  xmax_loc = 300.0
-  rbf_loc = select_rbf_locs(xmin_loc, xmax_loc, Nb)
-  rbf_stddev = select_rbf_shapes(rbf_loc)
+  # Choose the basis functions: linear spacing
+  Nb = 20
+  xmin_loc = 1.0
+  xmax_loc = 20.0
+  rbf_loc = collect(range(xmin_loc, stop=xmax_loc, length=Nb))
+  rbf_stddev = (rbf_loc[end] - rbf_loc[end-1])/1.5*ones(Nb)
+  rbf_stddev[1] = min(rbf_stddev[1], rbf_loc[1]/1.5)
+  #rbf_θ = rbf_stddev.^2 ./ rbf_loc
+  #rbf_k = rbf_loc.^2 ./ rbf_stddev
   basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
   for i = 1:Nb
     basis[i] = GaussianBasisFunction(rbf_loc[i], rbf_stddev[i])
+    #basis[i] = GammaBasisFunction(rbf_k[i], rbf_θ[i])
   end
-  #basis[Nb] = GaussianBasisFunction(rbf_loc[Nb]*0.9, 5.0)
-  println(basis)
+  #println(basis)
 
   # Precompute the various matrices
   # integration limits:
@@ -50,7 +53,7 @@ function main()
   println("precomputation complete")
 
   # Implicit Time stepping
-  tspan = (0.0, 10.0)
+  tspan = (0.0, 60.0)
   
   function dndt(ni,t,p)
     return collision_coalescence(ni, A, Source, Sink)
