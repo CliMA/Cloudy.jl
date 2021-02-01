@@ -85,7 +85,7 @@ function get_IC_vec(u0::Function, basis::Array{PrimitiveUnivariateBasisFunc, 1},
     return (c0, mass)
 end
 
-function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; xstart::FT = eps(), xstop::FT = 1000.0) where {FT <: Real}
+function get_kernel_rbf_sink(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rbf_locs::Array{FT}, kernel::Function; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real}
     # N_ijk = <basis[k](x), basis[j](x'), K(x, x'), basis[i](x) dx' dx 
     Nb = length(basis)
     N = zeros(FT, Nb, Nb, Nb)
@@ -116,7 +116,7 @@ function get_kernel_rbf_source(basis::Array{PrimitiveUnivariateBasisFunc, 1}, rb
     return M
 end
 
-function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT=1000.0) where {FT <: Real}
+function get_mass_cons_term(basis::Array{PrimitiveUnivariateBasisFunc, 1}; xstart::FT = eps(), xstop::FT=1e6) where {FT <: Real}
     Nb = length(basis)
     J = zeros(FT, Nb)
     for i=1:Nb

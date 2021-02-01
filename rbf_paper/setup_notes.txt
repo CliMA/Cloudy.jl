@@ -1,0 +1,11 @@
+# Initial condition taken from Long 1974/TAU paper
+Gamma distribution in radius with: 
+    N0 = 300 / cm^3
+    radius scale = 10 µm
+    shape parameter = 3 (k = eta  + 1)
+
+# Constant kernel dynamics from TAU paper
+K(x,y) = 1e-4 cm3/sec 
+
+# Golovin kernel dynamics from TAU paper
+K(x,y) = 1500(x+y) / sec (where x, y are volume of particles)
