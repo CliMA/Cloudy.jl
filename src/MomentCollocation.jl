@@ -25,7 +25,7 @@ end
 Given a set of RBF locations, set up shape parameters based on distance between
 adjacent rbfs 
 """
-function select_rbf_shapes(rbf_locs::Array{FT}; smoothing_factor::FT = 2.0) where {FT <: Real}
+function select_rbf_shapes(rbf_locs::Array{FT}; smoothing_factor::FT = 1.5) where {FT <: Real}
     rbf_pts = append!([0.0], rbf_locs)
     rbf_sigma = zeros(length(rbf_locs))
     rbf_sigma[1] = rbf_locs[1]/smoothing_factor
