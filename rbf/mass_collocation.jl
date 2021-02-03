@@ -1,6 +1,6 @@
 using Plots
 using Cloudy.BasisFunctions
-using Cloudy.MomentCollocation
+using Cloudy.MassCollocation
 using QuadGK
 using SpecialFunctions: gamma
 using DifferentialEquations
@@ -24,10 +24,8 @@ function main()
   # Choose the basis functions: linear spacing
   Nb = 20
   xmin_loc = 1.0
-  xmax_loc = 20.0
+  xmax_loc = 200.0
   #rbf_loc = collect(range(xmin_loc, stop=xmax_loc, length=Nb))
-  #rbf_stddev = (rbf_loc[end] - rbf_loc[end-1])/1.5*ones(Nb)
-  #rbf_stddev[1] = min(rbf_stddev[1], rbf_loc[1]/1.5)
   rbf_loc = select_rbf_locs(xmin_loc, xmax_loc, Nb)
   rbf_shapes = zeros(Nb)
   rbf_shapes[3:end] = (rbf_loc[3:end] - rbf_loc[1:end-2])
@@ -36,15 +34,13 @@ function main()
   #rbf_k = rbf_loc.^2 ./ rbf_stddev
   basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
   for i = 1:Nb
-    #basis[i] = GaussianBasisFunction(rbf_loc[i], rbf_stddev[i])
     basis[i] = CompactBasisFunction1(rbf_loc[i], rbf_shapes[i])
-    #basis[i] = GammaBasisFunction(rbf_k[i], rbf_θ[i])
   end
   #println(basis)
 
   # Precompute the various matrices
   # integration limits:
-  x_min = 0.0
+  x_min = 1e-3
   x_max = xmax_loc
   
   # computation
@@ -71,7 +67,7 @@ function main()
   t_coll = sol.t
 
   # track the moments
-  basis_mom = vcat(get_moment(basis, 0.0, xstart=x_min, xstop=x_max)', get_moment(basis, 1.0, xstart=x_min, xstop=x_max)', get_moment(basis, 2.0, xstart=x_min, xstop=x_max)')
+  basis_mom = vcat(get_moment(basis, -1.0, xstart=x_min, xstop=x_max)', get_moment(basis, 0.0, xstart=x_min, xstop=x_max)', get_moment(basis, 1.0, xstart=x_min, xstop=x_max)')
   c_coll = zeros(FT, length(t_coll)+1, Nb)
   c_coll[1,:] = c0
   for (i,t) in enumerate(t_coll)
@@ -85,31 +81,31 @@ function main()
 
   ############################### PLOTTING ####################################
     # plot the actual distribution
-    x = collect(range(eps(), stop=30.0, length=1000))
+    x = collect(range(x_min, stop=x_max*0.3, length=1000))
     plot(x, 
       evaluate_rbf(basis, c0, x)/sum(c0),
       linewidth=2,
       title="Golovin; Collocation truncated integral",
       xaxis="mass",
-      yaxis="Probability distribution (normalized)",
+      yaxis="Mass distribution (normalized)",
       label="t = 0"
     )
 
-    plot!(x,
-      dist_init.(x)/sum(c0),
-      linewidth=2,
-      ls=:dash,
-      label="Exact I.C.")
+    plot!(x, 
+        dist_init.(x).*x/sum(c0),
+        linewidth=2,
+        ls=:dash,
+        label="exact I.C.")
     
     plot!(x,
       evaluate_rbf(basis, c_coll[end,:], x)/sum(c_coll[end,:]),
       linewidth=2,
-      label="t = 30.0"
+      label="t = 10.0"
     )
 
     for i=1:Nb
       c_basis = zeros(FT,Nb)
-      c_basis[i] = 0.5
+      c_basis[i] = 1
       plot!(x,
         evaluate_rbf(basis, c_basis, x),
         ls=:dash,
@@ -117,7 +113,7 @@ function main()
         label="basis_fn")
     end
   
-    savefig("rbf/moment_hybrid.png")
+    savefig("rbf/mass_collocation.png")
   
     # plot the moments
   plot(t_coll,
@@ -149,7 +145,7 @@ function main()
   plot!(t_coll, mom_coll[1:end-1,1]/moments_init[1], lw=3, label="M\$_0\$ RBF")
   plot!(t_coll, mom_coll[1:end-1,2]/moments_init[2], lw=3, label="M\$_1\$ RBF")
   plot!(t_coll, mom_coll[1:end-1,3]/moments_init[3], lw=3, label="M\$_2\$ RBF")
-  savefig("rbf/moment_hybrid_moments.png")
+  savefig("rbf/mass_collocation_moments.png")
 
   # print out the final moment and the initial and final distribution parameters
   println("Initial moments: ", mom_coll[1,:])

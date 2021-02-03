@@ -8,6 +8,7 @@ export PrimitiveUnivariateBasisFunc
 export GaussianBasisFunction
 export LognormalBasisFunction
 export GammaBasisFunction
+export CompactBasisFunction1
 export basis_func
 export evaluate_rbf
 export get_moment
@@ -89,6 +90,26 @@ struct GammaBasisFunction{FT} <: PrimitiveUnivariateBasisFunc{FT}
     end
 end
 
+"""
+   CompactBasisFunction{FT}
+
+A compactly supported basis function of degree 7, which is twice differentiable
+"""
+struct CompactBasisFunction1{FT} <: PrimitiveUnivariateBasisFunc{FT}
+    "mean/center"
+    μ::FT
+    "scale parameter"
+    θ::FT
+
+    function CompactBasisFunction1(μ::FT, θ::FT) where {FT <: Real}
+        if θ <= 0
+          error("θ needs to be positive")
+        end
+      
+        new{FT}(μ, θ)
+    end
+end
+
 
 """
   basis_func(dist)
@@ -126,6 +147,22 @@ function basis_func(rbf::GammaBasisFunction{FT}) where {FT <: Real}
       x^(k-1)*exp(-x/θ)/θ^k/gamma(k)
   end
   g = x-> f(k, θ, x)
+  return g
+end
+
+function basis_func(rbf::CompactBasisFunction1{FT}) where {FT <: Real}
+  p = get_params(rbf)[2]
+  μ = p[1]
+  θ = p[2]
+  function f(μ,θ,x)
+    r = abs(x-μ)/θ
+    if r > 1
+      0
+    else
+      12/35*(1-r)^4*(4+16*r+12*r^2+3*r^3)
+    end
+  end
+  g = x -> f(μ,θ,x)
   return g
 end
 
