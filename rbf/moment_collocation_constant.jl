@@ -10,8 +10,8 @@ function main()
   FT = Float64
 
   # Physical parameters: Kernel
-  b = 1e-4
-  kernel_func = x -> b*(x[1]+x[2])
+  a = 2e-3
+  kernel_func = x-> a
   tracked_moments = [1.0]
 
   ################## COLLOCATION APPROACH ###################
@@ -22,25 +22,22 @@ function main()
   dist_init = x-> N*x^(k-1)*exp(-x/theta)/theta^k/gamma(k)
 
   # Choose the basis functions: linear spacing
-  Nb = 20
+  Nb = 10
   xmin_loc = 1.0
-  xmax_loc = 20.0
+  xmax_loc = 100.0
   #rbf_loc = collect(range(xmin_loc, stop=xmax_loc, length=Nb))
   #rbf_stddev = (rbf_loc[end] - rbf_loc[end-1])/1.5*ones(Nb)
   #rbf_stddev[1] = min(rbf_stddev[1], rbf_loc[1]/1.5)
   rbf_loc = select_rbf_locs(xmin_loc, xmax_loc, Nb)
-  rbf_shapes = zeros(Nb)
-  rbf_shapes[3:end] = (rbf_loc[3:end] - rbf_loc[1:end-2])
-  rbf_shapes[1:2] = rbf_loc[1:2]
+  rbf_stddev = select_rbf_shapes(rbf_loc)
   #rbf_θ = rbf_stddev.^2 ./ rbf_loc
   #rbf_k = rbf_loc.^2 ./ rbf_stddev
   basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
   for i = 1:Nb
-    #basis[i] = GaussianBasisFunction(rbf_loc[i], rbf_stddev[i])
-    basis[i] = CompactBasisFunction1(rbf_loc[i], rbf_shapes[i])
+    basis[i] = GaussianBasisFunction(rbf_loc[i], rbf_stddev[i])
     #basis[i] = GammaBasisFunction(rbf_k[i], rbf_θ[i])
+    println(basis[i])
   end
-  #println(basis)
 
   # Precompute the various matrices
   # integration limits:
@@ -58,7 +55,7 @@ function main()
   println("precomputation complete")
 
   # Implicit Time stepping
-  tspan = (0.0, 30.0)
+  tspan = (0.0, 50.0)
   
   function dndt(ni,t,p)
     return collision_coalescence(ni, A, Source, Sink)
@@ -84,46 +81,40 @@ function main()
   moments_init = mom_coll[1,:]
 
   ############################### PLOTTING ####################################
-    # plot the actual distribution
+    # plot the actual *mass* distribution
     x = collect(range(eps(), stop=130.0, length=1000))
     plot(x, 
-      evaluate_rbf(basis, c0, x)/sum(c0),
+      x.*evaluate_rbf(basis, c0, x)/sum(c0),
       linewidth=2,
       title="Golovin; Collocation truncated integral",
       xaxis="mass",
-      yaxis="Probability distribution (normalized)",
+      yaxis="Mass distribution: x n(x)",
       label="t = 0"
     )
-
-    plot!(x,
-      dist_init.(x)/sum(c0),
-      linewidth=2,
-      ls=:dash,
-      label="Exact I.C.")
     
     plot!(x,
-      evaluate_rbf(basis, c_coll[end,:], x)/sum(c_coll[end,:]),
+      x.*evaluate_rbf(basis, c_coll[end,:], x)/sum(c_coll[end,:]),
       linewidth=2,
-      label="t = 30.0"
+      label="t = 10.0"
     )
 
     for i=1:Nb
       c_basis = zeros(FT,Nb)
-      c_basis[i] = 0.5
+      c_basis[i] = 1
       plot!(x,
-        evaluate_rbf(basis, c_basis, x),
+        x.*evaluate_rbf(basis, c_basis, x),
         ls=:dash,
         linecolor=:gray,
         label="basis_fn")
     end
   
-    savefig("rbf/moment_hybrid.png")
+    savefig("rbf/moment_hybrid_mass.png")
   
     # plot the moments
   plot(t_coll,
-  t-> (moments_init[1]*exp(-b*moments_init[2]*t))/moments_init[1],
+    t-> (1 / moments_init[1] + 0.5 * a * t)^(-1)/moments_init[1],
       linewidth=3,
-      title="Golovin; Collocation truncated integral",
+      title="Constant; Collocation truncated integral",
       xaxis="time",
       yaxis="M\$_k\$(time)",
       xlims=tspan,
@@ -140,7 +131,7 @@ function main()
   )
   
   plot!(t_coll,
-      t-> (moments_init[3]*exp(2*b*moments_init[2]*t))/moments_init[3],
+      t-> (moments_init[3] + moments_init[2]^2 * a * t)/moments_init[3],
       lw=3,
       ls=:dash,
       label="M\$_2\$ Exact"
