@@ -10,27 +10,38 @@ function main()
   FT = Float64
 
   # Physical parameters: Kernel
-  a = 0
-  b = 0.1
-  kernel_func = x -> a + b*(x[1]+x[2])
+  a = 0.05
+  b = 0
+  c = 1.0
+  xmin_loc = 1.0
+  xmax_loc = 200.0
+  kernel_func = x -> a + b*(x[1]+x[2]) + c*abs(x[1]^(2/3)-x[2]^(2/3))/xmax_loc^(2/3)
   tracked_moments = [1.0]
 
-  # Initial condition: gamma
-  N = 300
-  k=2
+  # Initial condition
+  N = 0
+  #N2 = 100
+  #k=2
   theta=1
-  dist_init = x-> N*x^(k-1)*exp(-x/theta)/theta^k/gamma(k)
+  #dist_init = x-> N*x^(k-1)*exp(-x/theta)/theta^k/gamma(k)
+  dist_init = x-> N*basis_func(CompactBasisFunction1(1.0, 1.0))(x)
+  #dist_init = x-> N*basis_func(CompactBasisFunction1(1.0, 1.0))(x)+N2*basis_func(CompactBasisFunction1(5.0, 1.0))(x)
 
   # Injection rate
-  inject_rate = 1
-  inject_rate_fn = x-> inject_rate*dist_init(x)
-
+  inject_rate = [100, 200, 100, 50, 10]
+  function inject_rate_fn(x)
+    f = 0
+    for (i, r) in enumerate(inject_rate)
+      f = f + r*basis_func(CompactBasisFunction1(Float64(i), 1.0))(x)
+    end
+    #println(f)
+    return f
+  end
+  
   ################## COLLOCATION APPROACH ###################
 
   # Choose the basis functions: log spacing
-  Nb = 10
-  xmin_loc = 1.0
-  xmax_loc = 20.0
+  Nb = 9
   rbf_loc = select_rbf_locs(xmin_loc, xmax_loc, Nb)
   rbf_shapes = zeros(Nb)
   rbf_shapes[3:end] = (rbf_loc[3:end] - rbf_loc[1:end-2])
@@ -39,7 +50,7 @@ function main()
   for i = 1:Nb
     basis[i] = CompactBasisFunction1(rbf_loc[i], rbf_shapes[i])
   end
-  #println(basis)
+  println(basis)
 
   # Precompute the various matrices
   # integration limits:
@@ -54,11 +65,11 @@ function main()
 
   # INITIAL CONDITION
   (c0, nj_init) = get_IC_vecs(dist_init, basis, rbf_loc, A, tracked_moments)
-  println(c0, nj_init)
+  #println(c0, nj_init)
   println("precomputation complete")
 
   # Implicit Time stepping
-  tspan = (0.0, 1.0)
+  tspan = (0.0, 10.0)
   
   function dndt(ni,t,p)
     return collision_coalescence(ni, A, Source, Sink, Inject)
@@ -85,7 +96,7 @@ function main()
 
   ############################### PLOTTING ####################################
     # plot the actual distribution
-    x = collect(range(eps(), stop=50.0, length=1000))
+    x = collect(range(eps(), stop=xmax_loc, length=1000))
     plot(x,
       dist_init.(x),#/sum(c0),
       linewidth=2,
@@ -116,6 +127,13 @@ function main()
     end """
   
     savefig("rbf/moment_hybrid.png")
+
+    # plot final distribution
+    plot(x, evaluate_rbf(basis, c_coll[end,:], x),#/sum(c_coll[i,:]),
+                linewidth=2,
+                label=string("t=",10)
+                )
+    savefig("rbf/moment_hybrid_end.png")
   
     # plot the moments
   """plot(t_coll,
@@ -144,10 +162,10 @@ function main()
       label="M\$_2\$ Exact"
   )"""
 
-  plot(t_coll, mom_coll[1:end-1,1]/moments_init[1], lw=3, label="M\$_0\$ RBF")
-  plot!(t_coll, mom_coll[1:end-1,2]/moments_init[2], lw=3, label="M\$_1\$ RBF")
-  plot!(t_coll, mom_coll[1:end-1,3]/moments_init[3], lw=3, label="M\$_2\$ RBF")
-  savefig("rbf/moment_hybrid_moments.png")
+  #plot(t_coll, mom_coll[1:end-1,1]/moments_init[1], lw=3, label="M\$_0\$ RBF")
+  plot(t_coll, mom_coll[1:end-1,2], lw=3, label="M\$_1\$ RBF")
+  #plot!(t_coll, mom_coll[1:end-1,3]/moments_init[3], lw=3, label="M\$_2\$ RBF")
+  savefig("rbf/moment_hybrid_mass.png")
 
   # print out the final moment and the initial and final distribution parameters
   println("Initial moments: ", mom_coll[1,:])
