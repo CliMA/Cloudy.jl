@@ -11,46 +11,86 @@ function main()
 
   # Physical parameters: Kernel
   a = 0.05
-  b = 0
-  c = 1.0
+  b = 0.0
+  c = 0.0
   xmin_loc = 1.0
-  xmax_loc = 200.0
-  kernel_func = x -> a + b*(x[1]+x[2]) + c*abs(x[1]^(2/3)-x[2]^(2/3))/xmax_loc^(2/3)
+  xmax_loc = 100.0
+  kernel_func = x -> a + b*(x[1]+x[2]) + c*abs(x[1]^(2/3)-x[2]^(2/3))/xmax_loc^(2/3)*(x[1]^(1/3)+x[2]^(1/3))^2
   tracked_moments = [1.0]
 
   # Initial condition
-  N = 0
+  N = 100.0
   #N2 = 100
   #k=2
   theta=1
   #dist_init = x-> N*x^(k-1)*exp(-x/theta)/theta^k/gamma(k)
   dist_init = x-> N*basis_func(CompactBasisFunction1(1.0, 1.0))(x)
   #dist_init = x-> N*basis_func(CompactBasisFunction1(1.0, 1.0))(x)+N2*basis_func(CompactBasisFunction1(5.0, 1.0))(x)
-
-  # Injection rate
-  inject_rate = [100, 200, 100, 50, 10]
-  function inject_rate_fn(x)
-    f = 0
-    for (i, r) in enumerate(inject_rate)
-      f = f + r*basis_func(CompactBasisFunction1(Float64(i), 1.0))(x)
-    end
-    #println(f)
-    return f
-  end
   
   ################## COLLOCATION APPROACH ###################
 
   # Choose the basis functions: log spacing
-  Nb = 9
+  Nb = 10
+  
+  # Log-spaced compact basis functions
+  """basis = Array{CompactBasisFunc}(undef, Nb)
   rbf_loc = select_rbf_locs(xmin_loc, xmax_loc, Nb)
   rbf_shapes = zeros(Nb)
   rbf_shapes[3:end] = (rbf_loc[3:end] - rbf_loc[1:end-2])
   rbf_shapes[1:2] = rbf_loc[1:2]
-  basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
   for i = 1:Nb
     basis[i] = CompactBasisFunction1(rbf_loc[i], rbf_shapes[i])
+  end"""
+
+  # log-spaced uneven compact rbf
+  """basis = Array{CompactBasisFunc}(undef, Nb)
+  rbf_loc = select_rbf_locs(xmin_loc, xmax_loc, Nb)
+  rbf_shapes = zeros(Nb)
+  rbf_shapes[3:end] = (rbf_loc[3:end] - rbf_loc[1:end-2])
+  rbf_shapes[1:2] = rbf_loc[1:2]
+  rbf_shapes_R = zeros(Nb)
+  rbf_shapes_R[1:end-2] = (rbf_loc[3:end] - rbf_loc[1:end-2])
+  rbf_shapes_R[end-1:end] = xmax_loc .- rbf_loc[end-1:end]
+  rbf_shapes_R[end] = max(rbf_shapes_R[end], 1.0)
+  for i = 1:Nb
+    basis[i] = CompactBasisFunctionUneven(rbf_loc[i], rbf_shapes[i], rbf_shapes_R[i])
+  end"""
+
+  # log-spaced gamma rbf
+  """basis = Array{GlobalBasisFunc}(undef, Nb)
+  rbf_loc = select_rbf_locs(xmin_loc, xmax_loc, Nb)
+  rbf_shapes = zeros(Nb)
+  rbf_shapes[3:end] = (rbf_loc[3:end] - rbf_loc[1:end-2])
+  rbf_shapes[1:2] = rbf_loc[1:2]
+  rbf_k = rbf_loc.^2 ./ rbf_shapes.^2
+  rbf_theta = rbf_shapes.^2 ./ rbf_loc
+  for i = 1:Nb
+    basis[i] = GammaBasisFunction(rbf_k[i], rbf_theta[i])
+  end"""
+
+  # lin-spaced log compact rbf
+  basis = Array{CompactBasisFunc}(undef, Nb)
+  rbf_loc = collect(range(0.0, stop=log(xmax_loc), length=Nb))
+  rbf_shapes = zeros(Nb)
+  rbf_shapes[3:end] = (rbf_loc[3:end] - rbf_loc[1:end-2])
+  rbf_shapes[2] = rbf_loc[2]
+  rbf_shapes[1] = rbf_loc[2]
+  for i=1:Nb
+    basis[i] = CompactBasisFunctionLog(rbf_loc[i], rbf_shapes[i])
   end
   println(basis)
+  rbf_loc = exp.(rbf_loc)
+
+  # Injection rate
+  inject_rate = [100, 50]#, 200, 100, 50, 10]
+  function inject_rate_fn(x)
+    f = 0
+    for (i, r) in enumerate(inject_rate)
+      f = f + r*basis_func(CompactBasisFunction1(i+0.0, 1.0))(x)
+    end
+    #println(f)
+    return f
+  end
 
   # Precompute the various matrices
   # integration limits:
@@ -61,11 +101,17 @@ function main()
   A = get_rbf_inner_products(basis, rbf_loc, tracked_moments)
   Source = get_kernel_rbf_source(basis, rbf_loc, tracked_moments, kernel_func, xstart=x_min)
   Sink = get_kernel_rbf_sink_precip(basis, rbf_loc, tracked_moments, kernel_func, xstart=x_min, xstop=x_max)
-  Inject = get_injection_source(rbf_loc, tracked_moments, inject_rate_fn)
+  #Inject = get_injection_source(rbf_loc, tracked_moments, inject_rate_fn)
+  (c_inject, Inject) = get_basis_projection(basis, rbf_loc, A, tracked_moments, inject_rate_fn, x_max)
+  J = get_mass_cons_term(basis, xstart = x_min, xstop = x_max)
+  m_inject = sum(c_inject .* J)
+  println(c_inject)
+  println(Inject)
 
   # INITIAL CONDITION
-  (c0, nj_init) = get_IC_vecs(dist_init, basis, rbf_loc, A, tracked_moments)
-  #println(c0, nj_init)
+  #(c0, nj_init) = get_IC_vecs(dist_init, basis, rbf_loc, A, tracked_moments)
+  (c0, nj_init) = get_basis_projection(basis, rbf_loc, A, tracked_moments, dist_init, x_max)
+  m_init = sum(c0 .* J)
   println("precomputation complete")
 
   # Implicit Time stepping
@@ -115,16 +161,6 @@ function main()
                 )
         end
     end
-
-    """for i=1:Nb
-      c_basis = zeros(FT,Nb)
-      c_basis[i] = 0.5
-      plot!(x,
-        evaluate_rbf(basis, c_basis, x),
-        ls=:dash,
-        linecolor=:gray,
-        label="basis_fn")
-    end """
   
     savefig("rbf/moment_hybrid.png")
 
@@ -133,6 +169,15 @@ function main()
                 linewidth=2,
                 label=string("t=",10)
                 )
+    for i=1:Nb
+      c_basis = zeros(FT,Nb)
+      c_basis[i] = 0.5
+      plot!(x,
+        evaluate_rbf(basis, c_basis, x)*sum(c_coll[end,:]),
+        ls=:dash,
+        linecolor=:gray,
+        label="basis_fn")
+    end
     savefig("rbf/moment_hybrid_end.png")
   
     # plot the moments
@@ -171,9 +216,9 @@ function main()
   println("Initial moments: ", mom_coll[1,:])
   println("Final moments: ", mom_coll[end,:])
   println("Initial distribution constants: ", c0)
-  println("Normalized: ", c0/sum(c0))
+  #println("Normalized: ", c0/sum(c0))
   println("Final distribution constants: ", c_coll[end,:])
-  println("Normalized: ", c_coll[end,:]/sum(c_coll[end,:]))
+  #println("Normalized: ", c_coll[end,:]/sum(c_coll[end,:]))
   
 end
 
