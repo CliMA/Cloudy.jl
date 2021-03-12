@@ -148,7 +148,7 @@ function get_kernel_rbf_sink_precip(basis::Array{CompactBasisFunc, 1}, rbf_locs:
     return N
 end
 
-function get_kernel_rbf_source(basis::Array{GlobalBasisFunc, 1}, rbf_locs::Array{FT}, moment_list::Array{FT, 1}, kernel::Function; xstart::FT = eps()) where {FT <: Real}
+"""function get_kernel_rbf_source(basis::Array{GlobalBasisFunc, 1}, rbf_locs::Array{FT}, moment_list::Array{FT, 1}, kernel::Function; xstart::FT = eps()) where {FT <: Real}
     # M_ijk = 1/2 <basis[k](x-x'), basis[j](x'), K(x-x', x'), basis[i](x) dx' dx 
     Nb = length(basis)
     Nmom = length(moment_list)
@@ -169,7 +169,7 @@ function get_kernel_rbf_source(basis::Array{GlobalBasisFunc, 1}, rbf_locs::Array
     end
 
     return M
-end
+end"""
 
 function get_kernel_rbf_source(basis::Array{CompactBasisFunc, 1}, rbf_locs::Array{FT}, moment_list::Array{FT, 1}, kernel::Function; xstart::FT = 0.0) where {FT <: Real}
     # M_ijk = 1/2 <basis[k](x-x'), basis[j](x'), K(x-x', x'), basis[i](x) dx' dx 

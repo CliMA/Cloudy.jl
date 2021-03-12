@@ -2,8 +2,10 @@
 
 using Plots
 using Cloudy.BasisFunctions
-using Cloudy.Collocation
+using Cloudy.MomentCollocation
+using QuadGK
 using SpecialFunctions: gamma
+using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
@@ -11,79 +13,99 @@ function main()
     # Numerical parameters
     FT = Float64
 
-    # Physical parameters
-    K     = x-> 1e-4      # kernel function in cm3 per sec 
-    
-    N0    = 300           # initial droplet density: number per cm^3
-    N     = N0            # total number density of droplets initially
-    θ_r   = 10            # radius scale factor: µm
-    #θ_v   = 4/3*pi*θ_r^3  # volume scale factor: µm^3
-    #θ_v   = 10
-    k     = 3             # shape factor for volume size distribution 
-    ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
-
-    # initial distribution in volume: gamma distribution in radius, number per cm^3
-    r = v->(3/4/pi*v)^(1/3)
-    n_v_init = v -> N*(r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
-
     # basis setup 
-    Nb = 4
-    rmax  = 100.0
-    rmin  = 10.0
+    Nb = 20
+    rmax  = 50.0
+    rmin  = 1.0
     vmin = rmin^3
     vmax = rmax^3
-    rbf_mu = select_rbf_locs(vmin, vmax, Nb)
-    rbf_sigma = select_rbf_shapes(rbf_mu, smoothing_factor=1.5)
-    rbf_k = rbf_mu.^2 ./ rbf_sigma.^2
-    rbf_θ = rbf_mu.^2 ./ rbf_sigma
-    basis = Array{PrimitiveUnivariateBasisFunc}(undef, Nb)
-    for i = 1:Nb
-      basis[i] = GaussianBasisFunction(rbf_mu[i], rbf_sigma[i])
-      #basis[i] = GammaBasisFunction(rbf_k[i], rbf_θ[i])
-      println(basis[i])
-    end
 
+    # Physical parameters: Kernel
+    a = 0.05
+    b = 0.0
+    c = 0.0
+    kernel_func = x -> a + b*(x[1]+x[2]) + c*abs(x[1]^(2/3)-x[2]^(2/3))/vmax^(2/3)*(x[1]^(1/3)+x[2]^(1/3))^2
+    tracked_moments = [1.0]
+    N0    = 3           # initial droplet density: number per cm^3
+    N     = N0            # total number density of droplets initially
+    θ_r   = 3            # radius scale factor: µm
+    k     = 3             # shape factor for particle size distribution 
+    ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
+
+    # initial/injection distribution in volume: gamma distribution in radius, number per cm^3
+    r = v->(3/4/pi*v)^(1/3)
+    n_v_init = v -> N*(r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
+    
+    # lin-spaced log compact rbf
+    basis = Array{CompactBasisFunc}(undef, Nb)
+    rbf_loc = collect(range(log(vmin), stop=log(vmax), length=Nb))
+    rbf_shapes = zeros(Nb)
+    rbf_shapes[3:end] = (rbf_loc[3:end] - rbf_loc[1:end-2])
+    rbf_shapes[2] = rbf_loc[2]
+    rbf_shapes[1] = rbf_loc[2]
+    for i=1:Nb
+      basis[i] = CompactBasisFunctionLog(rbf_loc[i], rbf_shapes[i])
+    end
+    #println(basis)
+    rbf_loc = exp.(rbf_loc)
+
+    # Injection rate
+    inject_rate = 1
+    function inject_rate_fn(v)
+      f = inject_rate*n_v_init(v)/N
+      return f
+    end
     ########################### PRECOMPUTATION ################################
-    v_start = eps()
+    v_start = 0.0
     v_stop = vmax
 
     # Precomputation
-    Φ = get_rbf_inner_products(basis, rbf_mu)
-    Source = get_kernel_rbf_source(basis, rbf_mu, K, xstart = v_start)
-    Sink = get_kernel_rbf_sink(basis, rbf_mu, K, xstart = v_start, xstop=v_stop)
-    mass_cons = get_mass_cons_term(basis, xstart = v_start, xstop=v_stop)
-    (c0, mass) = get_IC_vec(n_v_init, basis, Φ, mass_cons, xstart = v_start, xstop=v_stop)
+    A = get_rbf_inner_products(basis, rbf_loc, tracked_moments)
+    Source = get_kernel_rbf_source(basis, rbf_loc, tracked_moments, kernel_func, xstart=vmin)
+    Sink = get_kernel_rbf_sink_precip(basis, rbf_loc, tracked_moments, kernel_func, xstart=vmin, xstop=vmax)
+    #Inject = get_injection_source(rbf_loc, tracked_moments, inject_rate_fn)
+    (c_inject, Inject) = get_basis_projection(basis, rbf_loc, A, tracked_moments, inject_rate_fn, vmax)
+    J = get_mass_cons_term(basis, xstart = vmin, xstop = vmax)
+    m_inject = sum(c_inject .* J)
+    println(c_inject)
+    println(Inject)
+
+    # INITIAL CONDITION
+    #(c0, nj_init) = get_IC_vecs(dist_init, basis, rbf_loc, A, tracked_moments)
+    (c0, nj_init) = get_basis_projection(basis, rbf_loc, A, tracked_moments, n_v_init, vmax)
+    m_init = sum(c0 .* J)
+    println("precomputation complete")
 
     ########################### DYNAMICS ################################
-    tspan = (0.0, 60.0)
-    dt = 1.0
-    tsteps = range(tspan[1]+dt, stop=tspan[2], step=dt)
-    nj = n_v_init.(rbf_mu)
-    dndt = ni->collision_coalescence(ni, Φ, Source, Sink, mass_cons, mass)
-
-    basis_mom = vcat(get_moment(basis, 0.0)', get_moment(basis, 1.0)', get_moment(basis, 2.0)')
-    mom_coll = zeros(FT, length(tsteps)+1, 3)
-    mom_coll[1,:] = (basis_mom*c0)'
-
-    c05 = c0
-    for (i,t) in enumerate(tsteps)
-      nj += dndt(nj)*dt
-      cj = get_constants_vec(nj, Φ, mass_cons, mass)
-      println(cj)
-
-      # save intermediate time step
-      if t/tspan[2]==0.5
-        c05 = cj
-      end
-
-      mom_coll[i+1,:] = (basis_mom*cj)'
+    # Implicit Time stepping
+    tspan = (0.0, 1.0)
+    
+    function dndt(ni,t,p)
+      return collision_coalescence(ni, A, Source, Sink, Inject)
     end
 
+    prob = ODEProblem(dndt, nj_init, tspan)
+    sol = solve(prob)
+    #println(sol)
+
+    t_coll = sol.t
+
+    # track the moments
+    basis_mom = vcat(get_moment(basis, 0.0, xstart=vmin, xstop=vmax)', get_moment(basis, 1.0, xstart=vmin, xstop=vmax)', get_moment(basis, 2.0, xstart=vmin, xstop=vmax)')
+    c_coll = zeros(FT, length(t_coll)+1, Nb)
+    c_coll[1,:] = c0
+    for (i,t) in enumerate(t_coll)
+      nj_t = sol(t)
+      c_coll[i+1,:] = get_constants_vec(nj_t, A)
+    end
+    
+    mom_coll = c_coll*basis_mom'
+    #println(mom_coll)
     moments_init = mom_coll[1,:]
 
-    c_final = get_constants_vec(nj, Φ, mass_cons, mass)
-    plot_nv_result(vmin*0.1, vmax*1.2, basis, c0, c05, c_final, plot_exact=true, n_v_init=n_v_init)
-    #plot_nr_result(rmin*0.1, rmax*1.2, basis, c0, c_final, plot_exact=true, n_v_init=n_v_init)
+    plot_nv_result(vmin*0.1, vmax, basis, c0, c_coll[end,:], plot_exact=true, n_v_init=n_v_init)
+    plot_nr_result(rmin*0.1, rmax, basis, c0, c_coll[end,:], plot_exact=true, n_v_init=n_v_init)
+    #plot_moments(t_coll, mom_coll)
 end
 
 function plot_init()
@@ -91,7 +113,6 @@ function plot_init()
   g_lnr_init = r-> 3*(4*pi/3*r^3)^2*n_v_init(4*pi/3*r^3)*ρ_w
 
   # PLOT INITIAL MASS DISTRIBUTION: should look similar to Fig 10 from Long 1974
-  pyplot()
   r_plot = collect(range(0, stop=50.0, length=100))
   plot(r_plot, 
       g_lnr_init.(r_plot),
@@ -104,7 +125,6 @@ function plot_init()
   savefig("rbf_paper/initial_dist.png")
 
   # PLOT INITIAL DISTRIBUTION: should look similar to Tzivion 1987 fig 1
-  pyplot()
   r_plot = collect(range(0, stop=100.0, length=100))
   plot(r_plot, 
       n_v_init.(r_plot.^3*4*pi/3),
@@ -120,10 +140,9 @@ function plot_init()
   savefig("rbf_paper/initial_dist.png")
 end
 
-function plot_nv_result(vmin::FT, vmax::FT, basis::Array{PrimitiveUnivariateBasisFunc, 1}, 
+function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, 
                         c::Array{FT, 1}...; plot_exact::Bool=false, n_v_init::Function = x-> 0.0) where {FT <: Real}
   v_plot = exp.(collect(range(log(vmin), stop=log(vmax), length=1000)))
-  pyplot()
   if plot_exact
     plot(v_plot,
         n_v_init.(v_plot),
@@ -145,10 +164,10 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{PrimitiveUnivariateBasi
     )
   end
 
-  savefig("rbf_paper/temp.png")
+  savefig("rbf_paper/nv.png")
 end
 
-function plot_nr_result(rmin::FT, rmax::FT, basis::Array{PrimitiveUnivariateBasisFunc, 1}, c::Array{FT, 1}...;
+function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, c::Array{FT, 1}...;
                         plot_exact::Bool=false, n_v_init::Function = x-> 0.0) where {FT <: Real}
   r_plot = exp.(collect(range(log(rmin), stop=log(rmax), length=1000)))
   v_plot = 4/3*pi*r_plot.^3
@@ -171,13 +190,12 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{PrimitiveUnivariateBasi
           yaxis=:log,
           ylim=[1e-4, 1e5])
   end
-  savefig("rbf_paper/temp.png")
+  savefig("rbf_paper/nv.png")
 end
 
-function plot_nv_result(vmin::FT, vmax::FT, basis::Array{PrimitiveUnivariateBasisFunc, 1}, 
+function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, 
                         c::Array{FT, 1}...; plot_exact::Bool=false, n_v_init::Function = x-> 0.0) where {FT <: Real}
   v_plot = exp.(collect(range(log(vmin), stop=log(vmax), length=1000)))
-  pyplot()
   if plot_exact
     plot(v_plot,
         n_v_init.(v_plot),
@@ -199,14 +217,13 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{PrimitiveUnivariateBasi
     )
   end
 
-  savefig("rbf_paper/temp.png")
+  savefig("rbf_paper/nr.png")
 end
 
-function plot_nr_result(rmin::FT, rmax::FT, basis::Array{PrimitiveUnivariateBasisFunc, 1}, c::Array{FT, 1}...;
+function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, c::Array{FT, 1}...;
                         plot_exact::Bool=false, n_v_init::Function = x-> 0.0) where {FT <: Real}
   r_plot = exp.(collect(range(log(rmin), stop=log(rmax), length=1000)))
   v_plot = 4/3*pi*r_plot.^3
-  pyplot()
   if plot_exact
     plot(r_plot,
           n_v_init.(v_plot),
@@ -215,7 +232,6 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{PrimitiveUnivariateBasi
   end
   for cvec in c
     n_plot = evaluate_rbf(basis, cvec, v_plot)
-    pyplot()
     plot!(r_plot,
           n_plot,
           lw=2,
@@ -229,7 +245,6 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{PrimitiveUnivariateBasi
 end
 
 function plot_moments(tsteps::Array{FT}, moments::Array{FT, 2}) where {FT <: Real}
-  pyplot()
   plot(tsteps,
         moments[:,1],
         lw=2,
