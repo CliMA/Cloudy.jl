@@ -12,14 +12,14 @@ function main()
   # Physical parameters: Kernel
   a = 0.05
   b = 0.0
-  c = 0.0
+  c = 1.0
   xmin_loc = 1.0
-  xmax_loc = 100.0
+  xmax_loc = 20.0
   kernel_func = x -> a + b*(x[1]+x[2]) + c*abs(x[1]^(2/3)-x[2]^(2/3))/xmax_loc^(2/3)*(x[1]^(1/3)+x[2]^(1/3))^2
   tracked_moments = [1.0]
 
   # Initial condition
-  N = 100.0
+  N = 0.0
   #N2 = 100
   #k=2
   theta=1
@@ -82,7 +82,7 @@ function main()
   rbf_loc = exp.(rbf_loc)
 
   # Injection rate
-  inject_rate = [100, 50]#, 200, 100, 50, 10]
+  inject_rate = [100]#, 200, 100, 50, 10]
   function inject_rate_fn(x)
     f = 0
     for (i, r) in enumerate(inject_rate)
