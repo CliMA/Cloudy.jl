@@ -14,21 +14,21 @@ function main()
     FT = Float64
 
     # basis setup 
-    Nb = 10
-    rmax  = 50.0
-    rmin  = 1.0
-    vmin = rmin^3
-    vmax = rmax^3
+    Nb = 15
+    rmax  = 100.0
+    rmin  = 2.0
+    vmin = 4*rmin^3
+    vmax = 4*rmax^3
 
     # Physical parameters: Kernel
-    a = 1e-5
+    a = 1e-6
     b = 0.0
     c = 0.0
     kernel_func = x -> a + b*(x[1]+x[2]) + c*abs(x[1]^(2/3)-x[2]^(2/3))/vmax^(2/3)*(x[1]^(1/3)+x[2]^(1/3))^2
     tracked_moments = [1.0]
     inject_rate = 0
     N     = 100           # initial droplet density: number per cm^3
-    θ_r   = 3            # radius scale factor: µm
+    θ_r   = 6.42          # radius scale factor: µm
     k     = 3             # shape factor for particle size distribution 
     ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
 
@@ -70,13 +70,13 @@ function main()
 
     # INITIAL CONDITION
     #(c0, nj_init) = get_IC_vecs(dist_init, basis, rbf_loc, A, tracked_moments)
-    (c0, nj_init) = get_basis_projection(basis, rbf_loc, A, tracked_moments, n_v_init, vmax)
+    (c0, nj_init) = get_basis_projection(basis, rbf_loc, A, tracked_moments, n_v_init, θ_v*12.0)
     m_init = sum(c0 .* J)
     println("precomputation complete")
 
     ########################### DYNAMICS ################################
     # Implicit Time stepping
-    tspan = (0.0, 10.0)
+    tspan = (0.0, 60.0)
     
     function dndt(ni,t,p)
       return collision_coalescence(ni, A, Source, Sink, Inject)
@@ -95,47 +95,15 @@ function main()
     for (i,t) in enumerate(t_coll)
       nj_t = sol(t)
       c_coll[i,:] = get_constants_vec(nj_t, A)
-      println(c_coll[i,:])
+      println(t, c_coll[i,:])
     end
     
     mom_coll = c_coll*basis_mom'
     moments_init = mom_coll[1,:]
 
-    plot_nv_result(vmin*0.1, vmax, basis, c0, c_coll[end,:], plot_exact=true, n_v_init=n_v_init)
-    plot_nr_result(rmin*0.1, rmax, basis, c0, c_coll[end,:], plot_exact=true, n_v_init=n_v_init)
+    #plot_nv_result(vmin*0.1, vmax, basis, c0, c_coll[end,:], plot_exact=true, n_v_init=n_v_init)
+    plot_nr_result(rmin/2, rmax*2, basis, c0, c_coll[end,:], plot_exact=true, n_v_init=n_v_init)
     plot_moments(t_coll, mom_coll)
-end
-
-function plot_init()
-  # often plotted g(ln r) = 3x^2*n(x,t); mass per m^3 per unit log r
-  g_lnr_init = r-> 3*(4*pi/3*r^3)^2*n_v_init(4*pi/3*r^3)*ρ_w
-
-  # PLOT INITIAL MASS DISTRIBUTION: should look similar to Fig 10 from Long 1974
-  r_plot = collect(range(0, stop=50.0, length=100))
-  plot(r_plot, 
-      g_lnr_init.(r_plot),
-      linewidth=2,
-      title="Initial distribution",
-      ylabel="mass [gram /m^3 / unit log(r)",
-      xaxis="r (µm)",
-      xlim=[6, 25]
-    )
-  savefig("rbf_paper/initial_dist.png")
-
-  # PLOT INITIAL DISTRIBUTION: should look similar to Tzivion 1987 fig 1
-  r_plot = collect(range(0, stop=100.0, length=100))
-  plot(r_plot, 
-      n_v_init.(r_plot.^3*4*pi/3),
-      linewidth=2,
-      title="Initial distribution",
-      ylabel="number /m^3 ",
-      xlabel="r (µm)",
-      xlim=[1, 100],
-      ylim=[1e-2, 1e4],
-      xaxis=:log,
-      yaxis=:log
-    )
-  savefig("rbf_paper/initial_dist.png")
 end
 
 function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, 
@@ -154,7 +122,7 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1},
     plot!(v_plot,
         n_plot,
         lw=2,
-        ylim=[1e-4, 1],
+        ylim=[1e-2, 1e2],
         xlabel="volume, µm^3",
         ylabel="number",
         xaxis=:log,
@@ -185,7 +153,7 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, c
           ylabel="number",
           xaxis=:log,
           yaxis=:log,
-          ylim=[1e-4, 1e5])
+          ylim=[1e-3, 1e2])
   end
   savefig("rbf_paper/nr.png")
 end
