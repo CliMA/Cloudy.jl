@@ -2,6 +2,7 @@ module BasisFunctions
 
 using QuadGK
 using SpecialFunctions: gamma
+using Plots
 
 export AbstractBasisFunc
 export PrimitiveUnivariateBasisFunc
@@ -18,6 +19,7 @@ export evaluate_rbf
 export get_moment
 export get_params
 export get_support
+export plot_basis
 
 
 """
@@ -390,6 +392,25 @@ function get_support(rbf::CompactBasisFunctionUneven{FT}) where {FT <: Real}
   xmin = μ - θ_L
   xmax = μ + θ_R
   return (xmin, xmax)
+end
+
+function plot_basis(basis::Array{RBF, 1}; xstart::FT = eps(), xstop::FT = 1e6) where {FT <: Real, RBF <: PrimitiveUnivariateBasisFunc}
+  v_plot = exp.(collect(range(log(xstart), stop=log(xstop), length=1000)))
+  plot()
+  for (i,tsim) in enumerate(basis)
+    cvec = zeros(length(basis))
+    cvec[i] = 10^(0.6*i)
+    n_plot = evaluate_rbf(basis, cvec, v_plot)
+      plot!(v_plot,
+          n_plot,
+          lw=2,
+          ylim=[1e-2, 1e1],
+          xlabel="volume, µm^3",
+          ylabel="number",
+          xaxis=:log,
+          yaxis=:log)
+  end
+  savefig("rbf_paper/plot_basis.png")
 end
 
 end

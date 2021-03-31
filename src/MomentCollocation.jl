@@ -98,6 +98,31 @@ function get_kernel_rbf_sink(basis::Array{GlobalBasisFunc, 1}, rbf_locs::Array{F
     return N
 end
 
+function get_kernel_rbf_sink(basis::Array{CompactBasisFunc, 1}, rbf_locs::Array{FT}, moment_list::Array{FT, 1}, kernel::Function; xstart::FT = 0.0, xstop::FT=1e6) where {FT <: Real}
+    # N_ijk = <basis[k](x), basis[j](x'), K(x, x'), basis[i](x) dx' dx 
+    Nb = length(basis)
+    Nmom = length(moment_list)
+    N = zeros(FT, Nb*Nmom, Nb, Nb)
+    for i=1:Nb
+        for j=1:Nb
+            for k=1:Nb
+                supp = get_support(basis[k])
+                xstartk = max(xstart, supp[1])
+                xstopk = min(supp[2], xstop-rbf_locs[i])
+                integrand = y -> basis_func(basis[k])(y)*kernel([rbf_locs[i], y])
+                N[i,j,k] = basis_func(basis[j])(rbf_locs[i]) * quadgk(integrand, xstartk, xstopk)[1]
+            end
+        end
+    end
+    for i=1:Nb
+        for (l, moment_order) in enumerate(moment_list)
+            N[(l-1)*Nb+i,:,:] = N[i,:,:] .* rbf_locs[i]^moment_order
+        end
+    end
+
+    return N
+end
+
 """
 Collision kernel sink, with loss of particles that exceed size x_max from the system
 """
