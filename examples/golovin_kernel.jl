@@ -21,11 +21,11 @@ function main()
   # Physicsal parameters
   # Mass has been rescaled below by a factor of 1e3 so that 1 gram = 1e3 milligram 
   # Time has been rescaled below by a factor of 1e1 so that 1 sec = 10 deciseconds
-  mass_scale = 1e3
-  time_scale = 1e1
+  mass_scale = 1 #1e3
+  time_scale = 1 #1e1
   
-  T_end = 3 * time_scale #3 s
-  coalescence_coeff = 5.78e3 / mass_scale / time_scale #5.78e3 cm^3 g^-1 s-1  
+  T_end = 4*3600.0
+  coalescence_coeff = 1500 * (1e-18) * (1e6) 
   kernel_func = LinearKernelFunction(coalescence_coeff)
   
   # Parameter transform used to transform native distribution
@@ -37,10 +37,7 @@ function main()
   # Initial condition
   # We carrry transformed parameters in our time stepper for
   # stability purposes
-  particle_number = 1e4
-  mean_particles_mass = 1e-8 * mass_scale #1e-7 g
-  particle_mass_std = 0.5e-8 * mass_scale #0.5e-7 g
-  pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
+  pars_init = [100; 3.0; 100.0]
   state_init = trafo.(pars_init) 
 
   # Set up the ODE problem
@@ -87,6 +84,22 @@ function main()
   n = inv_trafo.(vcat(sol.u'...)[:, 1])
   k = inv_trafo.(vcat(sol.u'...)[:, 2])
   θ = inv_trafo.(vcat(sol.u'...)[:, 3])
+
+  println("n =", n[end])
+  println("k =", k[end])
+  println("theta =", θ[end])
+
+  t_plot = collect(range(0.0, stop=360.0, length=21))
+  ns = inv_trafo.(vcat(sol.(t_plot)'...)[:, 1])
+  ks = inv_trafo.(vcat(sol.(t_plot)'...)[:, 2])
+  θs = inv_trafo.(vcat(sol.(t_plot)'...)[:, 3])
+  m0 = ns
+  m1 = ns.*ks.*θs
+  m2 = ns.*ks.*(ks.+1.0).*θs.^2
+  println("times = ", t_plot)
+  println("M0 = ", m0)
+  println("M1 = ", m1)
+  println("M2 = ", m2)
 
   # Calculate moments for plotting
   moment_0 = n
@@ -138,7 +151,7 @@ function main()
       label="M2 Exact"
   )
   plot(p1, p2, p3, layout=(1, 3), size=(1000, 375), margin=5Plots.mm)
-  savefig("golovin_kernel_test.png")
+  savefig("examples/golovin_kernel_test.png")
 end
 
 main()

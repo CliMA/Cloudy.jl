@@ -19,7 +19,7 @@ function main()
   n_inducing = 4
 
   # Physicsal parameters
-  coalescence_coeff = 1e-3
+  coalescence_coeff = 1e-4
   kernel_func = ConstantKernelFunction(coalescence_coeff)
   
   # Parameter transform used to transform native distribution
@@ -31,10 +31,11 @@ function main()
   # Initial condition
   # We carrry transformed parameters in our time stepper for
   # stability purposes
-  particle_number = 100.0
-  mean_particles_mass = 10.0
-  particle_mass_std = 5.0
-  pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
+  #particle_number = 100.0
+  #mean_particles_mass = 10.0
+  #particle_mass_std = 5.0
+  #pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
+  pars_init = [100.0, 3.0, 100.0]
   state_init = trafo.(pars_init) 
 
   # Set up the ODE problem
@@ -70,7 +71,7 @@ function main()
   end
 
   # Step 3) Solve the ODE
-  tspan = (0.0, 1000.0)
+  tspan = (0.0, 360.0)
   prob = ODEProblem(rhs!, state_init, tspan)
   sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
 
@@ -81,6 +82,21 @@ function main()
   n = inv_trafo.(vcat(sol.u'...)[:, 1])
   k = inv_trafo.(vcat(sol.u'...)[:, 2])
   θ = inv_trafo.(vcat(sol.u'...)[:, 3])
+  println("n =", n[end])
+  println("k =", k[end])
+  println("theta =", θ[end])
+
+  t_plot = collect(range(0.0, stop=360.0, length=21))
+  ns = inv_trafo.(vcat(sol.(t_plot)'...)[:, 1])
+  ks = inv_trafo.(vcat(sol.(t_plot)'...)[:, 2])
+  θs = inv_trafo.(vcat(sol.(t_plot)'...)[:, 3])
+  m0 = ns
+  m1 = ns.*ks.*θs
+  m2 = ns.*ks.*(ks.+1.0).*θs.^2
+  println("times = ", t_plot)
+  println("M0 = ", m0)
+  println("M1 = ", m1)
+  println("M2 = ", m2)
 
   # Calculate moments for plotting
   moment_0 = n
@@ -132,7 +148,7 @@ function main()
       label="M2 Exact"
   )
   plot(p1, p2, p3, layout=(1, 3), size=(1000, 375), margin=5Plots.mm)
-  savefig("constant_kernel_test.png")
+  savefig("examples/constant_kernel_test.png")
 end
 
 main()
