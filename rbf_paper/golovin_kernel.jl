@@ -9,16 +9,17 @@ using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
+    casename = "golovin/gaussian_10_"
 
     # Numerical parameters
     FT = Float64
-    tspan = (0.0, 30.0)
+    tspan = (0.0, 4*3600.0)
 
     # basis setup 
     Nb = 10
     rmax  = 50.0
     rmin  = 1.0
-    vmin = rmin^3
+    vmin = 8*rmin^3
     vmax = rmax^3
 
     # Physical parameters: Kernel
@@ -27,15 +28,17 @@ function main()
     c = 0.0
     kernel_func = x -> a + b*(x[1]+x[2]) + c*abs(x[1]^(2/3)-x[2]^(2/3))/vmax^(2/3)*(x[1]^(1/3)+x[2]^(1/3))^2
     tracked_moments = [1.0]
-    inject_rate = 1
-    N     = 0           # initial droplet density: number per cm^3
-    θ_r   = 3            # radius scale factor: µm
+    inject_rate = 0
+    N     = 100           # initial droplet density: number per cm^3
+    θ_v   = 100            # volume scale factor: µm
+    θ_r   = 3             # radius scale factor: µm
     k     = 3             # shape factor for particle size distribution 
     ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
 
     # initial/injection distribution in volume: gamma distribution in radius, number per cm^3
     r = v->(3/4/pi*v)^(1/3)
-    n_v_init = v -> N*(r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
+    #n_v_init = v -> N*(r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
+    n_v_init = v -> N*v^(k-1)/θ_v^k * exp(-v/θ_v) / gamma(k)
     n_v_inject = v -> (r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
     
     # lin-spaced log compact rbf
@@ -48,7 +51,10 @@ function main()
     for i=1:Nb
       basis[i] = CompactBasisFunctionLog(rbf_loc[i], rbf_shapes[i])
     end
+    println("means = ", rbf_loc)
+    println("stddevs = ", rbf_shapes)
     #println(basis)
+    plot_basis(basis, xstart=vmin*0.1, xstop=vmax)
     rbf_loc = exp.(rbf_loc)
 
     # Injection rate
@@ -77,8 +83,7 @@ function main()
     println("precomputation complete")
 
     ########################### DYNAMICS ################################
-    # Implicit Time stepping
-    
+    # Implicit Time stepping    
     function dndt(ni,t,p)
       return collision_coalescence(ni, A, Source, Sink, Inject)
     end
@@ -99,10 +104,17 @@ function main()
     
     mom_coll = c_coll*basis_mom'
     moments_init = mom_coll[1,:]
+    println("times = ", t_coll)
+    println("M_0 = ", mom_coll[:,1])
+    println("M_1 = ", mom_coll[:,2])
+    println("M_2 = ", mom_coll[:,3])
+    println("c_init = ", c_coll[1,:])
+    println("c_final = ", c_coll[end,:])
 
-    plot_nv_result(vmin*0.1, vmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true)
-    plot_nr_result(rmin*0.1, rmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true)
-    plot_moments(t_coll, mom_coll)
+    #plot_nv_result(vmin*0.1, 1000.0, basis, c_coll[1,:], plot_exact=true, n_v_init=n_v_init, casename=casename)
+    plot_nv_result(vmin*0.1, 1000.0, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
+    plot_nr_result(rmin*0.1, rmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
+    plot_moments(t_coll, mom_coll, casename = casename)
 end
 
 
@@ -141,7 +153,8 @@ end
 
 """ Plot the n(v) result, with option to show exact I.C. and log or linear scale """
 function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, 
-                        c::Array{FT, 1}...; plot_exact::Bool=false, n_v_init::Function = x-> 0.0, log_scale::Bool=false) where {FT <: Real}
+                        c::Array{FT, 1}...; plot_exact::Bool=false, n_v_init::Function = x-> 0.0, 
+                        log_scale::Bool=false, casename::String="") where {FT <: Real}
   v_plot = exp.(collect(range(log(vmin), stop=log(vmax), length=1000)))
   if plot_exact
     plot(v_plot,
@@ -157,29 +170,30 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1},
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e1],
+          ylim=[1e-2, 1e0],
           xlabel="volume, µm^3",
           ylabel="number",
           xaxis=:log,
           yaxis=:log,
-          label=string("time ", i), legend=:bottomleft)
+          label=string("time ", i))
     else
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e1],
+          ylim=[1e-2, 1e0],
           xlabel="volume, µm^3",
           ylabel="number",
-          label=string("time ", i), legend=:bottomleft)
+          label=string("time ", i))
     end
   end
 
-  savefig("rbf_paper/nv.png")
+  savefig(string("rbf_paper/",casename,"nv.png"))
 end
 
 """ Plot the n(v) result, with option to show exact I.C. and log or linear scale """
 function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, t::Array{FT,1},
-                        c::Array{FT, 2}; plot_exact::Bool=false, n_v_init::Function = x-> 0.0, log_scale::Bool=false) where {FT <: Real}
+                        c::Array{FT, 2}; plot_exact::Bool=false, n_v_init::Function = x-> 0.0, 
+                        log_scale::Bool=false, casename::String="") where {FT <: Real}
   v_plot = exp.(collect(range(log(vmin), stop=log(vmax), length=1000)))
   if plot_exact
     plot(v_plot,
@@ -213,12 +227,13 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, t
     end
   end
 
-  savefig("rbf_paper/nv.png")
+  savefig(string("rbf_paper/",casename,"nv.png"))
 end
 
 """ Plot the n(r) result, with option to show exact I.C. and log or linear scale """
 function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, c::Array{FT, 1}...;
-                        plot_exact::Bool=false, n_v_init::Function = x-> 0.0, log_scale::Bool=false) where {FT <: Real}
+                        plot_exact::Bool=false, n_v_init::Function = x-> 0.0, 
+                        log_scale::Bool=false, casename::String="") where {FT <: Real}
   r_plot = exp.(collect(range(log(rmin), stop=log(rmax), length=1000)))
   v_plot = 4/3*pi*r_plot.^3
   if plot_exact
@@ -247,12 +262,13 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, c
             ylim=[1e-2, 1e1], legend=:bottomleft)
     end
   end
-  savefig("rbf_paper/nr.png")
+  savefig(string("rbf_paper/",casename,"nr.png"))
 end
 
 """ Plot the n(r) result, with option to show exact I.C. and log or linear scale """
 function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, t::Array{FT,1}, c::Array{FT, 2};
-                        plot_exact::Bool=false, n_v_init::Function = x-> 0.0, log_scale::Bool=false) where {FT <: Real}
+                        plot_exact::Bool=false, n_v_init::Function = x-> 0.0, 
+                        log_scale::Bool=false, casename::String="") where {FT <: Real}
   r_plot = exp.(collect(range(log(rmin), stop=log(rmax), length=1000)))
   v_plot = 4/3*pi*r_plot.^3
   if plot_exact
@@ -282,11 +298,11 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, t
             ylim=[1e-2, 1e1], legend=:bottomleft)
     end
   end
-  savefig("rbf_paper/nr.png")
+  savefig(string("rbf_paper/",casename,"nr.png"))
 end
 
 """ Plot the moments supplied over time """
-function plot_moments(tsteps::Array{FT}, moments::Array{FT, 2}) where {FT <: Real}
+function plot_moments(tsteps::Array{FT}, moments::Array{FT, 2}; casename::String="") where {FT <: Real}
   plot(tsteps,
         moments[:,1],
         lw=2,
@@ -300,8 +316,8 @@ function plot_moments(tsteps::Array{FT}, moments::Array{FT, 2}) where {FT <: Rea
           xlabel="time, sec",
           ylabel=string("M_",i-1),
           label=string("M_",i-1))
-    savefig(string("rbf_paper/M_",i-1,".png"))
+    savefig(string("rbf_paper/",casename,"M_",i-1,".png"))
   end
 end
 
-main()
+@time main()

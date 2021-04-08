@@ -252,7 +252,7 @@ function get_basis_projection(basis::Array{RBF,1}, rbf_locs::Array{FT}, A::Array
     J = get_mass_cons_term(basis, xstart = 0.0, xstop = xmax)
     m_fn = quadgk(x->unprojected_fn.(x)*x, 0.0, xmax)[1]
     c_fn = get_constants_vec(f0, A, J, m_fn)
-    println("mass computed is ", m_fn)
+    #println("mass computed is ", m_fn)
 
     # evaluate the projected function at collocation points and return
     function f_projected(x)
