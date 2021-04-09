@@ -1,4 +1,4 @@
-"Linear (Golovin) coalescence kernel example"
+"Gravitational coalescence kernel example"
 
 using DifferentialEquations
 using LinearAlgebra
@@ -24,9 +24,11 @@ function main()
   mass_scale = 1 #1e3
   time_scale = 1 #1e1
   
-  T_end = 4*3600.0
-  coalescence_coeff = 1500 * (1e-18) * (1e6) 
-  kernel_func = LinearKernelFunction(coalescence_coeff)
+  T_end = 720.0
+  # C = 1e-5 1/cm3/sec
+  coalescence_coeff = 1e-10
+  xmax = (15.0)^3
+  kernel_func = GravitationalKernelFunction(coalescence_coeff, xmax)
   
   # Parameter transform used to transform native distribution
   # parameters to the real axis
@@ -151,7 +153,7 @@ function main()
       label="M2 Exact"
   )
   plot(p1, p2, p3, layout=(1, 3), size=(1000, 375), margin=5Plots.mm)
-  savefig("examples/golovin_kernel_test.png")
+  savefig("examples/gravitational_kernel_test.png")
 end
 
 main()

@@ -17,6 +17,7 @@ export ConstantKernelFunction
 export LinearKernelFunction
 export ProductKernelFunction
 export LongKernelFunction
+export GravitationalKernelFunction
 
 
 """
@@ -88,6 +89,22 @@ struct LongKernelFunction{FT} <: CoalescenceKernelFunction{FT}
 end
 
 """
+  GravitationalKernelFunction <: CoalescenceKernelFunction
+
+Represents a generalized gravitational kernel with Ec=1.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
+struct GravitationalKernelFunction{FT} <: CoalescenceKernelFunction{FT}
+  "collision-coalesence rate"
+  coll_coal_rate::FT
+
+  "maximum particle size"
+  xmax::FT
+end
+
+"""
     (kernel::KernelFunction)(x::FT, y::FT)
     
 Returns evaluations of kernel function at locations `x` and `y`.
@@ -110,6 +127,10 @@ function (kern::LongKernelFunction{FT})(x::FT, y::FT) where {FT<:Real}
   else
     return kern.rain_coll_coal_rate * (x + y)
   end
+end
+
+function (kern::GravitationalKernelFunction{FT})(x::FT, y::FT) where {FT<:Real}
+  return kern.coll_coal_rate * π / kern.xmax^(2/3) * abs(x^(2/3) - y^(2/3)) * (x+y)^2
 end
 
 end # module KernelFunctions.jl
