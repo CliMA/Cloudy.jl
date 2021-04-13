@@ -9,15 +9,15 @@ using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
-    casename = "w_precip/small_range"
+    casename = "w_precip/large_range40"
 
     # Numerical parameters
     FT = Float64
-    tspan = (0.0, 3600.0)
+    tspan = (0.0, 7200.0)
 
     # basis setup 
-    Nb = 10
-    rmax  = 6.0
+    Nb = 40
+    rmax  = 50.0
     rmin  = 1.0
     vmin = rmin^3
     vmax = rmax^3
@@ -25,7 +25,7 @@ function main()
     # Physical parameters: Kernel
     a = 0.0
     b = 0.0
-    c = 1e-7
+    c = 1.15e-14 * 1e9
     kernel_func = x -> a + b*(x[1]+x[2]) + c*abs(x[1]^(2/3)-x[2]^(2/3))/vmax^(2/3)*(x[1]^(1/3)+x[2]^(1/3))^2
     tracked_moments = [1.0]
     inject_rate = 7
