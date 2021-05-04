@@ -9,18 +9,18 @@ using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
-    casename = "hydrodynamic/5_"
+    casename = "low_res/hydro_3-1"
 
     # Numerical parameters
     FT = Float64
-    tspan = (0.0, 720.0)
+    tspan = (0.0, 60.0)
 
     # basis setup 
-    Nb = 5
+    Nb = 3
     rmax  = 50.0
-    rmin  = 1.0
-    vmin = 8*rmin^3
-    vmax = rmax^3
+    rmin  = 6.3
+    vmin = 4/3*pi*rmin^3
+    vmax = 4/3*pi*rmax^3
 
     # Physical parameters: Kernel
     a = 0.0
@@ -30,8 +30,8 @@ function main()
     tracked_moments = [1.0]
     inject_rate = 0
     N     = 100           # initial droplet density: number per cm^3
-    θ_v   = 100            # volume scale factor: µm
-    θ_r   = 3             # radius scale factor: µm
+    θ_v   = 1000            # volume scale factor: µm          
+    θ_r   = 10             # radius scale factor: µm
     k     = 3             # shape factor for particle size distribution 
     ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
 
@@ -39,22 +39,20 @@ function main()
     r = v->(3/4/pi*v)^(1/3)
     #n_v_init = v -> N*(r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
     n_v_init = v -> N*v^(k-1)/θ_v^k * exp(-v/θ_v) / gamma(k)
+    #n_v_init = v -> N / σ_v / v / sqrt(2*pi) * exp(-(log(v)/σ_v)^2/2)
     n_v_inject = v -> (r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
     
-    # lin-spaced log compact rbf
+    # TODO: Smarter choice of RBF setup for low-res case
     basis = Array{CompactBasisFunc}(undef, Nb)
-    rbf_loc = collect(range(log(vmin), stop=log(vmax), length=Nb))
-    rbf_shapes = zeros(Nb)
-    rbf_shapes[3:end] = (rbf_loc[3:end] - rbf_loc[1:end-2])
-    rbf_shapes[2] = rbf_loc[2]
-    rbf_shapes[1] = rbf_loc[2]
+    rbf_loc = 2.3*[3.0, 4.0, 5.0]
+    rbf_shapes = 2.3*[1.0, 1.0, 1.0]
     for i=1:Nb
       basis[i] = CompactBasisFunctionLog(rbf_loc[i], rbf_shapes[i])
     end
     println("means = ", rbf_loc)
     println("stddevs = ", rbf_shapes)
     #println(basis)
-    plot_basis(basis, xstart=vmin*0.1, xstop=vmax)
+    plot_basis(basis, xstart=vmin*0.001, xstop=vmax)
     rbf_loc = exp.(rbf_loc)
 
     # Injection rate
@@ -65,6 +63,8 @@ function main()
     ########################### PRECOMPUTATION ################################
     v_start = 0.0
     v_stop = vmax
+
+    start = time_ns()
 
     # Precomputation
     A = get_rbf_inner_products(basis, rbf_loc, tracked_moments)
@@ -80,9 +80,11 @@ function main()
     #(c0, nj_init) = get_IC_vecs(dist_init, basis, rbf_loc, A, tracked_moments)
     (c0, nj_init) = get_basis_projection(basis, rbf_loc, A, tracked_moments, n_v_init, vmax)
     m_init = sum(c0 .* J)
-    println("precomputation complete")
+    t_elapsed = time_ns() - start
+    println("precomputation complete:  ", t_elapsed*1e-9, " sec")
 
     ########################### DYNAMICS ################################
+    start = time_ns()
     # Implicit Time stepping    
     function dndt(ni,t,p)
       return collision_coalescence(ni, A, Source, Sink, Inject)
@@ -91,6 +93,8 @@ function main()
     prob = ODEProblem(dndt, nj_init, tspan)
     sol = solve(prob)
     #println(sol)
+    t_elapsed = time_ns() - start
+    println("time stepping complete:  ", t_elapsed*1e-9, " sec")
 
     t_coll = sol.t
 
@@ -112,8 +116,8 @@ function main()
     println("c_final = ", c_coll[end,:])
 
     #plot_nv_result(vmin*0.1, 1000.0, basis, c_coll[1,:], plot_exact=true, n_v_init=n_v_init, casename=casename)
-    plot_nv_result(vmin*0.1, 1000.0, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
-    plot_nr_result(rmin*0.1, rmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
+    plot_nv_result(vmin*0.001, vmax, basis, c_coll[1,:], c_coll[end,:], plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
+    plot_nr_result(rmin*0.1, rmax, basis, c_coll[1,:], c_coll[end,:], plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
     plot_moments(t_coll, mom_coll, casename = casename)
 end
 
@@ -170,7 +174,7 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1},
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e0],
+          ylim=[1e-6, 1e3],
           xlabel="volume, µm^3",
           ylabel="number",
           xaxis=:log,
@@ -180,11 +184,22 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1},
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e0],
+          ylim=[1e-6, 1e3],
           xlabel="volume, µm^3",
           ylabel="number",
           label=string("time ", i))
     end
+  end
+  Nb = length(basis)
+  for i=1:Nb
+    c_basis = zeros(FT,Nb)
+    c_basis[i] = 1
+    plot!(v_plot,
+      evaluate_rbf(basis, c_basis, v_plot),
+      ls=:dash,
+      linecolor=:gray,
+      label="basis_fn",
+      legend=:topright)
   end
 
   savefig(string("rbf_paper/",casename,"nv.png"))
@@ -210,7 +225,7 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, t
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e1],
+          ylim=[1e-6, 1e1],
           xlabel="volume, µm^3",
           ylabel="number",
           xaxis=:log,
@@ -220,11 +235,22 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, t
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e1],
+          ylim=[1e-6, 1e1],
           xlabel="volume, µm^3",
           ylabel="number",
           label=string("time ", tsim), legend=:bottomleft)
     end
+  end
+  Nb = length(basis)
+  for i=1:Nb
+    c_basis = zeros(FT,Nb)
+    c_basis[i] = 1
+    plot!(v_plot,
+      evaluate_rbf(basis, c_basis, v_plot),
+      ls=:dash,
+      linecolor=:gray,
+      label="basis_fn",
+      legend=:topright)
   end
 
   savefig(string("rbf_paper/",casename,"nv.png"))
@@ -252,14 +278,14 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, c
             ylabel="number",
             xaxis=:log,
             yaxis=:log,
-            ylim=[1e-2, 1e1], legend=:bottomleft)
+            ylim=[1e-6, 1e1], legend=:bottomleft)
     else
       plot!(r_plot,
             n_plot,
             lw=2,
             xlabel="radius, µm",
             ylabel="number",
-            ylim=[1e-2, 1e1], legend=:bottomleft)
+            ylim=[1e-6, 1e1], legend=:bottomleft)
     end
   end
   savefig(string("rbf_paper/",casename,"nr.png"))
@@ -319,5 +345,23 @@ function plot_moments(tsteps::Array{FT}, moments::Array{FT, 2}; casename::String
     savefig(string("rbf_paper/",casename,"M_",i-1,".png"))
   end
 end
+
+"""function plot_basis(basis::Array{CompactBasisFunc,1}, vmin::FT, vmax::FT,casename::String="") where {FT <: Real}
+  Nb = length(basis)
+  v_plot = exp.(collect(range(log(vmin), stop=log(vmax), length=1000)))
+  for i=1:Nb
+    c_basis = zeros(FT,Nb)
+    c_basis[i] = 1
+    plot!(v_plot,
+      evaluate_rbf(basis, c_basis, v_plot),
+      ls=:dash,
+      linecolor=:gray,
+      label="basis_fn",
+      legend=:topright,
+      xaxis=:log,
+      yaxis=:log)
+  end
+  savefig(string("rbf_paper/",casename,"basis.png"))
+end"""
 
 @time main()
