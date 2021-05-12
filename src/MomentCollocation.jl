@@ -5,6 +5,7 @@ using QuadGK
 using LinearAlgebra
 using Convex
 using SCS
+using NonNegLeastSquares
 
 export select_rbf_locs
 export select_rbf_shapes
@@ -302,11 +303,30 @@ function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, 
     return dndt
 end
 
+"""
+Mass-conserving collision coalescence rate of change with particle injection
+"""
+function collision_coalescence(nj::Array{FT,1}, A::Array{FT,2}, M::Array{FT,3}, N::Array{FT,3}, I::Array{FT,1}, J::Array{FT,1}, mass::FT) where {FT <: Real}
+    Nb_times_Nmom = length(nj)
+    # first calculate c(t)
+    c = get_constants_vec(nj, A, J, mass)
+
+    # time rate of change: dn/dt|_xj, t
+    dndt = zeros(FT, Nb_times_Nmom)
+    for i=1:Nb_times_Nmom
+        dndt[i] = (1/2*c'*M[i,:,:]*c - c'*N[i,:,:]*c + I[i])
+    end
+
+    return dndt
+end
+
 """ 
 Retrieves constants vector from a set of values at the collocation points
 """
-function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}) where {FT<:Real}
-    return A\nj
+function get_constants_vec(nj::Array{FT, 1}, A::Array{FT}, λ::FT=0.0) where {FT<:Real}
+    Aprime = A + λ * I
+    #return Aprime\nj
+    return nonneg_lsq(Aprime, nj)[:,1]
 end
 
 """ 

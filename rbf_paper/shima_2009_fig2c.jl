@@ -9,7 +9,7 @@ using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
-    casename = "shima_fig2c/20_"
+    casename = "regularization/15_masscons_"
 
     # Numerical parameters
     FT = Float64
@@ -39,15 +39,8 @@ function main()
     θ_r_1 = 10.0
     N_1   = 10.0
     θ_v_1 = 4/3*pi*θ_r_1^3
-    #μ_r_2 = 8.0/2
-    #θ_r_2 = 1.0/2
-    #N_2   = 90.0
     r = v->(3/4/pi*v)^(1/3)
-    #drdv = v->(1/4/pi/r(v)^2)
-    #mode1_r = r-> N_1/θ_r_1 * exp(-r/θ_r_1)
-    #mode2_r = r->(N_2/θ_r_2/sqrt(2*pi)*exp(-(r - μ_r_2)^2/2/θ_r_2^2))
     n_v_init = v -> 1/θ_v_1 * exp(-v / θ_v_1)
-    #plot_init(n_v_init, vmin*0.1, vmax*1.1, casename)
 
   
     ## INJECTION RATE: not used
@@ -97,13 +90,14 @@ function main()
     ########################### DYNAMICS ################################
     # Implicit Time stepping    
     function dndt(ni,t,p)
-      return collision_coalescence(ni, A, Source, Sink, Inject)
+      #return collision_coalescence(ni, A, Source, Sink, Inject)
+      return collision_coalescence(ni, A, Source, Sink, Inject, J, m_init)
     end
 
     prob = ODEProblem(dndt, nj_init, tspan)
     sol = solve(prob)
     #println(sol)
-
+    
     t_coll = sol.t
 
     # track the moments
