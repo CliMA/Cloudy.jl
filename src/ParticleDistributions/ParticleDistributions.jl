@@ -78,7 +78,14 @@ struct GammaParticleDistribution{FT} <: ParticleDistribution{FT}
   dist::Distribution
 
   function GammaParticleDistribution(n::FT, k::FT, θ::FT) where {FT<:Real}
-    dist = Gamma(k, θ)
+    dist = try
+        Gamma(k, θ)
+    catch
+        println("in catch")
+        dist = Gamma(1000.0, 1000.0)
+        return new{FT}(n, k, θ, dist)
+    end
+    #dist = Gamma(k, θ)
     new{FT}(n, k, θ, dist)
   end
 end
@@ -221,6 +228,17 @@ function moment(pdist::GammaParticleDistribution{FT}, q::Int, a::FT, b::FT) wher
   return n*θ^q*gamma(k+q)/gamma(k)*(1 - g1 - g2)
 end
 
+function moment(pdist::GammaParticleDistribution{FT}, q::Float64) where {FT<:Real}
+    # moment_of_dist = n * θ^q * Γ(q+k) / Γ(k)
+    function f(n, θ, k, q)
+        n .* θ.^q .* gamma.(q .+ k) / gamma.(k)
+    end
+    n = pdist.n
+    k = pdist.k
+    θ = pdist.θ
+
+    return f(n, θ, k, q)
+end
 function moment(pdist::ExponentialParticleDistribution{FT}, q::Int, a::FT, b::FT) where {FT<:Real}
   n = pdist.n
   θ = pdist.θ

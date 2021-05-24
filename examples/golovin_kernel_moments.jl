@@ -4,6 +4,7 @@ using DifferentialEquations
 using LinearAlgebra
 using Plots
 using Random: seed!
+using JLD2
 
 using Cloudy.KernelFunctions
 using Cloudy.ParticleDistributions
@@ -13,18 +14,20 @@ seed!(123)
 
 
 function main()
+
   # Numerical parameters
   tol = 1e-4
-  n_samples = 100
+  n_samples = 300
 
   # Physicsal parameters
-  # Time has been rescaled below by a factor of 1e1 so that 1 sec = 10 deciseconds
+  # Time has been rescaled below by a factor of 1e1 so that
+  # 1 sec = 10 deciseconds
   time_scale = 1e6
-  
+
   T_end = 120 * time_scale
-  coalescence_coeff = 5.78e3 / time_scale #5.78e3 cm^3 g^-1 s-1
+  coalescence_coeff = 2.0e3 / time_scale # 1.5e3 cm^3 g^-1 s-1
   kernel_func = LinearKernelFunction(coalescence_coeff)
-  
+
   # Parameter transform used to transform native distribution
   # parameters to moments and back
   trafo = native_state -> [native_state[1], native_state[1]*native_state[2]*native_state[3], native_state[1]*native_state[2]*(native_state[2]+1)*native_state[3]^2]
@@ -34,30 +37,44 @@ function main()
   particle_number = 1e4
   mean_particles_mass = 0.33e-9 #0.33e-9 g = 2.5e-6 m radius
   particle_mass_std = 0.33e-9 #0.33e-9 g
-  pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
-  state_init = trafo(pars_init) 
+  pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2;
+               particle_mass_std^2/mean_particles_mass]
+  state_init = trafo(pars_init)
 
-  # Set up the ODE problem
-  # Step 1) Define termination criterion: stop integration when one of the 
-  #         distribution parameters leaves its allowed domain (which can 
-  #         happen before the end of the time period defined below by tspan)
-  nothing
 
-  # Step 2) Set up the right hand side of ODE
+  # Set up the right hand side of ODE
   function rhs!(dstate, state, p, t)
+    # Set value of the coalescence efficiency (assumed to be constant for now)
+    coalescence_efficiency = 0.8
+
     # Transform state to native distribution parameters
     native_state = inv_trafo(state)
 
     # Evaluate processes for moments using a closure distribution
-    pdist = GammaParticleDistribution(native_state[1], native_state[2], native_state[3])
+    pdist = GammaParticleDistribution(native_state[1],
+                                      native_state[2],
+                                      native_state[3])
     coal_int = similar(state)
     for k in 1:length(coal_int)
-        coal_int[k] = get_coalescence_integral_moment(k-1, kernel_func, pdist, n_samples)
+        coal_int[k] = get_coalescence_integral_moment(k-1, kernel_func, pdist,
+                                                      n_samples, 
+                                                      coalescence_efficiency)
     end
 
+    breakup_int = similar(state)
+    for k in 1:length(breakup_int)
+        breakup_int[k] = get_breakup_integral_moment(k-1, kernel_func, pdist,
+                                                     coalescence_efficiency,
+                                                     state_init[1],
+                                                     state_init[2],
+                                                     n_samples)
+    end
+
+
+    
     # Assign time derivative
     for i in 1:length(dstate)
-        dstate[i] = coal_int[i]
+        dstate[i] = coal_int[i] + breakup_int[i]
     end
   end
 
@@ -93,13 +110,7 @@ function main()
       yaxis="M0 [1/cm^3]",
       xlims=(0, maximum(time)),
       ylims=(0, 1.5*maximum(moment_0)),
-      label="M0 CLIMA"
-  )
-  plot!(p1, time,
-      t-> (moment_0[1] * exp(-moment_1[1] * coalescence_coeff * t * time_scale)),
-      lw=3,
-      ls=:dash,
-      label="M0 Exact"
+      label="M0"
   )
 
   p2 = plot(time,
@@ -108,30 +119,20 @@ function main()
       xaxis="time [s]",
       yaxis="M1 [grams/cm^3]",
       ylims=(0, 1.5*maximum(moment_1)),
-      label="M1 CLIMA"
+      label="M1"
   )
-  plot!(p2, time,
-      t-> moment_1[1],
-      lw=3,
-      ls=:dash,
-      label="M1 Exact"
-  )
+
   p3 = plot(time,
       moment_2,
       linewidth=3,
       xaxis="time [s]",
       yaxis="M2 [grams^2/cm^3]",
       ylims=(0, 1.5*maximum(moment_2)),
-      label="M2 CLIMA"
+      label="M2"
   )
-  plot!(p3, time,
-  t-> (moment_2[1] * exp(2 * moment_1[1] * coalescence_coeff * t * time_scale)),
-  lw=3,
-      ls=:dash,
-      label="M2 Exact"
-  )
+
   plot(p1, p2, p3, layout=(1, 3), size=(1000, 375), margin=5Plots.mm)
-  savefig("golovin_kernel_moment_test.png")
+  savefig("golovin_kernel_moment_test_hcubature.png")
 end
 
 main()

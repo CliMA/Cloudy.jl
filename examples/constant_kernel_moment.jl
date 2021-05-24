@@ -15,7 +15,7 @@ seed!(123)
 function main()
   # Numerical parameters
   tol = 1e-4
-  n_samples = 125
+  n_samples = 150
 
   # Physicsal parameters
   # Rescale time and mass to get better stability properties 
@@ -53,12 +53,18 @@ function main()
     pdist = GammaParticleDistribution(native_state[1], native_state[2], native_state[3])
     coal_int = similar(state)
     for k in 1:length(coal_int)
-        coal_int[k] = get_coalescence_integral_moment(k-1, kernel_func, pdist, n_samples)
+        coal_int[k] = get_coalescence_integral_moment(k-1, kernel_func, pdist,
+                                                      n_samples)
     end
 
+    breakup_int = similar(state)
+    for k in 1:length(coal_int)
+        breakup_int[k] = get_breakup_integral_moment(k-1, kernel_func, pdist,
+                                                     n_samples)
+    end
     # Assign time derivative
     for i in 1:length(dstate)
-        dstate[i] = coal_int[i]
+        dstate[i] = coal_int[i] + breakup_int[i]
     end
   end
 
