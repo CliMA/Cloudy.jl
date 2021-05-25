@@ -151,9 +151,7 @@ function get_breakup_integral_moment(
 
   # Defining these parameters will save us some typing
   θ = M1_init / (n * M0_init)
-
-  #α = θ^(1-k)/ gamma(k+1)
-  α = θ^(k-1)/ gamma(k+1)
+  α = θ^(1-k)/ gamma(k+1)
 
   # Breakup kernel
   function B(x, y, kernel, coalescence_efficiency::Function)
@@ -167,34 +165,14 @@ function get_breakup_integral_moment(
   z = zeros(n_samples_mc)
 
   for i in 1:n_samples_mc
-      x[i] = rand(Gamma(k+1, θ))[1]
-      y[i], z[i] = ParticleDistributions.sample(pdist, 2)
+      x[i], y[i], z[i] = ParticleDistributions.sample(pdist, 3)
   end
-
-#  eps = 1e-10
-#  x[x .< eps] .= eps
-#  y[y .< eps] .= eps
-#  z[z .< eps] .= eps
 
   # Source breakup integral for the k-th moment
   source = 0.0
   for i in 1:n_samples_mc
       source += 0.5 * B(y[i], z[i]) * (y[i] + z[i]) * 1/α
   end
-
-  # Monte Carlo samples for sink term
-  x = zeros(n_samples_mc)
-  y = zeros(n_samples_mc)
-  z = zeros(n_samples_mc)
-
-  for i in 1:n_samples_mc
-      x[i], z[i] = ParticleDistributions.sample(pdist, 2)
-      y[i] = rand(Gamma(2.0, θ))
-  end
-
-#  x[x .< eps] .= eps
-#  y[y .< eps] .= eps
-#  z[z .< eps] .= eps
 
   # Sink breakup integral for the k-th moment
   sink = 0.0
