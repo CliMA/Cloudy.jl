@@ -160,31 +160,43 @@ function get_breakup_integral_moment(
   B(x, y) = B(x, y, kernel, coalescence_efficiency)
 
   # Monte Carlo samples for source term
-  x = zeros(n_samples_mc)
   y = zeros(n_samples_mc)
   z = zeros(n_samples_mc)
-
   for i in 1:n_samples_mc
-      x[i], y[i], z[i] = ParticleDistributions.sample(pdist, 3)
+      y[i], z[i] = ParticleDistributions.sample(pdist, 2)
   end
+
+  # Helper Gamma distributions that will be integrated analytically
+  gamma_helper_source = Gamma(k + 1, θ)
 
   # Source breakup integral for the k-th moment
   source = 0.0
   for i in 1:n_samples_mc
-      source += 0.5 * B(y[i], z[i]) * (y[i] + z[i]) * 1/α
+    source += (0.5 * B(y[i], z[i]) * (y[i] + z[i]) * 1/α 
+               * cdf(gamma_helper_source, y[i] + z[i]))
   end
+
+  # Monte Carlo samples for source term
+  x = zeros(n_samples_mc)
+  z = zeros(n_samples_mc)
+  for i in 1:n_samples_mc
+    x[i], z[i] = ParticleDistributions.sample(pdist, 2)
+  end
+
+  # Helper Gamma distributions that will be integrated analytically
+  gamma_helper_sink = Gamma(2, θ)
 
   # Sink breakup integral for the k-th moment
   sink = 0.0
   for i in 1:n_samples_mc
-      sink += x[i]^k * B(x[i], z[i])
+    sink += x[i]^k * B(x[i], z[i]) * cdf(gamma_helper_sink, x[i] + z[i])
   end
 
   # Normalize to get correct Monte Carlo average
   out = source - sink
   out *= (pdist.n)^2 / n_samples_mc
 
-   return out
+  return out
 end
 
 
