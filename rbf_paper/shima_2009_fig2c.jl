@@ -9,36 +9,41 @@ using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
-    casename = "hydrodynamic/5_"
+    casename = "regularization/15_masscons_"
 
     # Numerical parameters
     FT = Float64
-    tspan = (0.0, 720.0)
+    tspan = (0.0, 4*3600.0)
 
     # basis setup 
-    Nb = 5
-    rmax  = 50.0
-    rmin  = 1.0
-    vmin = 8*rmin^3
+    Nb = 20
+    rmax  = 400.0
+    rmin  = 4.0
+    vmin = rmin^3
     vmax = rmax^3
 
     # Physical parameters: Kernel
     a = 0.0
     b = 0.0
-    c = 1.15e-14 * 1e9
+    c = 1.15e-14 * 1e10 #1e9
     kernel_func = x -> a + b*(x[1]+x[2]) + c*abs(x[1]^(2/3)-x[2]^(2/3))/vmax^(2/3)*(x[1]^(1/3)+x[2]^(1/3))^2
     tracked_moments = [1.0]
-    inject_rate = 0
+    inject_rate = 0.0
     N     = 100           # initial droplet density: number per cm^3
     θ_v   = 100            # volume scale factor: µm
     θ_r   = 3             # radius scale factor: µm
     k     = 3             # shape factor for particle size distribution 
     ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
 
-    # initial/injection distribution in volume: gamma distribution in radius, number per cm^3
+    #### INTIIAL DISTRIBUTION: TWO MODES ####
+    θ_r_1 = 10.0
+    N_1   = 10.0
+    θ_v_1 = 4/3*pi*θ_r_1^3
     r = v->(3/4/pi*v)^(1/3)
-    #n_v_init = v -> N*(r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
-    n_v_init = v -> N*v^(k-1)/θ_v^k * exp(-v/θ_v) / gamma(k)
+    n_v_init = v -> 1/θ_v_1 * exp(-v / θ_v_1)
+
+  
+    ## INJECTION RATE: not used
     n_v_inject = v -> (r(v))^(k-1)/θ_r^k * exp(-r(v)/θ_r) / gamma(k)
     
     # lin-spaced log compact rbf
@@ -85,13 +90,14 @@ function main()
     ########################### DYNAMICS ################################
     # Implicit Time stepping    
     function dndt(ni,t,p)
-      return collision_coalescence(ni, A, Source, Sink, Inject)
+      #return collision_coalescence(ni, A, Source, Sink, Inject)
+      return collision_coalescence(ni, A, Source, Sink, Inject, J, m_init)
     end
 
     prob = ODEProblem(dndt, nj_init, tspan)
     sol = solve(prob)
     #println(sol)
-
+    
     t_coll = sol.t
 
     # track the moments
@@ -112,43 +118,44 @@ function main()
     println("c_final = ", c_coll[end,:])
 
     #plot_nv_result(vmin*0.1, 1000.0, basis, c_coll[1,:], plot_exact=true, n_v_init=n_v_init, casename=casename)
-    plot_nv_result(vmin*0.1, 1000.0, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
-    plot_nr_result(rmin*0.1, rmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
+    #plot_nv_result(vmin*0.1, 1000.0, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
+    #plot_nr_result(rmin*0.1, rmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=false, casename = casename)
     plot_moments(t_coll, mom_coll, casename = casename)
+    plot_glnr_result(rmin, rmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
 end
 
 
 """ Plot Initial distribution only """
-function plot_init()
+function plot_init(n_v_init::Function, vmin::FT, vmax::FT,casename::String="") where {FT <: Real}
   # often plotted g(ln r) = 3x^2*n(x,t); mass per m^3 per unit log r
-  g_lnr_init = r-> 3*(4*pi/3*r^3)^2*n_v_init(4*pi/3*r^3)*ρ_w
-
-  # PLOT INITIAL MASS DISTRIBUTION: should look similar to Fig 10 from Long 1974
-  r_plot = collect(range(0, stop=50.0, length=100))
-  plot(r_plot, 
-      g_lnr_init.(r_plot),
-      linewidth=2,
-      title="Initial distribution",
-      ylabel="mass [gram /m^3 / unit log(r)",
-      xaxis="r (µm)",
-      xlim=[6, 25]
-    )
-  savefig("rbf_paper/initial_dist.png")
 
   # PLOT INITIAL DISTRIBUTION: should look similar to Tzivion 1987 fig 1
-  r_plot = collect(range(0, stop=100.0, length=100))
-  plot(r_plot, 
-      n_v_init.(r_plot.^3*4*pi/3),
+  v_plot = exp.(collect(range(log(vmin), stop=log(vmax), length=1000)))
+  plot(v_plot, 
+      #n_v_init.(v_plot),
+      3*v_plot.^2 .* n_v_init.(v_plot),
       linewidth=2,
       title="Initial distribution",
       ylabel="number /m^3 ",
-      xlabel="r (µm)",
-      xlim=[1, 100],
-      ylim=[1e-2, 1e4],
-      xaxis=:log,
-      yaxis=:log
+      xlabel="v (µm^3)"
+      #xaxis=:log,
+      #yaxis=:log
     )
-  savefig("rbf_paper/initial_dist.png")
+  savefig(string("rbf_paper/",casename,"nv_init.png"))
+
+  r_plot = (v_plot/4*3/pi).^(1/3)
+  plot(r_plot, 
+      3*v_plot.^2 .* n_v_init.(v_plot),
+      #n_v_init.(v_plot),
+      linewidth=2,
+      title="Initial distribution",
+      ylabel="number /m^3 ",
+      xlabel="r (µm)"
+      #xaxis=:log,
+      #yaxis=:log
+    )
+  savefig(string("rbf_paper/",casename,"nr_init.png"))
+
 end
 
 """ Plot the n(v) result, with option to show exact I.C. and log or linear scale """
@@ -170,7 +177,7 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1},
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e0],
+          ylim=[1e-2, 1e2],
           xlabel="volume, µm^3",
           ylabel="number",
           xaxis=:log,
@@ -180,7 +187,7 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1},
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e0],
+          ylim=[1e-2, 1e2],
           xlabel="volume, µm^3",
           ylabel="number",
           label=string("time ", i))
@@ -210,7 +217,7 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, t
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e1],
+          ylim=[1e-2, 1e2],
           xlabel="volume, µm^3",
           ylabel="number",
           xaxis=:log,
@@ -220,7 +227,7 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, t
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e1],
+          ylim=[1e-2, 1e2],
           xlabel="volume, µm^3",
           ylabel="number",
           label=string("time ", tsim), legend=:bottomleft)
@@ -252,14 +259,14 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, c
             ylabel="number",
             xaxis=:log,
             yaxis=:log,
-            ylim=[1e-2, 1e1], legend=:bottomleft)
+            ylim=[1e-2, 1e2], legend=:bottomleft)
     else
       plot!(r_plot,
             n_plot,
             lw=2,
             xlabel="radius, µm",
             ylabel="number",
-            ylim=[1e-2, 1e1], legend=:bottomleft)
+            ylim=[1e-2, 1e2], legend=:bottomleft)
     end
   end
   savefig(string("rbf_paper/",casename,"nr.png"))
@@ -287,18 +294,53 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, t
             xlabel="radius, µm",
             ylabel="number",
             xaxis=:log,
-            yaxis=:log,
-            ylim=[1e-2, 1e1], legend=:bottomleft)
+            yaxis=:log)
+            #ylim=[1e-2, 1e2], legend=:bottomleft)
     else
       plot!(r_plot,
             n_plot,
             lw=2,
             xlabel="radius, µm",
-            ylabel="number",
-            ylim=[1e-2, 1e1], legend=:bottomleft)
+            ylabel="number")
+            #ylim=[1e-2, 1e2], legend=:bottomleft)
     end
   end
   savefig(string("rbf_paper/",casename,"nr.png"))
+end
+
+""" Plot the g(ln(r)) result, with option to show exact I.C. and log or linear scale """
+function plot_glnr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, t::Array{FT,1}, c::Array{FT, 2};
+                        plot_exact::Bool=false, n_v_init::Function = x-> 0.0, 
+                        log_scale::Bool=false, casename::String="") where {FT <: Real}
+  r_plot = exp.(collect(range(log(rmin), stop=log(rmax), length=1000)))
+  v_plot = 4/3*pi*r_plot.^3
+  if plot_exact
+    plot(r_plot,
+          3*v_plot.^2 .* n_v_init.(v_plot),
+          lw=2,
+          label="Exact")
+  end
+  for (i, tsim) in enumerate(t)
+    cvec = c[i,:]
+    glnr_plot = 3*v_plot.^2 .* evaluate_rbf(basis, cvec, v_plot)
+    if log_scale
+      plot!(r_plot,
+            glnr_plot,
+            lw=2,
+            xlabel="radius, µm",
+            ylabel="g(ln r)",
+            xaxis=:log)
+            #ylim=[1e-2, 1e2], legend=:bottomleft)
+    else
+      plot!(r_plot,
+            glnr_plot,
+            lw=2,
+            xlabel="radius, µm",
+            ylabel="g(ln r)")
+            #ylim=[1e-2, 1e2], legend=:bottomleft)
+    end
+  end
+  savefig(string("rbf_paper/",casename,"glnr.png"))
 end
 
 """ Plot the moments supplied over time """

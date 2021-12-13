@@ -1,6 +1,6 @@
 # Plots
 *.eps
-#*.png
+*.png
 *.jpg
 *.pdf
 
@@ -14,7 +14,7 @@
 *.bckp
 
 # Data files
-*.txt
+#*.txt
 *.dat
 *.csv
 *.tsv

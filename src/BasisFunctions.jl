@@ -404,7 +404,7 @@ function plot_basis(basis::Array{RBF, 1}; xstart::FT = eps(), xstop::FT = 1e6) w
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e1],
+          ylim=[1e-5, 1e1],
           xlabel="volume, µm^3",
           ylabel="number",
           xaxis=:log,
