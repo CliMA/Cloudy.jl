@@ -3,7 +3,7 @@
 using Plots
 using Cloudy.BasisFunctions
 using Cloudy.MomentCollocation
-using QuadGK
+#using QuadGK
 using SpecialFunctions: gamma
 using DifferentialEquations
 
@@ -16,7 +16,7 @@ function main()
     tspan = (0.0, 360.0)
 
     # basis setup 
-    Nb = 20
+    Nb = 5
     rmax  = 50.0
     rmin  = 1.0
     vmin = 8*rmin^3
@@ -320,4 +320,4 @@ function plot_moments(tsteps::Array{FT}, moments::Array{FT, 2}; casename::String
   end
 end
 
-main()
+@time main()
