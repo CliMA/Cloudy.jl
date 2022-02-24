@@ -9,14 +9,14 @@ using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
-    casename = "two_modes/20_"
+    casename = "two_modes/16_"
 
     # Numerical parameters
     FT = Float64
     tspan = (0.0, 4*3600.0)
 
     # basis setup 
-    Nb = 20
+    Nb = 16
     rmax  = 50.0
     rmin  = 4.0
     vmin = rmin^3
@@ -66,7 +66,7 @@ function main()
     println("means = ", rbf_loc)
     println("stddevs = ", rbf_shapes)
     #println(basis)
-    plot_basis(basis, xstart=vmin*0.1, xstop=vmax)
+    #plot_basis(basis, xstart=vmin*0.1, xstop=vmax)
     rbf_loc = exp.(rbf_loc)
 
     # Injection rate
@@ -124,9 +124,9 @@ function main()
     println("c_final = ", c_coll[end,:])
 
     #plot_nv_result(vmin*0.1, 1000.0, basis, c_coll[1,:], plot_exact=true, n_v_init=n_v_init, casename=casename)
-    plot_nv_result(vmin*0.1, 1000.0, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
-    plot_nr_result(rmin*0.1, rmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=false, casename = casename)
-    plot_moments(t_coll, mom_coll, casename = casename) 
+    #plot_nv_result(vmin*0.1, 1000.0, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
+    #plot_nr_result(rmin*0.1, rmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=false, casename = casename)
+    #plot_moments(t_coll, mom_coll, casename = casename) 
 end
 
 

@@ -9,14 +9,14 @@ using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
-    casename = "const_kern/5_"
+    casename = "const_kern/16_"
 
     # Numerical parameters
     FT = Float64
-    tspan = (0.0, 360.0)
+    tspan = (0.0, 3600.0)
 
     # basis setup 
-    Nb = 5
+    Nb = 16
     rmax  = 50.0
     rmin  = 1.0
     vmin = 8*rmin^3
@@ -145,49 +145,9 @@ function plot_init()
       xlabel="r (µm)",
       xlim=[1, 100],
       ylim=[1e-2, 1e4],
-      xaxis=:log,
-      yaxis=:log
+      xaxis=:log
     )
   savefig("rbf_paper/initial_dist.png")
-end
-
-""" Plot the n(v) result, with option to show exact I.C. and log or linear scale """
-function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, 
-                        c::Array{FT, 1}...; plot_exact::Bool=false, n_v_init::Function = x-> 0.0, 
-                        log_scale::Bool=false, casename::String="") where {FT <: Real}
-  v_plot = exp.(collect(range(log(vmin), stop=log(vmax), length=1000)))
-  if plot_exact
-    plot(v_plot,
-        n_v_init.(v_plot),
-        lw=2,
-        label="Exact I.C.")
-  else
-    plot()
-  end
-  for (i,cvec) in enumerate(c)
-    n_plot = evaluate_rbf(basis, cvec, v_plot)
-    if log_scale
-      plot!(v_plot,
-          n_plot,
-          lw=2,
-          ylim=[1e-2, 1e0],
-          xlabel="volume, µm^3",
-          ylabel="number",
-          xaxis=:log,
-          yaxis=:log,
-          label=string("time ", i))
-    else
-      plot!(v_plot,
-          n_plot,
-          lw=2,
-          ylim=[1e-2, 1e0],
-          xlabel="volume, µm^3",
-          ylabel="number",
-          label=string("time ", i))
-    end
-  end
-
-  savefig(string("rbf_paper/",casename,"nv.png"))
 end
 
 """ Plot the n(v) result, with option to show exact I.C. and log or linear scale """
@@ -210,60 +170,25 @@ function plot_nv_result(vmin::FT, vmax::FT, basis::Array{CompactBasisFunc, 1}, t
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e1],
+          ylim=[1e-2, 1e0],
           xlabel="volume, µm^3",
           ylabel="number",
           xaxis=:log,
-          yaxis=:log,
-          label=string("time ", tsim), legend=:bottomleft)
+          label=string("time ", tsim), legend=:topright)
     else
       plot!(v_plot,
           n_plot,
           lw=2,
-          ylim=[1e-2, 1e1],
+          ylim=[1e-2, 1e0],
           xlabel="volume, µm^3",
           ylabel="number",
-          label=string("time ", tsim), legend=:bottomleft)
+          label=string("time ", tsim), legend=:topright)
     end
   end
 
   savefig(string("rbf_paper/",casename,"nv.png"))
 end
 
-""" Plot the n(r) result, with option to show exact I.C. and log or linear scale """
-function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, c::Array{FT, 1}...;
-                        plot_exact::Bool=false, n_v_init::Function = x-> 0.0, 
-                        log_scale::Bool=false, casename::String="") where {FT <: Real}
-  r_plot = exp.(collect(range(log(rmin), stop=log(rmax), length=1000)))
-  v_plot = 4/3*pi*r_plot.^3
-  if plot_exact
-    plot(r_plot,
-          n_v_init.(v_plot),
-          lw=2,
-          label="Exact")
-  end
-  for cvec in c
-    n_plot = evaluate_rbf(basis, cvec, v_plot)
-    if log_scale
-      plot!(r_plot,
-            n_plot,
-            lw=2,
-            xlabel="radius, µm",
-            ylabel="number",
-            xaxis=:log,
-            yaxis=:log,
-            ylim=[1e-2, 1e1], legend=:bottomleft)
-    else
-      plot!(r_plot,
-            n_plot,
-            lw=2,
-            xlabel="radius, µm",
-            ylabel="number",
-            ylim=[1e-2, 1e1], legend=:bottomleft)
-    end
-  end
-  savefig(string("rbf_paper/",casename,"nr.png"))
-end
 
 """ Plot the n(r) result, with option to show exact I.C. and log or linear scale """
 function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, t::Array{FT,1}, c::Array{FT, 2};
@@ -287,15 +212,14 @@ function plot_nr_result(rmin::FT, rmax::FT, basis::Array{CompactBasisFunc, 1}, t
             xlabel="radius, µm",
             ylabel="number",
             xaxis=:log,
-            yaxis=:log,
-            ylim=[1e-2, 1e1], legend=:bottomleft)
+            ylim=[1e-2, 1e0], legend=:topright)
     else
       plot!(r_plot,
             n_plot,
             lw=2,
             xlabel="radius, µm",
             ylabel="number",
-            ylim=[1e-2, 1e1], legend=:bottomleft)
+            ylim=[1e-2, 1e0], legend=:topright)
     end
   end
   savefig(string("rbf_paper/",casename,"nr.png"))
