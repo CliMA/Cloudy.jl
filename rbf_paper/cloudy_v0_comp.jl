@@ -2,6 +2,7 @@
 
 using DifferentialEquations
 using Plots
+using QuadGK
 
 using Cloudy.KernelTensors
 using Cloudy.ParticleDistributions
@@ -11,6 +12,7 @@ using Cloudy.Sources
 function main()
   ############################ SETUP ###################################
   casename = "golovin/16_"
+  v_cutoff = 1e3
 
   # Numerical parameters
   FT = Float64
@@ -62,7 +64,7 @@ function main()
                          ubound::Union{AbstractVector, Nothing}=nothing)
 
     dist = integrator.p[:dist]
-    dist_params = reduce(vcat, get_params(dist)[2])
+    dist_params = reduce(vcat, ParticleDistributions.get_params(dist)[2])
     n_params = length(dist_params)
 
     lbound == nothing && (lbound = -Inf * ones(n_params))
@@ -104,26 +106,24 @@ function main()
   print("M1_cloudy=",moment_1,"\n")
   print("M2_cloudy=",moment_2,"\n")
 
-#   plot(time,
-#       moment_0,
-#       linewidth=3,
-#       xaxis="time",
-#       yaxis="M\$_k\$(time)",
-#       xlims=tspan,
-#       ylims=(0, 600),
-#       label="M\$_0\$ CLIMA"
-#   )
-#   plot!(time,
-#       moment_1,
-#       linewidth=3,
-#       label="M\$_1\$ CLIMA"
-#   )
-#   plot!(time,
-#       moment_2,
-#       linewidth=3,
-#       label="M\$_2\$ CLIMA"
-#   )
-#   savefig("linear_kernel_example.png")
+  # track the precipitable mass
+  t_precip = collect(range(tspan[1], stop=tspan[2], length=100))
+  m_precip = zeros(FT, length(t_precip))
+  for (i,t) in enumerate(t_precip)
+    mj_t = sol(t)
+    M0 = mj_t[1]
+    M1 = mj_t[2]
+    M2 = mj_t[3]
+    n = M0
+    k = -M1^2/(M1^2-M0*M2)
+    θ = -(M1^2 - M0*M2)/(M0*M1)
+    psd = x ->  n .* x.^(k .- 1) ./ θ.^k ./ gamma.(k) .* exp.(-x ./ θ)
+    integrand = x-> x * psd(x)
+    m_precip[i] = quadgk(integrand, v_cutoff, vmax)[1]
+  end
+  println("t_precip = ",t_precip)
+  println("v_precip = ",m_precip)
+
 end
 
 main()
