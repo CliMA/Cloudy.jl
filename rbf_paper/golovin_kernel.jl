@@ -30,7 +30,7 @@ function main()
     tracked_moments = [1.0]
     inject_rate = 0
     N     = 100           # initial droplet density: number per cm^3
-    θ_v   = 100            # volume scale factor: µm
+    θ_v   = 100            # volume scale factor: µm^3
     θ_r   = 3             # radius scale factor: µm
     k     = 3             # shape factor for particle size distribution 
     ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
