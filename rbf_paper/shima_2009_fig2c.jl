@@ -9,16 +9,16 @@ using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
-    casename = "regularization/15_masscons_"
+    casename = "shima_fig2c/15_"
 
     # Numerical parameters
     FT = Float64
-    tspan = (0.0, 4*3600.0)
+    tspan = (0.0, 3600.0)
 
     # basis setup 
-    Nb = 20
-    rmax  = 400.0
-    rmin  = 4.0
+    Nb = 15
+    rmax  = 50.0
+    rmin  = 1.0
     vmin = rmin^3
     vmax = rmax^3
 
@@ -110,10 +110,10 @@ function main()
     
     mom_coll = c_coll*basis_mom'
     moments_init = mom_coll[1,:]
-    println("times = ", t_coll)
-    println("M_0 = ", mom_coll[:,1])
-    println("M_1 = ", mom_coll[:,2])
-    println("M_2 = ", mom_coll[:,3])
+    #println("times = ", t_coll)
+    #println("M_0 = ", mom_coll[:,1])
+    #println("M_1 = ", mom_coll[:,2])
+    #println("M_2 = ", mom_coll[:,3])
     println("c_init = ", c_coll[1,:])
     println("c_final = ", c_coll[end,:])
 
