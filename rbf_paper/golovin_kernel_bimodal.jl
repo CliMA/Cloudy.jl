@@ -9,14 +9,14 @@ using DifferentialEquations
 
 function main()
     ############################ SETUP ###################################
-    casename = "golovin_bimodal/8_"
+    casename = "golovin_bimodal/16_"
 
     # Numerical parameters
     FT = Float64
     tspan = (0.0, 4*3600.0)
 
     # basis setup 
-    Nb = 8
+    Nb = 16
     rmax  = 50.0
     rmin  = 1.0
     vmin = 8*rmin^3
@@ -129,7 +129,7 @@ function main()
 
     # output results to file
     open(string("rbf_paper/",casename,"results.txt"),"w") do file
-      write(file, string("means = ", rbf_loc,"\n"))
+      write(file, string("means = ", log.(rbf_loc),"\n"))
       write(file,string("stddevs = ", rbf_shapes,"\n"))
       write(file,"")
       write(file,string("times = ", t_coll,"\n"))
