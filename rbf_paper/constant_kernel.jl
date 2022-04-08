@@ -3,7 +3,7 @@
 using Plots
 using Cloudy.BasisFunctions
 using Cloudy.MomentCollocation
-#using QuadGK
+using QuadGK
 using SpecialFunctions: gamma
 using DifferentialEquations
 
@@ -13,7 +13,7 @@ function main()
 
     # Numerical parameters
     FT = Float64
-    tspan = (0.0, 3600.0)
+    tspan = (0.0, 360.0)
 
     # basis setup 
     Nb = 16
@@ -21,6 +21,8 @@ function main()
     rmin  = 1.0
     vmin = 8*rmin^3
     vmax = rmax^3
+
+    v_cutoff = 1e3
 
     # Physical parameters: Kernel
     a = 1e-4
@@ -30,7 +32,7 @@ function main()
     tracked_moments = [1.0]
     inject_rate = 0
     N     = 100           # initial droplet density: number per cm^3
-    θ_v   = 100            # volume scale factor: µm
+    θ_v   = 100            # volume scale factor: µm^3
     θ_r   = 3             # radius scale factor: µm
     k     = 3             # shape factor for particle size distribution 
     ρ_w   = 1.0e-12       # density of droplets: 1 g/µm^3
@@ -54,7 +56,7 @@ function main()
     println("means = ", rbf_loc)
     println("stddevs = ", rbf_shapes)
     #println(basis)
-    plot_basis(basis, xstart=vmin*0.1, xstop=vmax)
+    #plot_basis(basis, xstart=vmin*0.1, xstop=vmax)
     rbf_loc = exp.(rbf_loc)
 
     # Injection rate
@@ -101,20 +103,44 @@ function main()
       nj_t = sol(t)
       c_coll[i,:] = get_constants_vec(nj_t, A)
     end
-    
     mom_coll = c_coll*basis_mom'
     moments_init = mom_coll[1,:]
     println("times = ", t_coll)
-    println("M_0 = ", mom_coll[:,1])
-    println("M_1 = ", mom_coll[:,2])
-    println("M_2 = ", mom_coll[:,3])
     println("c_init = ", c_coll[1,:])
     println("c_final = ", c_coll[end,:])
+
+    # track the precipitable mass
+    t_precip = collect(range(tspan[1], stop=tspan[2], length=100))
+    m_precip = zeros(FT, length(t_precip))
+    basis_mom_precip = get_moment(basis, 1.0, xstart=v_cutoff, xstop=vmax)
+    for (i,t) in enumerate(t_precip)
+      nj_t = sol(t)
+      c_tmp = get_constants_vec(nj_t, A)
+      m_precip[i] = c_tmp' * basis_mom_precip
+    end
 
     #plot_nv_result(vmin*0.1, 1000.0, basis, c_coll[1,:], plot_exact=true, n_v_init=n_v_init, casename=casename)
     plot_nv_result(vmin*0.1, 1000.0, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
     plot_nr_result(rmin*0.1, rmax, basis, t_coll, c_coll, plot_exact=true, n_v_init=n_v_init, log_scale=true, casename = casename)
     plot_moments(t_coll, mom_coll, casename = casename)
+    plot_precip(t_precip, m_precip, v_cutoff, casename = casename)
+
+    # output results to file
+    open(string("rbf_paper/",casename,"results.txt"),"w") do file
+      write(file, string("means = ", rbf_loc,"\n"))
+      write(file,string("stddevs = ", rbf_shapes,"\n"))
+      write(file,"")
+      write(file,string("times = ", t_coll,"\n"))
+      write(file,string("M_0 = ", mom_coll[:,1],"\n"))
+      write(file,string("M_1 = ", mom_coll[:,2],"\n"))
+      write(file,string("M_2 = ", mom_coll[:,3],"\n"))
+      write(file,"")
+      write(file,string("c_init = ", c_coll[1,:],"\n"))
+      write(file,string("c_final = ", c_coll[end,:],"\n"))
+      write(file,"")
+      write(file,string("t_precip = ", t_precip[:],"\n"))
+      write(file,string("m_precip = ", m_precip[:],"\n"))
+    end
 end
 
 
@@ -242,6 +268,17 @@ function plot_moments(tsteps::Array{FT}, moments::Array{FT, 2}; casename::String
           label=string("M_",i-1))
     savefig(string("rbf_paper/",casename,"M_",i-1,".png"))
   end
+end
+
+""" Plot the moments supplied over time """
+function plot_precip(t_precip::Array{FT}, m_precip::Array{FT}, v_cutoff::FT; casename::String="") where {FT <: Real}
+  plot(t_precip,
+        m_precip,
+        lw=2,
+        xlabel="time, sec",
+        ylabel="μm^3 / cm^3",
+        label="precip mass")
+  savefig(string("rbf_paper/",casename,"precip_",v_cutoff,".png"))
 end
 
 @time main()
