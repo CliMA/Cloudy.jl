@@ -44,7 +44,7 @@ end
 """ 
 For conversion between collocation point and constants vector
 """
-function get_rbf_inner_products(basis::Array{RBF, 1}, rbf_locs::Array{FT,1}, moment_list::Array{FT,1}) where {FT <: Real, RBF <: PrimitiveUnivariateBasisFunc}
+function get_rbf_inner_products(basis::Array{RBF, 1}, rbf_locs::Array{FT,1}, moment_list::Array{FT,1}; x_stop::FT=-1.0) where {FT <: Real, RBF <: PrimitiveUnivariateBasisFunc}
     # Φ_ij = Φ_i(x_j)
     Nb = length(basis)
     Nmom = length(moment_list)
@@ -52,11 +52,14 @@ function get_rbf_inner_products(basis::Array{RBF, 1}, rbf_locs::Array{FT,1}, mom
     for j=1:Nb
         for i=1:Nb
             for (k, moment_order) in enumerate(moment_list)
-                Φ[(k-1)*Nb+j,i] = rbf_locs[j]^moment_order * evaluate_rbf(basis[i], rbf_locs[j])
+                if x_stop > 0.0 && x_stop < rbf_locs[i]
+                    Φ[(k-1)*Nb+j,i] = 0
+                else
+                    Φ[(k-1)*Nb+j,i] = rbf_locs[j]^moment_order * evaluate_rbf(basis[i], rbf_locs[j])
+                end
             end
         end
     end
-
     return Φ
 end
 
@@ -197,7 +200,7 @@ end
     return M
 end"""
 
-function get_kernel_rbf_source(basis::Array{CompactBasisFunc, 1}, rbf_locs::Array{FT}, moment_list::Array{FT, 1}, kernel::Function; xstart::FT = 0.0) where {FT <: Real}
+function get_kernel_rbf_source(basis::Array{CompactBasisFunc, 1}, rbf_locs::Array{FT}, moment_list::Array{FT, 1}, kernel::Function; xstart::FT = 0.0, xstop::FT = -1.0) where {FT <: Real}
     # M_ijk = 1/2 <basis[k](x-x'), basis[j](x'), K(x-x', x'), basis[i](x) dx' dx 
     Nb = length(basis)
     Nmom = length(moment_list)
@@ -210,6 +213,9 @@ function get_kernel_rbf_source(basis::Array{CompactBasisFunc, 1}, rbf_locs::Arra
                 suppk = get_support(basis[k])
                 xstartk = max(max(xstart, suppk[1]), supp_ji[1])
                 xstopk = min(min(rbf_locs[i], suppk[2]), supp_ji[2])
+                if xstop != -1.0
+                    xstopk = min(xstop, xstopk)
+                end
                 if xstartk >= xstopk
                     M[i,j,k] = 0
                 else
