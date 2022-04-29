@@ -27,4 +27,3 @@ To build the docs locally:
 
 - ```include(docs/make.jl)```
 
-MAKE IT YOUR OWN!
