@@ -7,13 +7,14 @@ using Random: seed!
 
 using Cloudy.KernelFunctions
 using Cloudy.ParticleDistributions
-using Cloudy.Sources
+using Cloudy.MultiParticleSources
 
 seed!(123)
 
 
 function main()
   # Numerical parameters
+  FT = Float64
   tol = 1e-4
   n_samples = 25
   n_inducing = 5
@@ -37,10 +38,10 @@ function main()
   # Initial condition
   # We carrry transformed parameters in our time stepper for
   # stability purposes
-  particle_number = 1e4
-  mean_particles_mass = 1e-8 * mass_scale #1e-7 g
-  particle_mass_std = 0.5e-8 * mass_scale #0.5e-7 g
-  pars_init = [particle_number; (mean_particles_mass/particle_mass_std)^2; particle_mass_std^2/mean_particles_mass]
+  particle_number = [1e4, 1e1]
+  mean_particles_mass = [1e-8 * mass_scale, 1e-6 * mass_scale] #1e-7 g
+  particle_mass_std = [0.5e-8 * mass_scale, 0.25e-6 * mass_scale] #0.5e-7 g
+  pars_init = reduce(vcat, transpose.([particle_number, (mean_particles_mass ./ particle_mass_std).^2, particle_mass_std.^2 ./ mean_particles_mass]))
   state_init = trafo.(pars_init) 
 
   # Set up the ODE problem
@@ -55,23 +56,32 @@ function main()
     native_state = inv_trafo.(state)
 
     # Evaluate processes at inducing points using a closure distribution
-    pdist = GammaParticleDistribution(native_state[1], native_state[2], native_state[3])
-    inducing_points = sample(pdist, n_inducing)
-    coal_int = get_coalescence_integral(inducing_points, kernel_func, pdist, n_samples)
+    pdists = Array{GammaParticleDistribution{FT}}(undef, length(particle_number))
+    inducing_points = Array{FT}(undef,length(particle_number),n_inducing)
+    for i in 1:length(particle_number)
+        pdists[i] = GammaParticleDistribution(native_state[1, i], native_state[2,i], native_state[3,i])
+        inducing_points[i,:] = sample(pdists[i], n_inducing)
+    end
 
-    # Obtain time derivatve of the transformed distribution parameters
-    jacobian = density_gradient(pdist, inducing_points) * diagm(inv_trafo_der.(state))
-    transformed_int = inv(jacobian'*jacobian)*jacobian'*coal_int
+    (coal_int_plus, coal_int_minus) = get_coalescence_integrals(inducing_points, kernel_func, pdists, n_samples)
 
-    # Projection to enforce mass conservation in transformed space
-    normal = normal_mass_constraint(pdist)
-    transformed_normal = diagm(inv_trafo_der.(state)) * normal
-    unit_normal = transformed_normal / norm(transformed_normal)
-    transformed_int = (I - unit_normal * unit_normal') * transformed_int
+    for i in 1:length(pdists)
+        # Obtain time derivatve of the transformed distribution parameters
+        jacobian = density_gradient(pdists[i], inducing_points[i,:]) * diagm(inv_trafo_der.(state[:,i]))
+        transformed_int_plus = inv(jacobian'*jacobian)*jacobian'*coal_int_plus[:,i]
+        transformed_int_minus = inv(jacobian'*jacobian)*jacobian'*coal_int_minus[:,i]
 
-    # Assign time derivative
-    for i in 1:length(dstate)
-        dstate[i] = transformed_int[i]
+        # Projection to enforce mass conservation in transformed space
+        normal = normal_mass_constraint(pdists[i])
+        transformed_normal = diagm(inv_trafo_der.(state[:,i])) * normal
+        unit_normal = transformed_normal / norm(transformed_normal)
+        transformed_int_plus = (I - unit_normal * unit_normal') * transformed_int_plus
+        transformed_int_minus = (I - unit_normal * unit_normal') * transformed_int_minus
+
+        # Assign time derivative
+        for j in 1:length(dstate[:,i])
+            dstate[j,i] = transformed_int_plus[j] - transformed_int_minus[j]
+        end
     end
   end
 
