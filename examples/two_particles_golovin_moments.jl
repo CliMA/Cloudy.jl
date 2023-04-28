@@ -57,12 +57,13 @@ function main()
         for i in 1:length(particle_number)
             pdists[i] = GammaParticleDistribution(dist_params[1, i], dist_params[2,i], dist_params[3,i])
         end
+        println("Distributions:  ", pdists, "\n")
         
         coal_ints = similar(dist_moments)
         # Compute the sources and sinks
         for (m, moment_order) in enumerate(tracked_moments)
             (Q, R, S) = get_coalescence_integral_moment_qrs(moment_order, kernel_func, pdists)
-            for j in 1:length(pdists)
+            for j in 1:length(pdists)-1
                 coal_ints[m,j] += S[j,1] - R[j,j] - R[j,j+1]
                 coal_ints[m,j+1] += S[j,2] + Q[j,j+1] + Q[j+1,j] + Q[j+1,j+1] - R[j+1,j] - R[j+1,j+1]
             end
