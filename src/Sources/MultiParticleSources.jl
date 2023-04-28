@@ -18,75 +18,85 @@ using ..KernelFunctions
 # export constant_coalescence_efficiency
 export get_coalescence_integral_moment_qrs
 
+function weighting_fn(x::FT, pdist1::PD, pdist2::PD) where {FT<:Real, PD<:ParticleDistribution{FT}}
+  denom = pdist1(x) + pdist2(x)
+  if denom == 0.0
+    return 0.0
+  else
+    return pdist1(x) / (pdist1(x) + pdist2(x))
+  end
+end
+
+function q_integrand_inner(x::FT, y::FT, j::Int, k::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}
+  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+  integrand = 0.5 * kernel(x - y, y) * pdists[j](x-y) * pdists[k](y)
+  return integrand
+end
+
+function q_integrand_outer(x::FT, j::Int, k::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}, moment_order::Int
+  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+  outer = x.^moment_order * quadgk(yy -> q_integrand_inner(x, yy, j, k, kernel, pdists), 0.0, x; rtol=1e-4)[1]
+  return outer
+end
+
+function r_integrand(x::FT, y::FT, j::Int, k::Int,kernel::KernelFunction{FT}, pdists::Array{PD,1}, moment_order::Int
+  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+  integrand = x.^moment_order * kernel(x, y) * pdists[j](x) * pdists[k](y)
+  return integrand
+end
+
+function s_integrand1(x::FT, j::Int, k::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}, moment_order::Int
+  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+  integrandj = weighting_fn(x, pdists[j], pdists[k]) * q_integrand_outer(x, j, k, kernel, pdists, moment_order)
+  return integrandj
+end
+
+function s_integrand2(x::FT, j::Int, k::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}, moment_order::Int
+  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+  integrandk = (1 - weighting_fn(x, pdists[j], pdists[k])) * q_integrand_outer(x, j, k, kernel, pdists, moment_order)
+  return integrandk
+end
+
 """
 get_coalescence_integral_moment_qrs(x::Array{FT}, kernel::KernelFunction{FT}, pdist::ParticleDistribution{FT}, n_samples::Int)
 
 Returns the collision-coalescence integral at points `x`.
 """
+# TODO: MOVE THE INNER FUNCTIONS OUTSIDE
 function get_coalescence_integral_moment_qrs(
   moment_order::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}
   ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+  flush(stdout)
+  println("entered the big function")
+  flush(stdout)
 
-  function weighting_fn(x, pdist1, pdist2)
-    denom = pdist1(x) + pdist2(x)
-    if denom == 0.0
-      return 0.0
-    else
-      return pdist1(x) / (pdist1(x) + pdist2(x))
-    end
-  end
-
-  function q_integrand_inner(x, y, j, k)
-    integrand = 0.5 * kernel(x - y, y) * pdists[j](x-y) * pdists[k](y)
-    return integrand
-  end
-
-  function q_integrand_outer(x, j, k)
-    outer = x.^moment_order * quadgk(yy -> q_integrand_inner(x, yy, j, k), 0.0, x; rtol=1e-4)[1]
-    return outer
-  end
-
-  function r_integrand(xy, j, k)
-    integrand = xy[1]^moment_order * kernel(xy[1], xy[2]) * pdists[j](xy[1]) * pdists[k](xy[2])
-    return integrand
-  end
-
-  function s_integrand1(x, j, k)
-    integrandj = weighting_fn(x, pdists[j], pdists[k]) * q_integrand_outer(x, j, k)
-    return integrandj
-  end
-
-  function s_integrand2(x, j, k)
-    integrandk = (1 - weighting_fn(x, pdists[j], pdists[k])) * q_integrand_outer(x, j, k)
-    return integrandk
-  end
-  
   Ndist = length(pdists)
   Q = zeros((Ndist, Ndist))
   R = zeros((Ndist, Ndist))
   S = zeros((Ndist, 2))
-  println(Ndist)
+  @show Ndist
   
   for j in 1:Ndist
     if j < Ndist
       max_mass = ParticleDistributions.moment(pdists[j+1], 1.0)
-      s1 = x -> s_integrand1(x, j, j+1)
-      s2 = x -> s_integrand2(x, j, j+1)
+      s1 = x -> s_integrand1(x, j, j+1, kernel, pdists, moment_order)
+      s2 = x -> s_integrand2(x, j, j+1, kernel, pdists, moment_order)
       S[j,1] = quadgk(s1, 0.0, max_mass; rtol=1e-4)[1]
       S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-4)[1]
-      println(j, S[j,1], S[j,2])
+      @show j
     end
     for k in max(j-1,1):min(j+1, Ndist)
-      println(j, k)
+      @show (j, k)
       max_mass = ParticleDistributions.moment(pdists[max(j,k)], 1.0)
-      Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k), 0.0, max_mass; rtol=1e-4)[1]
-      R[j,k] = hcubature(xy -> r_integrand(xy, j, k), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
-      println(Q[j,k], R[j,k])
+      Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-4)[1]
+      R[j,k] = hcubature(xy -> r_integrand(xy[1], xy[2], j, k, kernel, pdists, moment_order), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
     end
   end
+  @show (Q, R, S)
 
   return (Q, R, S)
 end
+
 # function get_coalescence_integrals(x::Array{FT,2}, kernel::KernelFunction{FT}, 
 #   pdists::Array{PD,1}, n_samples::Int) where {FT<:Real, PD<:ParticleDistribution{FT}}
 #   out_plus = zeros((size(x)[2], length(pdists)))
