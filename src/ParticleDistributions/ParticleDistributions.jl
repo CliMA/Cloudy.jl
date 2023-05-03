@@ -67,7 +67,7 @@ Represents particle mass distribution function of gamma shape.
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct GammaParticleDistribution{FT} <: ParticleDistribution{FT}
+struct GammaParticleDistribution{FT, D <: Distribution} <: ParticleDistribution{FT}
   "normalization constant (e.g., droplet number concentration)"
   n::FT
   "shape parameter"
@@ -75,7 +75,7 @@ struct GammaParticleDistribution{FT} <: ParticleDistribution{FT}
   "scale parameter"
   θ::FT
   "underlying probability distribution"
-  dist::Distribution
+  dist::D
 
   function GammaParticleDistribution(n::FT, k::FT, θ::FT) where {FT<:Real}
     dist = try
@@ -83,12 +83,13 @@ struct GammaParticleDistribution{FT} <: ParticleDistribution{FT}
     catch
         println("in catch")
         dist = Gamma(1000.0, 1000.0)
-        return new{FT}(n, k, θ, dist)
+        return new{FT, typeof(dist)}(n, k, θ, dist)
     end
     #dist = Gamma(k, θ)
-    new{FT}(n, k, θ, dist)
+    new{FT, typeof(dist)}(n, k, θ, dist)
   end
 end
+# TODO EMILY: all initialized dists need to be of type {FT, D} / new{FT, typeof(dist)}
 
 
 """
@@ -192,7 +193,7 @@ end
 Returns the particle mass density evaluated at `x`.
 """
 function (pdist::ParticleDistribution{FT})(x::FT) where {FT<:Real}
-  return pdist.n * pdf.(pdist.dist, x)
+  return pdist.n * pdf(pdist.dist, x)
 end
 
 

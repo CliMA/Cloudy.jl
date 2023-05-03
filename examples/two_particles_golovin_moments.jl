@@ -53,9 +53,8 @@ function main()
         end
 
         # Evaluate processes at inducing points using a closure distribution
-        pdists = Array{GammaParticleDistribution{FT}}(undef, length(particle_number))
-        for i in 1:length(particle_number)
-            pdists[i] = GammaParticleDistribution(dist_params[1, i], dist_params[2,i], dist_params[3,i])
+        pdists = map(1:length(particle_number)) do i
+            GammaParticleDistribution(dist_params[1, i], dist_params[2,i], dist_params[3,i])
         end
         println("Distributions:  ", pdists, "\n")
         
@@ -65,6 +64,7 @@ function main()
         for (m, moment_order) in enumerate(tracked_moments)
             println("let's see if it works")
             (Q, R, S) = get_coalescence_integral_moment_qrs(moment_order, kernel_func, pdists)
+            error("hi")
             println("integrals for ", moment_order)
             for j in 1:length(pdists)-1
                 coal_ints[m,j] += S[j,1] - R[j,j] - R[j,j+1]

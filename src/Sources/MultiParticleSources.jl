@@ -4,6 +4,7 @@
 """
 module MultiParticleSources
 
+using InteractiveUtils
 using QuadGK
 using HCubature
 #using NIntegration
@@ -18,7 +19,7 @@ using ..KernelFunctions
 # export constant_coalescence_efficiency
 export get_coalescence_integral_moment_qrs
 
-function weighting_fn(x::FT, pdist1::PD, pdist2::PD) where {FT<:Real, PD<:ParticleDistribution{FT}}
+function weighting_fn(x, pdist1, pdist2)
   denom = pdist1(x) + pdist2(x)
   if denom == 0.0
     return 0.0
@@ -27,32 +28,27 @@ function weighting_fn(x::FT, pdist1::PD, pdist2::PD) where {FT<:Real, PD<:Partic
   end
 end
 
-function q_integrand_inner(x::FT, y::FT, j::Int, k::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}
-  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+function q_integrand_inner(x, y, j, k, kernel, pdists)
   integrand = 0.5 * kernel(x - y, y) * pdists[j](x-y) * pdists[k](y)
   return integrand
 end
 
-function q_integrand_outer(x::FT, j::Int, k::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}, moment_order::Int
-  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+function q_integrand_outer(x, j, k, kernel, pdists, moment_order)
   outer = x.^moment_order * quadgk(yy -> q_integrand_inner(x, yy, j, k, kernel, pdists), 0.0, x; rtol=1e-4)[1]
   return outer
 end
 
-function r_integrand(x::FT, y::FT, j::Int, k::Int,kernel::KernelFunction{FT}, pdists::Array{PD,1}, moment_order::Int
-  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+function r_integrand(x, y, j, k, kernel, pdists, moment_order)
   integrand = x.^moment_order * kernel(x, y) * pdists[j](x) * pdists[k](y)
   return integrand
 end
 
-function s_integrand1(x::FT, j::Int, k::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}, moment_order::Int
-  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+function s_integrand1(x, j, k, kernel, pdists, moment_order)
   integrandj = weighting_fn(x, pdists[j], pdists[k]) * q_integrand_outer(x, j, k, kernel, pdists, moment_order)
   return integrandj
 end
 
-function s_integrand2(x::FT, j::Int, k::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}, moment_order::Int
-  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
+function s_integrand2(x, j, k, kernel, pdists, moment_order)
   integrandk = (1 - weighting_fn(x, pdists[j], pdists[k])) * q_integrand_outer(x, j, k, kernel, pdists, moment_order)
   return integrandk
 end
@@ -64,11 +60,8 @@ Returns the collision-coalescence integral at points `x`.
 """
 # TODO: MOVE THE INNER FUNCTIONS OUTSIDE
 function get_coalescence_integral_moment_qrs(
-  moment_order::Int, kernel::KernelFunction{FT}, pdists::Array{PD,1}
-  ) where {FT<:Real, PD<:ParticleDistribution{FT}}
-  flush(stdout)
+  moment_order, kernel, pdists)
   println("entered the big function")
-  flush(stdout)
 
   Ndist = length(pdists)
   Q = zeros((Ndist, Ndist))
@@ -81,15 +74,16 @@ function get_coalescence_integral_moment_qrs(
       max_mass = ParticleDistributions.moment(pdists[j+1], 1.0)
       s1 = x -> s_integrand1(x, j, j+1, kernel, pdists, moment_order)
       s2 = x -> s_integrand2(x, j, j+1, kernel, pdists, moment_order)
-      S[j,1] = quadgk(s1, 0.0, max_mass; rtol=1e-4)[1]
-      S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-4)[1]
-      @show j
+      # S[j,1] = quadgk(s1, 0.0, max_mass; rtol=1e-4)[1]
+      # S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-4)[1]
+      # @show j
+      @show @code_warntype quadgk(s1, 0.0, max_mass; rtol=1e-4)[1]
     end
     for k in max(j-1,1):min(j+1, Ndist)
       @show (j, k)
       max_mass = ParticleDistributions.moment(pdists[max(j,k)], 1.0)
-      Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-4)[1]
-      R[j,k] = hcubature(xy -> r_integrand(xy[1], xy[2], j, k, kernel, pdists, moment_order), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
+  #     Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-4)[1]
+  #     R[j,k] = hcubature(xy -> r_integrand(xy[1], xy[2], j, k, kernel, pdists, moment_order), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
     end
   end
   @show (Q, R, S)
