@@ -23,6 +23,7 @@ export AdditiveExponentialParticleDistribution
 # methods that query particle mass distributions
 export sample
 export moment
+export max_mass
 export density_gradient
 export normal_mass_constraint
 
@@ -249,6 +250,22 @@ function moment(pdist::ExponentialParticleDistribution{FT}, q::Int, a::FT, b::FT
   return n*θ^q*gamma(1+q)*(1 - g1 - g2)
 end
 
+"""
+  max_mass(pdist::ParticleDistribution{FT})
+
+  - `pdist` - is a particle mass distribution
+Returns an estimate of the maximum mass to consider in integration (i.e. the support)
+"""
+function max_mass(pdist::GammaParticleDistribution{FT}) where {FT<:Real}
+  n = pdist.n
+  k = pdist.k
+  θ = pdist.θ
+
+  mean = k*θ
+  stddev = sqrt(k)*θ
+
+  return mean + 6*stddev
+end
 
 """
   density_gradient(pdist::ParticleDistribution{FT}, x::Array{FT})

@@ -26,11 +26,12 @@ function main()
     # Time has been rescaled below by a factor of 1e1 so that
     # 1 sec = 10 deciseconds
     time_scale = 1e1
-    mass_scale = 0.33e-9
+    mass_scale = 1.0 #0.33e-9
 
-    T_end = 10 * time_scale
-    coalescence_coeff = 2.0e3 / time_scale # 1.5e3 cm^3 g^-1 s-1
-    kernel_func = LinearKernelFunction(coalescence_coeff)
+    T_end = 1 * time_scale
+    #coalescence_coeff = 2.0e3 / time_scale # 1.5e3 cm^3 g^-1 s-1
+    #kernel_func = LinearKernelFunction(coalescence_coeff)
+    kernel_func = ConstantKernelFunction(1e-4 / time_scale)
 
     # Parameter transform used to transform native distribution
     # parameters to moments and back
@@ -49,6 +50,7 @@ function main()
     end
     @show params_init
     @show dist_moments_init
+    params = Vector{FT}()
 
     # Set up the right hand side of ODE
     function rhs!(ddist_moments, dist_moments, p, t)
@@ -57,6 +59,7 @@ function main()
         for i in 1:length(dist_moments[1,:])
             dist_params[:,i] = params_from_moments(dist_moments[:,i])
         end
+        append!(params, dist_params)
 
         # Evaluate processes at inducing points using a closure distribution
         pdists = map(1:length(particle_number)) do i
@@ -66,97 +69,101 @@ function main()
         coal_ints = similar(dist_moments)
         # Compute the sources and sinks
         for (m, moment_order) in enumerate(tracked_moments)
-            @show moment_order
-            @show ddist_moments
-            @show dist_params
-            @show dist_moments
             (Q, R, S) = try get_coalescence_integral_moment_qrs(moment_order, kernel_func, pdists)
             catch
                 error("failure in integrals")
             end
-                for j in 1:length(pdists)-1
+            for j in 1:length(pdists)-1
                 coal_ints[m,j] += S[j,1] - R[j,j] - R[j,j+1]
                 coal_ints[m,j+1] += S[j,2] + Q[j,j+1] + Q[j+1,j] + Q[j+1,j+1] - R[j+1,j] - R[j+1,j+1]
             end
             ddist_moments[m,:] = coal_ints[m,:]
-            if any(isnan.(Q))
-                @show Q
-            end
-            if any(isnan.(R))
-                @show R
-            end
-            if any(isnan.(S))
-                @show S
-            end
         end
     end
 
     ddist_moments = similar(dist_moments_init)
-    rhs!(ddist_moments, dist_moments_init, 0.0, 0.0)
+    rhs!(ddist_moments, dist_moments_init, params, 0.0)
     
     # Step 3) Solve the ODE
     tspan = (0.0, T_end)
     prob = ODEProblem(rhs!, dist_moments_init, tspan; progress=true)
     sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
-    @show sol
+    @show sol.u
 
-    # # Step 4) Plot the results
-    # time = sol.t / time_scale
-    # # Get the native distribution parameters
-    # n = params_from_moments.(vcat(sol.u'...)[:, 1])
-    # k = params_from_moments.(vcat(sol.u'...)[:, 2])
-    # θ = params_from_moments.(vcat(sol.u'...)[:, 3])
+    # Step 4) Plot the results
+    time = sol.t / time_scale
+    @show time
+    # Get the native distribution parameters
+    # n1 = params_from_moments.(vcat(sol.u'...)[:, :, 1])
+    # k1 = params_from_moments.(vcat(sol.u'...)[:, 2])
+    # θ1 = params_from_moments.(vcat(sol.u'...)[:, 3])
     # # Calculate moments for plotting
     # moment_0 = n
     # moment_1 = n.*k.*θ
     # moment_2 = n.*k.*(k.+1.0).*θ.^2
+    moment_0 = reshape(vcat(sol.u'...)[:, 1], 2, length(time))
+    moment_1 = reshape(vcat(sol.u'...)[:, 2], 2, length(time))
+    moment_2 = reshape(vcat(sol.u'...)[:, 3], 2, length(time))
+    @show moment_0
+    @show moment_1
+    @show moment_2
 
-    # p1 = plot(time,
-    #     moment_0,
-    #     linewidth=3,
-    #     xaxis="time [s]",
-    #     yaxis="M0 [1/cm^3]",
-    #     xlims=(0, maximum(time)),
-    #     ylims=(0, 1.5*maximum(moment_0)),
-    #     label="M0 CLIMA"
-    # )
-    # plot!(p1, time,
-    #     t-> (moment_0[1] * exp(-moment_1[1] * coalescence_coeff * t * time_scale)),
-    #     lw=3,
-    #     ls=:dash,
-    #     label="M0 Exact"
-    # )
+    p1 = plot(time,
+        moment_0[1,:],
+        linewidth=2,
+        xaxis="time [s]",
+        yaxis="M0 [1/cm^3]",
+        xlims=(0, maximum(time)),
+        ylims=(0, 1.5*maximum(moment_0)),
+        label="M_{0,1}"
+    )
+    plot!(p1, time,
+        moment_0[2,:],
+        linewidth=2,
+        label="M_{0,2}")
+    plot!(p1, time,
+        sum(moment_0, dims=1)[:],
+        linewidth=3,
+        label="M_{0,1+2}")
 
-    # p2 = plot(time,
-    #     moment_1,
-    #     linewidth=3,
-    #     xaxis="time [s]",
-    #     yaxis="M1 [milligrams/cm^3]",
-    #     ylims=(0, 1.5*maximum(moment_1)),
-    #     label="M1 CLIMA"
-    # )
-    # plot!(p2, time,
-    #     t-> moment_1[1],
-    #     lw=3,
-    #     ls=:dash,
-    #     label="M1 Exact"
-    # )
-    # p3 = plot(time,
-    #     moment_2,
-    #     linewidth=3,
-    #     xaxis="time [s]",
-    #     yaxis="M2 [milligrams^2/cm^3]",
-    #     ylims=(0, 1.5*maximum(moment_2)),
-    #     label="M2 CLIMA"
-    # )
-    # plot!(p3, time,
-    # t-> (moment_2[1] * exp(2 * moment_1[1] * coalescence_coeff * t * time_scale)),
-    # lw=3,
-    #     ls=:dash,
-    #     label="M2 Exact"
-    # )
-    # plot(p1, p2, p3, layout=(1, 3), size=(1000, 375), margin=5Plots.mm)
-    # savefig("golovin_kernel_test.png")
+    p2 = plot(time,
+        moment_1[1,:],
+        linewidth=2,
+        xaxis="time [s]",
+        yaxis="M1",
+        xlims=(0, maximum(time)),
+        ylims=(0, 1.5*maximum(moment_1)),
+        label="M_{1,1}"
+    )
+    plot!(p2, time,
+        moment_1[2,:],
+        linewidth=2,
+        label="M_{1,2}")
+    plot!(p2, time,
+        sum(moment_1, dims=1)[:],
+        linewidth=3,
+        label="M_{1,1+2}")
+
+    p3 = plot(time,
+        moment_2[1,:],
+        linewidth=2,
+        xaxis="time [s]",
+        yaxis="M2 [1/cm^3]",
+        xlims=(0, maximum(time)),
+        ylims=(0, 1.5*maximum(moment_2)),
+        label="M_{2,1}"
+    )
+    plot!(p3, time,
+        moment_2[2,:],
+        linewidth=2,
+        label="M_{2,2}")
+    plot!(p3, time,
+        sum(moment_2, dims=1)[:],
+        linewidth=3,
+        label="M_{2,1+2}")
+
+    plot(p1, p2, p3, layout=(1, 3), size=(1000, 375), margin=5Plots.mm)
+    savefig("test.png")
 end
 
 main()

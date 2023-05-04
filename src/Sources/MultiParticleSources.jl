@@ -76,12 +76,11 @@ function get_coalescence_integral_moment_qrs(
       S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-4)[1]
     end
     for k in max(j-1,1):min(j+1, Ndist)
-      max_mass = ParticleDistributions.moment(pdists[max(j,k)], 1.0)
+      max_mass = max(ParticleDistributions.max_mass(pdists[j]), ParticleDistributions.max_mass(pdists[k]))
       Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-4)[1]
       R[j,k] = hcubature(xy -> r_integrand(xy[1], xy[2], j, k, kernel, pdists, moment_order), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
     end
   end
-
   return (Q, R, S)
 end
 
