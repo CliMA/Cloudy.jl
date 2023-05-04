@@ -4,7 +4,6 @@
 """
 module MultiParticleSources
 
-using InteractiveUtils
 using QuadGK
 using HCubature
 #using NIntegration
@@ -26,6 +25,7 @@ function weighting_fn(x, pdist1, pdist2)
   else
     return pdist1(x) / (pdist1(x) + pdist2(x))
   end
+  #return 0.0
 end
 
 function q_integrand_inner(x, y, j, k, kernel, pdists)
@@ -61,32 +61,26 @@ Returns the collision-coalescence integral at points `x`.
 # TODO: MOVE THE INNER FUNCTIONS OUTSIDE
 function get_coalescence_integral_moment_qrs(
   moment_order, kernel, pdists)
-  println("entered the big function")
 
   Ndist = length(pdists)
   Q = zeros((Ndist, Ndist))
   R = zeros((Ndist, Ndist))
   S = zeros((Ndist, 2))
-  @show Ndist
   
   for j in 1:Ndist
     if j < Ndist
       max_mass = ParticleDistributions.moment(pdists[j+1], 1.0)
       s1 = x -> s_integrand1(x, j, j+1, kernel, pdists, moment_order)
       s2 = x -> s_integrand2(x, j, j+1, kernel, pdists, moment_order)
-      # S[j,1] = quadgk(s1, 0.0, max_mass; rtol=1e-4)[1]
-      # S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-4)[1]
-      # @show j
-      @show @code_warntype quadgk(s1, 0.0, max_mass; rtol=1e-4)[1]
+      S[j,1] = quadgk(s1, 0.0, max_mass; rtol=1e-4)[1]
+      S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-4)[1]
     end
     for k in max(j-1,1):min(j+1, Ndist)
-      @show (j, k)
       max_mass = ParticleDistributions.moment(pdists[max(j,k)], 1.0)
-  #     Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-4)[1]
-  #     R[j,k] = hcubature(xy -> r_integrand(xy[1], xy[2], j, k, kernel, pdists, moment_order), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
+      Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-4)[1]
+      R[j,k] = hcubature(xy -> r_integrand(xy[1], xy[2], j, k, kernel, pdists, moment_order), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
     end
   end
-  @show (Q, R, S)
 
   return (Q, R, S)
 end

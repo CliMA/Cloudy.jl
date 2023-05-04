@@ -9,6 +9,10 @@ using Cloudy.KernelFunctions
 using Cloudy.ParticleDistributions
 using Cloudy.MultiParticleSources
 
+using Logging: global_logger
+using TerminalLoggers: TerminalLogger
+global_logger(TerminalLogger())
+
 seed!(123)
 
 function main()
@@ -24,7 +28,7 @@ function main()
     time_scale = 1e1
     mass_scale = 0.33e-9
 
-    T_end = 120 * time_scale
+    T_end = 10 * time_scale
     coalescence_coeff = 2.0e3 / time_scale # 1.5e3 cm^3 g^-1 s-1
     kernel_func = LinearKernelFunction(coalescence_coeff)
 
@@ -37,12 +41,14 @@ function main()
     # Initial condition
     particle_number = [1e4, 1e1]
     mean_particles_mass = [mass_scale, 100 * mass_scale]
-    particle_mass_std = [mass_scale, 50 * mass_scale]
+    particle_mass_std = [mass_scale/4, 50 * mass_scale]
     params_init = reduce(vcat, transpose.([particle_number, (mean_particles_mass ./ particle_mass_std).^2, particle_mass_std.^2 ./ mean_particles_mass]))
     dist_moments_init = similar(params_init)
     for i in 1:length(params_init[1,:])
         dist_moments_init[:,i] = moments_from_params(params_init[:,i])
     end
+    @show params_init
+    @show dist_moments_init
 
     # Set up the right hand side of ODE
     function rhs!(ddist_moments, dist_moments, p, t)
@@ -56,33 +62,43 @@ function main()
         pdists = map(1:length(particle_number)) do i
             GammaParticleDistribution(dist_params[1, i], dist_params[2,i], dist_params[3,i])
         end
-        println("Distributions:  ", pdists, "\n")
         
         coal_ints = similar(dist_moments)
-        println("coal ints initialized")
         # Compute the sources and sinks
         for (m, moment_order) in enumerate(tracked_moments)
-            println("let's see if it works")
-            (Q, R, S) = get_coalescence_integral_moment_qrs(moment_order, kernel_func, pdists)
-            error("hi")
-            println("integrals for ", moment_order)
-            for j in 1:length(pdists)-1
+            @show moment_order
+            @show ddist_moments
+            @show dist_params
+            @show dist_moments
+            (Q, R, S) = try get_coalescence_integral_moment_qrs(moment_order, kernel_func, pdists)
+            catch
+                error("failure in integrals")
+            end
+                for j in 1:length(pdists)-1
                 coal_ints[m,j] += S[j,1] - R[j,j] - R[j,j+1]
                 coal_ints[m,j+1] += S[j,2] + Q[j,j+1] + Q[j+1,j] + Q[j+1,j+1] - R[j+1,j] - R[j+1,j+1]
             end
             ddist_moments[m,:] = coal_ints[m,:]
-            println("integrals assigned")
+            if any(isnan.(Q))
+                @show Q
+            end
+            if any(isnan.(R))
+                @show R
+            end
+            if any(isnan.(S))
+                @show S
+            end
         end
-        println(ddist_moments)
-        flush(stdout)
     end
 
     ddist_moments = similar(dist_moments_init)
     rhs!(ddist_moments, dist_moments_init, 0.0, 0.0)
-    # # Step 3) Solve the ODE
-    # tspan = (0.0, T_end)
-    # prob = ODEProblem(rhs!, dist_moments_init, tspan)
-    # sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
+    
+    # Step 3) Solve the ODE
+    tspan = (0.0, T_end)
+    prob = ODEProblem(rhs!, dist_moments_init, tspan; progress=true)
+    sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
+    @show sol
 
     # # Step 4) Plot the results
     # time = sol.t / time_scale

@@ -79,14 +79,13 @@ struct GammaParticleDistribution{FT, D <: Distribution} <: ParticleDistribution{
 
   function GammaParticleDistribution(n::FT, k::FT, θ::FT) where {FT<:Real}
     dist = try
-        Gamma(k, θ)
+        dist = Gamma(k, θ)
     catch
-        println("in catch")
+        println("in catch: ", k," ", θ)
         dist = Gamma(1000.0, 1000.0)
         return new{FT, typeof(dist)}(n, k, θ, dist)
     end
-    #dist = Gamma(k, θ)
-    new{FT, typeof(dist)}(n, k, θ, dist)
+    return new{FT, typeof(dist)}(n, k, θ, dist)
   end
 end
 # TODO EMILY: all initialized dists need to be of type {FT, D} / new{FT, typeof(dist)}
