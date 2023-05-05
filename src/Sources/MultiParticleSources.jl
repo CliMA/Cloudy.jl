@@ -19,13 +19,14 @@ using ..KernelFunctions
 export get_coalescence_integral_moment_qrs
 
 function weighting_fn(x, pdist1, pdist2)
-  denom = pdist1(x) + pdist2(x)
-  if denom == 0.0
-    return 0.0
-  else
-    return pdist1(x) / (pdist1(x) + pdist2(x))
-  end
-  #return 0.0
+  # denom = pdist1(x)/pdist1.n + pdist2(x)/pdist2.n
+  # if denom == 0.0
+  #   return 0.0
+  # else
+  #   return pdist1(x)/pdist1.n / denom
+  # end
+  # return pdist1.k / (pdist1.k + pdist2.k)
+  return 1.0
 end
 
 function q_integrand_inner(x, y, j, k, kernel, pdists)
@@ -34,7 +35,7 @@ function q_integrand_inner(x, y, j, k, kernel, pdists)
 end
 
 function q_integrand_outer(x, j, k, kernel, pdists, moment_order)
-  outer = x.^moment_order * quadgk(yy -> q_integrand_inner(x, yy, j, k, kernel, pdists), 0.0, x; rtol=1e-4)[1]
+  outer = x.^moment_order * quadgk(yy -> q_integrand_inner(x, yy, j, k, kernel, pdists), 0.0, x)[1]
   return outer
 end
 
@@ -44,12 +45,12 @@ function r_integrand(x, y, j, k, kernel, pdists, moment_order)
 end
 
 function s_integrand1(x, j, k, kernel, pdists, moment_order)
-  integrandj = weighting_fn(x, pdists[j], pdists[k]) * q_integrand_outer(x, j, k, kernel, pdists, moment_order)
+  integrandj = weighting_fn(x, pdists[j], pdists[k]) * q_integrand_outer(x, j, j, kernel, pdists, moment_order)
   return integrandj
 end
 
 function s_integrand2(x, j, k, kernel, pdists, moment_order)
-  integrandk = (1 - weighting_fn(x, pdists[j], pdists[k])) * q_integrand_outer(x, j, k, kernel, pdists, moment_order)
+  integrandk = (1 - weighting_fn(x, pdists[j], pdists[k])) * q_integrand_outer(x, j, j, kernel, pdists, moment_order)
   return integrandk
 end
 
@@ -69,15 +70,15 @@ function get_coalescence_integral_moment_qrs(
   
   for j in 1:Ndist
     if j < Ndist
-      max_mass = ParticleDistributions.moment(pdists[j+1], 1.0)
+      max_mass = max(ParticleDistributions.max_mass(pdists[j]), ParticleDistributions.max_mass(pdists[j+1]))
       s1 = x -> s_integrand1(x, j, j+1, kernel, pdists, moment_order)
       s2 = x -> s_integrand2(x, j, j+1, kernel, pdists, moment_order)
-      S[j,1] = quadgk(s1, 0.0, max_mass; rtol=1e-4)[1]
-      S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-4)[1]
+      S[j,1] = quadgk(s1, 0.0, max_mass; rtol=1e-8)[1]
+      S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-8)[1]
     end
     for k in max(j-1,1):min(j+1, Ndist)
       max_mass = max(ParticleDistributions.max_mass(pdists[j]), ParticleDistributions.max_mass(pdists[k]))
-      Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-4)[1]
+      Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-8)[1]
       R[j,k] = hcubature(xy -> r_integrand(xy[1], xy[2], j, k, kernel, pdists, moment_order), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
     end
   end

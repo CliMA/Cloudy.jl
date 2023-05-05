@@ -40,7 +40,7 @@ function main()
     params_from_moments = dist_moments -> [dist_moments[1], (dist_moments[2]/dist_moments[1])/(dist_moments[3]/dist_moments[2]-dist_moments[2]/dist_moments[1]), dist_moments[3]/dist_moments[2]-dist_moments[2]/dist_moments[1]]
 
     # Initial condition
-    particle_number = [1e4, 1e1]
+    particle_number = [1e4, 1e2]
     mean_particles_mass = [mass_scale, 100 * mass_scale]
     particle_mass_std = [mass_scale/4, 50 * mass_scale]
     params_init = reduce(vcat, transpose.([particle_number, (mean_particles_mass ./ particle_mass_std).^2, particle_mass_std.^2 ./ mean_particles_mass]))
@@ -54,19 +54,22 @@ function main()
 
     # Set up the right hand side of ODE
     function rhs!(ddist_moments, dist_moments, p, t)
+        @show t
+        @show dist_moments
         # Transform dist_moments to native distribution parameters
         dist_params = similar(dist_moments)
         for i in 1:length(dist_moments[1,:])
             dist_params[:,i] = params_from_moments(dist_moments[:,i])
         end
         append!(params, dist_params)
+        @show dist_params
 
         # Evaluate processes at inducing points using a closure distribution
         pdists = map(1:length(particle_number)) do i
             GammaParticleDistribution(dist_params[1, i], dist_params[2,i], dist_params[3,i])
         end
         
-        coal_ints = similar(dist_moments)
+        coal_ints = fill!(similar(dist_moments), 0)
         # Compute the sources and sinks
         for (m, moment_order) in enumerate(tracked_moments)
             (Q, R, S) = try get_coalescence_integral_moment_qrs(moment_order, kernel_func, pdists)
@@ -78,8 +81,25 @@ function main()
                 coal_ints[m,j+1] += S[j,2] + Q[j,j+1] + Q[j+1,j] + Q[j+1,j+1] - R[j+1,j] - R[j+1,j+1]
             end
             ddist_moments[m,:] = coal_ints[m,:]
+
+            if any(isnan.(ddist_moments[m,:]))
+                println("nan found in derivative")
+                @show moment_order
+                @show Q
+                @show R
+                @show S
+                @show ddist_moments
+                error("nan ddt")
+            end
         end
+        if ddist_moments[1, 1] > 0.0
+            @show (Q, R, S)
+            error("positive dn1")
+        end
+        @show ddist_moments
     end
+
+    # TODO: callbacks
 
     ddist_moments = similar(dist_moments_init)
     rhs!(ddist_moments, dist_moments_init, params, 0.0)
@@ -87,7 +107,7 @@ function main()
     # Step 3) Solve the ODE
     tspan = (0.0, T_end)
     prob = ODEProblem(rhs!, dist_moments_init, tspan; progress=true)
-    sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
+    sol = solve(prob, reltol=tol, abstol=tol)
     @show sol.u
 
     # Step 4) Plot the results
