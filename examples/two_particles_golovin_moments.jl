@@ -40,9 +40,9 @@ function main()
     params_from_moments = dist_moments -> [dist_moments[1], (dist_moments[2]/dist_moments[1])/(dist_moments[3]/dist_moments[2]-dist_moments[2]/dist_moments[1]), dist_moments[3]/dist_moments[2]-dist_moments[2]/dist_moments[1]]
 
     # Initial condition
-    particle_number = [1e4, 1e2]
-    mean_particles_mass = [mass_scale, 100 * mass_scale]
-    particle_mass_std = [mass_scale/4, 50 * mass_scale]
+    particle_number = [1e4, 1e0]
+    mean_particles_mass = [mass_scale, 10 * mass_scale]
+    particle_mass_std = [mass_scale/4, 5 * mass_scale]
     params_init = reduce(vcat, transpose.([particle_number, (mean_particles_mass ./ particle_mass_std).^2, particle_mass_std.^2 ./ mean_particles_mass]))
     dist_moments_init = similar(params_init)
     for i in 1:length(params_init[1,:])
@@ -54,15 +54,14 @@ function main()
 
     # Set up the right hand side of ODE
     function rhs!(ddist_moments, dist_moments, p, t)
-        @show t
-        @show dist_moments
+       # @show dist_moments
         # Transform dist_moments to native distribution parameters
         dist_params = similar(dist_moments)
         for i in 1:length(dist_moments[1,:])
             dist_params[:,i] = params_from_moments(dist_moments[:,i])
         end
+        #@show dist_params
         append!(params, dist_params)
-        @show dist_params
 
         # Evaluate processes at inducing points using a closure distribution
         pdists = map(1:length(particle_number)) do i
@@ -74,6 +73,8 @@ function main()
         for (m, moment_order) in enumerate(tracked_moments)
             (Q, R, S) = try get_coalescence_integral_moment_qrs(moment_order, kernel_func, pdists)
             catch
+                @show dist_moments
+                @show dist_params
                 error("failure in integrals")
             end
             for j in 1:length(pdists)-1
@@ -96,7 +97,6 @@ function main()
             @show (Q, R, S)
             error("positive dn1")
         end
-        @show ddist_moments
     end
 
     # TODO: callbacks

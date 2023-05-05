@@ -12,6 +12,7 @@ using HCubature
 using SpecialFunctions: gamma
 using ..ParticleDistributions
 using ..KernelFunctions
+using Distributions: pdf
 # methods that compute source terms from microphysical parameterizations
 # export get_coalescence_integrals
 # export get_coalescence_integral_moment
@@ -19,14 +20,14 @@ using ..KernelFunctions
 export get_coalescence_integral_moment_qrs
 
 function weighting_fn(x, pdist1, pdist2)
-  # denom = pdist1(x)/pdist1.n + pdist2(x)/pdist2.n
-  # if denom == 0.0
-  #   return 0.0
-  # else
-  #   return pdist1(x)/pdist1.n / denom
-  # end
+  denom = pdf(pdist1.dist, x) + pdf(pdist2.dist, x)
+  if denom == 0.0
+    return 0.0
+  else
+    return pdf(pdist1.dist, x) / denom
+  end
   # return pdist1.k / (pdist1.k + pdist2.k)
-  return 1.0
+  # return 1.0
 end
 
 function q_integrand_inner(x, y, j, k, kernel, pdists)
