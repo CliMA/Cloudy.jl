@@ -17,7 +17,9 @@ using Distributions: pdf
 # export get_coalescence_integrals
 # export get_coalescence_integral_moment
 # export constant_coalescence_efficiency
-export get_coalescence_integral_moment_qrs
+export get_coalescence_integral_moment_qrs!
+
+FT = Float64
 
 function weighting_fn(x, pdist1, pdist2)
   denom = pdf(pdist1.dist, x) + pdf(pdist2.dist, x)
@@ -26,8 +28,7 @@ function weighting_fn(x, pdist1, pdist2)
   else
     return pdf(pdist1.dist, x) / denom
   end
-  # return pdist1.k / (pdist1.k + pdist2.k)
-  # return 1.0
+  #return 0.0
 end
 
 function q_integrand_inner(x, y, j, k, kernel, pdists)
@@ -61,13 +62,10 @@ get_coalescence_integral_moment_qrs(x::Array{FT}, kernel::KernelFunction{FT}, pd
 Returns the collision-coalescence integral at points `x`.
 """
 # TODO: MOVE THE INNER FUNCTIONS OUTSIDE
-function get_coalescence_integral_moment_qrs(
-  moment_order, kernel, pdists)
+function get_coalescence_integral_moment_qrs!(
+  moment_order, kernel, pdists, Q, R, S)
 
   Ndist = length(pdists)
-  Q = zeros((Ndist, Ndist))
-  R = zeros((Ndist, Ndist))
-  S = zeros((Ndist, 2))
   
   for j in 1:Ndist
     if j < Ndist
@@ -83,7 +81,6 @@ function get_coalescence_integral_moment_qrs(
       R[j,k] = hcubature(xy -> r_integrand(xy[1], xy[2], j, k, kernel, pdists, moment_order), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
     end
   end
-  return (Q, R, S)
 end
 
 # function get_coalescence_integrals(x::Array{FT,2}, kernel::KernelFunction{FT}, 
