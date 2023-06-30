@@ -245,7 +245,7 @@ function moment(pdist::ExponentialParticleDistribution{FT}, q::Int, a::FT, b::FT
   θ = pdist.θ
   
   g1, __ = gamma_inc(1+q, a/θ, 0)
-  __, g2 = gamma_inc(1+q, b/θ, 0)
+  __, g2 =  gamma_inc(1+q, b/θ, 0)
 
   return n*θ^q*gamma(1+q)*(1 - g1 - g2)
 end
@@ -257,14 +257,16 @@ end
 Returns an estimate of the maximum mass to consider in integration (i.e. the support)
 """
 function max_mass(pdist::GammaParticleDistribution{FT}) where {FT<:Real}
-  n = pdist.n
+  if pdist.k < 0.0
+    AssertionError("k < 0")
+  end
   k = pdist.k
   θ = pdist.θ
 
   mean = k*θ
   stddev = sqrt(k)*θ
 
-  return mean + 6*stddev
+  return mean + 4*stddev
 end
 
 """
