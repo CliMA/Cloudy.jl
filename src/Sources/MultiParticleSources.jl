@@ -1,6 +1,6 @@
 """
   Microphysical source functions
-
+  TODO: Figure out a better way of setting integral limits
 """
 module MultiParticleSources
 
@@ -21,18 +21,24 @@ export get_coalescence_integral_moment_qrs!
 
 FT = Float64
 
-function weighting_fn(x, pdist1, pdist2)
-  denom = pdf(pdist1.dist, x) + pdf(pdist2.dist, x)
+function weighting_fn(x, k, pdists)
+  denom = 0.0
+  num = 0.0
+  for j=1:length(pdists)
+    denom += pdf(pdists[k].dist, x)
+    if j<= k
+      num += pdf(pdists[k].dist, x)
+    end
+  end
   if denom == 0.0
     return 0.0
   else
-    return pdf(pdist1.dist, x) / denom
+    return num / denom
   end
-  #return 0.0
 end
 
 function q_integrand_inner(x, y, j, k, kernel, pdists)
-  integrand = 0.5 * kernel(x - y, y) * pdists[j](x-y) * pdists[k](y)
+  integrand = 0.5 * kernel(x - y, y) * (pdists[j](x-y) * pdists[k](y) + pdists[k](x-y) * pdists[j](y))
   return integrand
 end
 
@@ -46,13 +52,19 @@ function r_integrand(x, y, j, k, kernel, pdists, moment_order)
   return integrand
 end
 
-function s_integrand1(x, j, k, kernel, pdists, moment_order)
-  integrandj = weighting_fn(x, pdists[j], pdists[k]) * q_integrand_outer(x, j, j, kernel, pdists, moment_order)
+function s_integrand_inner(x, k, kernel, pdists, moment_order)
+  integrand_inner = y -> 0.5 * kernel(x - y, y) * pdists[k](x-y) * pdists[k](y)
+  integrand_outer = x.^moment_order * quadgk(yy -> integrand_inner(yy), 0.0, x)[1]
+  return integrand_outer
+end
+
+function s_integrand1(x, k, kernel, pdists, moment_order)
+  integrandj = weighting_fn(x, k, pdists) * s_integrand_inner(x, k, kernel, pdists, moment_order)
   return integrandj
 end
 
-function s_integrand2(x, j, k, kernel, pdists, moment_order)
-  integrandk = (1 - weighting_fn(x, pdists[j], pdists[k])) * q_integrand_outer(x, j, j, kernel, pdists, moment_order)
+function s_integrand2(x, k, kernel, pdists, moment_order)
+  integrandk = (1 - weighting_fn(x, k, pdists)) * s_integrand_inner(x, k, kernel, pdists, moment_order)
   return integrandk
 end
 
@@ -60,28 +72,32 @@ end
 get_coalescence_integral_moment_qrs(x::Array{FT}, kernel::KernelFunction{FT}, pdist::ParticleDistribution{FT}, n_samples::Int)
 
 Returns the collision-coalescence integral at points `x`.
+Q: source term to particle k via collisions with smaller particles j
 """
-# TODO: MOVE THE INNER FUNCTIONS OUTSIDE
 function get_coalescence_integral_moment_qrs!(
   moment_order, kernel, pdists, Q, R, S)
 
   Ndist = length(pdists)
   
   for j in 1:Ndist
-    if j < Ndist
-      max_mass = max(ParticleDistributions.max_mass(pdists[j]), ParticleDistributions.max_mass(pdists[j+1]))
-      s1 = x -> s_integrand1(x, j, j+1, kernel, pdists, moment_order)
-      s2 = x -> s_integrand2(x, j, j+1, kernel, pdists, moment_order)
-      S[j,1] = quadgk(s1, 0.0, max_mass; rtol=1e-8)[1]
-      S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-8)[1]
-    end
-    for k in max(j-1,1):min(j+1, Ndist)
+    max_mass = ParticleDistributions.max_mass(pdists[j])
+    s1 = x -> s_integrand1(x, j, kernel, pdists, moment_order)
+    s2 = x -> s_integrand2(x, j, kernel, pdists, moment_order)
+    S[j,1] = quadgk(s1, 0.0, max_mass; rtol=1e-8)[1]
+    S[j,2] = quadgk(s2, 0.0, max_mass; rtol=1e-8)[1]
+    for k in 1:Ndist
       max_mass = max(ParticleDistributions.max_mass(pdists[j]), ParticleDistributions.max_mass(pdists[k]))
-      Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-8)[1]
       R[j,k] = hcubature(xy -> r_integrand(xy[1], xy[2], j, k, kernel, pdists, moment_order), [0.0, 0.0], [max_mass, max_mass]; rtol=1e-8, maxevals=1000)[1]
+      if j < k
+        Q[j,k] = quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, max_mass; rtol=1e-8)[1]
+      else
+        Q[j,k] = 0.0
+      end
     end
   end
 end
+
+# TODO: do we need a sorting function?
 
 # function get_coalescence_integrals(x::Array{FT,2}, kernel::KernelFunction{FT}, 
 #   pdists::Array{PD,1}, n_samples::Int) where {FT<:Real, PD<:ParticleDistribution{FT}}

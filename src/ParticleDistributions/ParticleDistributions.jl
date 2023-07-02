@@ -7,11 +7,12 @@ Particle mass distribution functions for microphysical process modeling:
 """
 module ParticleDistributions
 
-using Distributions: Distribution, Gamma, Exponential, MixtureModel, pdf, components
+using Distributions: Distribution, Gamma, Exponential, MixtureModel, pdf, components, cdf
 using ForwardDiff
 using DocStringExtensions
 using SpecialFunctions: polygamma, gamma_inc, gamma
 using Random: rand
+using NLsolve
 
 # particle mass distributions available for microphysics
 export ParticleDistribution
@@ -266,7 +267,7 @@ function max_mass(pdist::GammaParticleDistribution{FT}) where {FT<:Real}
   mean = k*θ
   stddev = sqrt(k)*θ
 
-  return mean + 4*stddev
+  return mean + 10*stddev
 end
 
 """
