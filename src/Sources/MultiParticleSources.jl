@@ -14,9 +14,6 @@ using ..ParticleDistributions
 using ..KernelFunctions
 using Distributions: pdf
 # methods that compute source terms from microphysical parameterizations
-# export get_coalescence_integrals
-# export get_coalescence_integral_moment
-# export constant_coalescence_efficiency
 export get_coalescence_integral_moment_qrs!
 
 FT = Float64

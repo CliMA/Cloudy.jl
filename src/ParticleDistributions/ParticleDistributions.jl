@@ -12,7 +12,6 @@ using ForwardDiff
 using DocStringExtensions
 using SpecialFunctions: polygamma, gamma_inc, gamma
 using Random: rand
-using NLsolve
 
 # particle mass distributions available for microphysics
 export ParticleDistribution
