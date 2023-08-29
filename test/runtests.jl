@@ -12,6 +12,7 @@ FT = Float64
 
 	  @testset "ParticleDistributions" begin
 	    include("test_ParticleDistributions_correctness.jl")
+      include("test_SuperParticleDistributions_correctness.jl")
     end
 
 	  @testset "Sources" begin
@@ -22,6 +23,7 @@ FT = Float64
   @testset "Type stability" begin
     @testset "Kernels" begin
       include("test_KernelFunctions_opt.jl")
+      include("test_SuperParticleDistributions_correctness.jl")
     end
   end
 end
