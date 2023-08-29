@@ -19,7 +19,9 @@ FT = Float64
     end
   end
 
-  #@testset "Type stability" begin
-  #  #TO BE DONE.
-  #end
+  @testset "Type stability" begin
+    @testset "Kernels" begin
+      include("test_KernelFunctions_opt.jl")
+    end
+  end
 end
