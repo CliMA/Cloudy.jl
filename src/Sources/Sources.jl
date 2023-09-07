@@ -15,6 +15,7 @@ using ..KernelTensors
 # methods that compute source terms from microphysical parameterizations
 export get_int_coalescence
 export get_flux_sedimentation
+export get_int_coalescence_two_modes
 
 
 """
@@ -73,6 +74,88 @@ function get_int_coalescence(mom_p::Array{FT}, ODE_parameters::Dict, ker::Kernel
   return coal_int
 end
 
+"""
+get_int_coalescence_two_modes(mom_p::Array{Real}, ODE_parameters::Dict, ker::KernelTensor{Real})
+
+  - `mom_p` - prognostic moments of the two particle mass distributions
+  - `ODE_parameters` - ODE parameters, a Dict containing a key ":dist" which 
+                       contains the two distributions at the previous time step. dists is an 
+                       array of ParticleDistribution; it is used to calculate the 
+                       diagnostic moments and also to dispatch to the
+                       moments-to-parameters mapping (done by the function
+                       moments_to_params) for the given types of distribution
+  - `ker` - coalescence kernel tensor
+Returns the coalescence integral for all moments in `mom_p`.
+"""
+function get_int_coalescence_two_modes(mom_p::Array{FT}, ODE_parameters::Dict, ker::KernelTensor{FT}) where {FT <: Real}
+  r = ker.r
+
+  dist_prev = ODE_parameters[:dist]
+  n_params = [nparams(dist_prev[i]) for i in 1:2]
+  mom_p_ = [mom_p[1:n_params[1]], mom_p[n_params[1]+1:end]]
+  s = [length(mom_p_[i]) for i in 1:2]
+
+  # Need to build diagnostic moments
+  dist = [moments_to_params(dist_prev[i], mom_p_[i]) for i in 1:2]
+  # Update the distributions that is carried along in the ODE_parameters for use
+  # in next time step
+  ODE_parameters[:dist] = dist
+  n_mom = maximum(s) + r
+  mom = zeros(FT, 2, n_mom)
+  for i in 1:2
+    for j in 1:n_mom
+      if j <= s[i]
+        mom[i, j] = mom_p_[i][j]
+      else
+        mom[i, j] = moment(dist[i], FT(j-1))
+      end
+    end
+  end
+
+  # Compute the integral term with threshold (mode1-mode1 coalescence contributing to both mode 1 and 2)
+  int_w_thrsh = zeros(FT, n_mom, n_mom)
+  mom_times_mom = zeros(FT, n_mom, n_mom)
+  for i in 1:n_mom
+    for j in i:n_mom
+      mom_times_mom[i, j] = mom[1, i] * mom[1, j]
+      tmp = (mom_times_mom[i, j] < eps(FT)) ? FT(0) : moment_source_helper(dist[1], FT(i-1), FT(j-1), ODE_parameters[:x_th])
+      int_w_thrsh[i, j] = min(mom_times_mom[i, j], tmp)
+      mom_times_mom[j, i] = mom_times_mom[i, j]
+      int_w_thrsh[j, i] = int_w_thrsh[i, j]
+    end
+  end
+
+  # only calculate coalescence integral for prognostic moments
+  coal_int = [similar(mom_p_[1]), similar(mom_p_[2])]
+  for i in 1:2
+    j = (i==1) ? 2 : 1
+    for k in 0:s[i]-1
+      temp = 0.0
+
+      for a in 0:r
+        for b in 0:r
+          coef = ker.c[a+1, b+1]
+          temp -= coef * mom[i, a+k+1] * mom[i, b+1]
+          temp -= coef * mom[i, a+k+1] * mom[j, b+1]
+          for c in 0:k
+            coef_binomial = coef * binomial(k, c)
+            if i == 1
+              temp += 0.5 * coef_binomial * int_w_thrsh[a+c+1, b+k-c+1]
+            elseif i == 2
+              temp += 0.5 * coef_binomial * (mom_times_mom[a+c+1, b+k-c+1] - int_w_thrsh[a+c+1, b+k-c+1])
+              temp += 0.5 * coef_binomial * mom[i, a+c+1] * mom[i, b+k-c+1]
+              temp += coef_binomial * mom[j, a+c+1] * mom[i, b+k-c+1]
+            end
+          end
+        end
+      end
+
+    coal_int[i][k+1] = temp
+    end
+  end
+
+  return vcat(coal_int[1], coal_int[2])
+end
 
 """
   get_flux_sedimentation(mom_p::Array{Real}, ODE_parameters::Dict, vel::Array{Real})

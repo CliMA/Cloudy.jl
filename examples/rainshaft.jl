@@ -296,7 +296,6 @@ Generates various plots for the ODE solution.
 
 """
 function plotting(time, height, moments, column_mass, surface_mass)
-  gr()
   plot(
     moments[2:end, 1, 1], 
     height[2:end],
