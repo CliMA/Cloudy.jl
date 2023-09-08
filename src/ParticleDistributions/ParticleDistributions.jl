@@ -30,12 +30,14 @@ export GammaAdditiveParticleDistribution
 
 # methods that query particle mass distributions
 export moment
+export get_moments
 export density
 export nparams
 export update_params
 export moments_to_params
 export update_params_from_moments
-export  moment_source_helper
+export update_dist_from_moments!
+export moment_source_helper
 
 # setters and getters
 export get_params
@@ -70,7 +72,7 @@ Represents particle mass distribution function of exponential shape.
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct ExponentialPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+mutable struct ExponentialPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
   "normalization constant (e.g., droplet number concentration)"
   n::FT
   "scale parameter"
@@ -97,7 +99,7 @@ Represents particle mass distribution function of gamma shape.
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct GammaPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+mutable struct GammaPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
   "normalization constant (e.g., droplet number concentration)"
   n::FT
   "scale parameter"
@@ -124,7 +126,7 @@ Represents monodisperse particle size distribution function.
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-struct MonodispersePrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+mutable struct MonodispersePrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
   "normalization constant (e.g., droplet number concentration)"
   n::FT
   "particle diameter"
@@ -266,6 +268,16 @@ function MonodisperseAdditiveParticleDistribution(dist_arr::Array{AbstractPartic
 end
 
 """
+  (pdist::ParticleDistribution{FT}(x::FT)
+
+  - `x` - is an array of points to evaluate the density of `pdist` at
+Returns the particle mass density evaluated at `x`.
+"""
+function (pdist::AbstractParticleDistribution{FT})(x::FT) where {FT<:Real}
+  return density(pdist, x)
+end
+
+"""
   moment_func(dist)
 
   `dist` - particle mass distribution function
@@ -329,6 +341,22 @@ function moment(dist::AbstractParticleDistribution{FT}, q::FT) where {FT<:Real}
   moment_func(dist)(reduce(vcat, get_params(dist)[2])..., q)
 end
 
+"""
+    moments(pdist::GammaParticleDistribution{FT})
+Returns the first P (0, 1, 2) moments of the distribution where P is the innate
+numer of prognostic moments
+"""
+function get_moments(pdist::GammaPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  return [pdist.n, pdist.n * pdist.k * pdist.θ, pdist.n*pdist.k*(pdist.k+1)*pdist.θ^2]
+end
+
+function get_moments(pdist::ExponentialPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  return [pdist.n, pdist.n * pdist.θ]
+end
+
+function get_moments(pdist::MonodispersePrimitiveParticleDistribution{FT}) where {FT<:Real}
+  return [pdist.n, pdist.n * pdist.θ]
+end
 
 """
   density_func(dist)
@@ -337,20 +365,16 @@ end
 Returns the particle mass density function.
 """
 function density_func(dist::ExponentialPrimitiveParticleDistribution{FT}) where {FT<:Real}
-  # density = n / θ * exp(-x/θ)
-
-  # can reuse the density of gamma distribution
-  density_func_gamma = density_func(GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(1)))
-  function f(n, θ, x)
-    density_func_gamma(n, θ, FT(1), x)
+  function f(x)
+    dist.n ./ dist.θ .* exp.(-x ./ dist.θ)
   end
   return f
 end
 
 function density_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT<:Real}
   # density = n / θ^k / Γ(k) * x^(k-1) * exp(-x/θ)
-  function f(n, θ, k, x)
-    n .* x.^(k .- 1) ./ θ.^k ./ gamma.(k) .* exp.(-x ./ θ)
+  function f(x)
+    dist.n .* x.^(dist.k .- 1) ./ dist.θ.^dist.k ./ gamma.(dist.k) .* exp.(-x ./ dist.θ)
   end
   return f
 end
@@ -386,7 +410,7 @@ function density(dist::AbstractParticleDistribution{FT}, x::FT) where {FT<:Real}
   if any(x .< zero(x))
     error("Density can only be evaluated at nonnegative values.")
   end
-  density_func(dist)(reduce(vcat, get_params(dist)[2])..., x)
+  density_func(dist)(x)
 end
 
 
@@ -427,7 +451,34 @@ function get_params(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdd
   return params, values
 end
 
+"""
+    update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT})
 
+Updates parameters of the gamma distribution given the first three moments
+"""
+function update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT}) where {FT<:Real}
+  if length(moments) != 3
+    throw(ArgumentError("must specify exactly 3 moments for gamma distribution"))
+  end
+  pdist.n = moments[1]
+  pdist.k = (moments[2]/moments[1])/(moments[3]/moments[2]-moments[2]/moments[1])
+  pdist.θ = moments[3]/moments[2]-moments[2]/moments[1]
+  pdist.dist = Gamma(pdist.k, pdist.θ)
+end
+
+"""
+    update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Array{FT})
+
+Updates parameters of the gamma distribution given the first three moments
+"""
+function update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Array{FT}) where {FT<:Real}
+  if length(moments) != 2
+    throw(ArgumentError("must specify exactly 2 moments for exponential distribution"))
+  end
+  pdist.n = moments[1]
+  pdist.θ = moments[2]/moments[1]
+  pdist.dist = Exponential(pdist.θ)
+end
 """
   update_params(dist, params)
 
@@ -546,6 +597,32 @@ function check_moment_consistency(m::Array{FT}) where {FT<:Real}
   nothing
 end
 
+"""
+    update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT})
+
+Updates parameters of the gamma distribution given the first three moments
+"""
+function update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT}) where {FT<:Real}
+  if length(moments) != 3
+    throw(ArgumentError("must specify exactly 3 moments for gamma distribution"))
+  end
+  pdist.n = moments[1]
+  pdist.k = (moments[2]/moments[1])/(moments[3]/moments[2]-moments[2]/moments[1])
+  pdist.θ = moments[3]/moments[2]-moments[2]/moments[1]
+end
+
+"""
+    update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Array{FT})
+
+Updates parameters of the gamma distribution given the first three moments
+"""
+function update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Array{FT}) where {FT<:Real}
+  if length(moments) != 2
+    throw(ArgumentError("must specify exactly 2 moments for exponential distribution"))
+  end
+  pdist.n = moments[1]
+  pdist.θ = moments[2]/moments[1]
+end
 
 """
   update_params_from_moments(ODE_parameters, target_moments)

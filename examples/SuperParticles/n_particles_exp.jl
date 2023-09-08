@@ -4,7 +4,7 @@ using DifferentialEquations
 using Plots
 
 using Cloudy.KernelFunctions
-using Cloudy.SuperParticleDistributions
+using Cloudy.ParticleDistributions
 using Cloudy.MultiParticleSources
 using Cloudy.PlottingUtils
 
@@ -38,7 +38,7 @@ function main()
 
     # Initialize distributions
     pdists = map(1:Ndist) do i
-        ExponentialParticleDistribution(particle_number[i], mass_scale[i])
+        ExponentialPrimitiveParticleDistribution(particle_number[i], mass_scale[i])
     end
 
     dist_moments = zeros(FT, Ndist, Nmom)

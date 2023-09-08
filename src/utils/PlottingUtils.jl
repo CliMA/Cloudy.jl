@@ -1,7 +1,7 @@
 module PlottingUtils
 
 using Plots
-using Cloudy.SuperParticleDistributions
+using Cloudy.ParticleDistributions
 
 export plot_moments!, plot_spectra!
 

@@ -6,7 +6,7 @@
 module MultiParticleSources
 
 using QuadGK
-using Cloudy.SuperParticleDistributions
+using Cloudy.ParticleDistributions
 
 export update_coal_ints!
 export initialize_coalescence_data
@@ -25,7 +25,7 @@ function update_coal_ints!(
     Nmom, kernel_func, pdists, coal_data
 )
     # check that all pdists are of the same type
-    if typeof(pdists) == Vector{ParticleDistribution{Float64}}
+    if typeof(pdists) == Vector{AbstractParticleDistribution{Float64}}
         throw(ArgumentError("All particle size distributions must be the same type"))
     end
 
