@@ -11,27 +11,20 @@ module ParticleDistributions
 
 using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
-using NLPModels
-using NLPModelsIpopt
 
-# NLPModelsKnitro is a thin KNITRO wrapper for NLP (Nonlinear Programming)
-# models. KNITRO is a commercial solver but a demo version can be
-# downloaded from the Artelys website at
-# https://www.artelys.com/solvers/knitro/
-using Requires
-@init @require NLPModelsKnitro = "bec4dd0d-7755-52d5-9a02-22f0ffc7efcb" begin
-  using .NLPModelsKnitro
-end
-
+import NonlinearSolve as NLS
 import LinearAlgebra: norm
 import Optim: optimize, LBFGS
+import NumericalIntegration as NI
 
 # particle mass distributions available for microphysics
 export AbstractParticleDistribution
 export PrimitiveParticleDistribution
 export ExponentialPrimitiveParticleDistribution
 export GammaPrimitiveParticleDistribution
+export MonodispersePrimitiveParticleDistribution
 export AdditiveParticleDistribution
+export MonodisperseAdditiveParticleDistribution
 export ExponentialAdditiveParticleDistribution
 export GammaAdditiveParticleDistribution
 
@@ -40,7 +33,9 @@ export moment
 export density
 export nparams
 export update_params
+export moments_to_params
 export update_params_from_moments
+export  moment_source_helper
 
 # setters and getters
 export get_params
@@ -118,6 +113,30 @@ struct GammaPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{F
   end
 end
 
+"""
+  MonodispersePrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+
+Represents monodisperse particle size distribution function.
+
+# Constructors
+  MonodispersePrimitiveParticleSizeDistribution(n::Real, m::Real)
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
+struct MonodispersePrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+  "normalization constant (e.g., droplet number concentration)"
+  n::FT
+  "particle diameter"
+  θ::FT
+  
+  function MonodispersePrimitiveParticleDistribution(n::FT, θ::FT) where {FT<:Real}
+    if n < 0 || θ <= 0
+      error("n needs to be nonnegative. θ needs to be positive.")
+    end
+    new{FT}(n, θ)
+  end
+end
 
 """
   AdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
@@ -214,6 +233,37 @@ function GammaAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistr
   GammaAdditiveParticleDistribution(dist_arr...)
 end
 
+"""
+  MonodisperseAdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
+
+A particle mass distribution function that is a mixture of
+Monodisperse distributions
+
+# Constructors
+  MonodisperseAdditiveParticleDistribution(dists::AbstractParticleDistribution{Real}...)
+  MonodisperseAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}})
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
+struct MonodisperseAdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
+  "array of Monodisperse distributions"
+  subdists::Array{AbstractParticleDistribution{FT}}
+
+  function MonodisperseAdditiveParticleDistribution(dists::AbstractParticleDistribution{FT}...) where {FT<:Real}
+    if length(dists) < 2
+      error("need at least two subdistributions to form a mixture.")
+    end
+    if !all(typeof(dists[i])==MonodispersePrimitiveParticleDistribution{FT} for i in 1:length(dists))
+      error("all subdistributions need to be of type MonodispersePrimitiveParticleDistribution")
+    end
+    new{FT}(collect(dists))
+  end
+end
+
+function MonodisperseAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}}) where {FT<:Real}
+  MonodisperseAdditiveParticleDistribution(dist_arr...)
+end
 
 """
   moment_func(dist)
@@ -240,8 +290,15 @@ function moment_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT<:Re
   return f
 end
 
+function moment_func(dist::MonodispersePrimitiveParticleDistribution{FT}) where {FT<:Real}
+  # moment_of_dist = n * θ^(q)
+  function f(n, θ, q)
+   n .* θ.^q
+  end
+  return f
+end
 
-function moment_func(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}}) where {FT<:Real}
+function moment_func(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}, MonodisperseAdditiveParticleDistribution{FT}}) where {FT<:Real}
   # mixture moment is sum of moments of subdistributions
   num_pars = [nparams(d) for d in dist.subdists]
   mom_funcs = [moment_func(d) for d in dist.subdists]
@@ -343,7 +400,7 @@ function nparams(dist::PrimitiveParticleDistribution{FT}) where {FT<:Real}
   length(propertynames(dist))
 end
 
-function nparams(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}}) where {FT<:Real}
+function nparams(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}, MonodisperseAdditiveParticleDistribution{FT}}) where {FT<:Real}
   sum([nparams(d) for d in dist.subdists])
 end
 
@@ -360,7 +417,7 @@ function get_params(dist::PrimitiveParticleDistribution{FT}) where {FT<:Real}
   return params, values
 end
 
-function get_params(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}}) where {FT<:Real}
+function get_params(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}, MonodisperseAdditiveParticleDistribution{FT}}) where {FT<:Real}
   params, values = Array{Array{Symbol, 1}}([]), Array{Array{FT, 1}}([])
   for (i, d) in enumerate(dist.subdists)
     params_sub, values_sub = get_params(d)
@@ -384,6 +441,10 @@ end
 
 function update_params(dist::GammaPrimitiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
   GammaPrimitiveParticleDistribution(values...)
+end
+
+function update_params(dist::MonodispersePrimitiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
+  MonodispersePrimitiveParticleDistribution(values...)
 end
 
 function update_params(dist::AdditiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
@@ -435,6 +496,23 @@ function update_params(dist::GammaAdditiveParticleDistribution{FT}, values::Arra
   end
 
   GammaAdditiveParticleDistribution(dist_arr)
+end
+
+function update_params(dist::MonodisperseAdditiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
+  if length(values) != nparams(dist)
+    error("length of values must match number of params of dist.")
+  end
+
+  # create new subdistributions one dist at a time
+  i = 1
+  dist_arr = Array{AbstractParticleDistribution{FT}}([])
+  for d in dist.subdists
+    n = nparams(d)
+    push!(dist_arr, update_params(d, values[i:i+n-1]))
+    i += n
+  end
+
+  MonodisperseAdditiveParticleDistribution(dist_arr)
 end
 
 
@@ -500,35 +578,68 @@ function update_params_from_moments(ODE_parameters, target_moments::Array{FT}) w
   moments_to_params(dist_prev, target_moments)
 end
 
-function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_moments::Array{FT}) where {FT<:Real}
+function update_params_from_moments(ODE_parameters, target_moments::Array{FT}, param_range::Dict{String, Tuple{FT, FT}}) where {FT<:Real}
+  # Extract the solution at the previous time step
+  dist_prev = ODE_parameters[:dist]
+  # Update parameters from the given target moments
+  moments_to_params(dist_prev, target_moments; param_range = param_range)
+end
+
+function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_moments::Array{FT}; param_range = Dict("θ" => (1e-5, 1e5), "k" => (eps(FT), FT(5)))) where {FT<:Real}
   if length(target_moments) != nparams(dist)
     error("Number of moments must be consistent with distribution type.")
   end
-  check_moment_consistency(target_moments)
 
-  # target_moments[1] == M0, target_moments[2] == M1, target_moments[3] == M2
-   M0 = target_moments[1]
-   M1 = target_moments[2]
-   M2 = target_moments[3]
-   n = M0
-   θ = -(M1^2 - M0*M2)/(M0*M1)
-   k = -M1^2/(M1^2 - M0*M2)
+  M0 = target_moments[1]
+  M1 = target_moments[2]
+  M2 = target_moments[3]
+  if M0 < eps(FT) || M1 < eps(FT) || M2 < eps(FT)
+    n = FT(0)
+    θ = FT(1)
+    k = FT(2)
+  else
+    θ = max(param_range["θ"][1], min(param_range["θ"][2], -(M1^2 - M0*M2)/(M0*M1)))
+    k = max(param_range["k"][1], min(param_range["k"][2], -M1^2/(M1^2 - M0*M2)))
+    n = M1/(θ*k)
+  end
 
   update_params(dist, [n, θ, k])
 
 end
 
-function moments_to_params(dist::ExponentialPrimitiveParticleDistribution{FT}, target_moments::Array{FT}) where {FT<:Real}
+function moments_to_params(dist::ExponentialPrimitiveParticleDistribution{FT}, target_moments::Array{FT}; param_range = Dict("θ" => (1e-5, 1e5))) where {FT<:Real}
   if length(target_moments) != nparams(dist)
     error("Number of moments must be consistent with distribution type.")
   end
-  check_moment_consistency(target_moments)
 
-  # target_moments[1] == M0, target_moments[2] == M1
   M0 = target_moments[1]
   M1 = target_moments[2]
-  n = M0
-  θ = M1/M0
+  if M0 < eps(FT) || M1 < eps(FT)
+    n = FT(0)
+    θ = FT(1)
+  else
+    θ = max(param_range["θ"][1], min(param_range["θ"][2], M1/M0))
+    n = M1/θ
+  end 
+
+  update_params(dist, [n, θ])
+
+end
+
+function moments_to_params(dist::MonodispersePrimitiveParticleDistribution{FT}, target_moments::Array{FT}; param_range = Dict("θ" => (1e-5, 1e5))) where {FT<:Real}
+  if length(target_moments) != nparams(dist)
+    error("Number of moments must be consistent with distribution type.")
+  end
+
+  M0 = target_moments[1]
+  M1 = target_moments[2]
+  if M0 < eps(FT) || M1 < eps(FT)
+    n = FT(0)
+    θ = FT(1)
+  else
+    θ = max(param_range["θ"][1], min(param_range["θ"][2], M1/M0))
+    n = M1/m
+  end 
 
   update_params(dist, [n, θ])
 
@@ -558,68 +669,35 @@ function moments_to_params(dist::AbstractParticleDistribution{FT}, target_moment
   update_params(dist, exp.(r.minimizer))
 end
 
-function moments_to_params(dist::Union{ExponentialAdditiveParticleDistribution, GammaAdditiveParticleDistribution}, target_moments::Array{FT}) where {FT<:Real}
-  # number of equations
-  n_equations = length(target_moments)
+function moments_to_params(dist::Union{ExponentialAdditiveParticleDistribution, GammaAdditiveParticleDistribution, MonodisperseAdditiveParticleDistribution}, target_moments::Array{FT}) where {FT<:Real}
   # number of subdistributions
   m = length(dist.subdists)
   # number of parameters per subdistribution
   n_params_subdist = nparams(dist.subdists[1])
 
   start_params = reduce(vcat, get_params(dist)[2])
-  start_params_ordered = vcat([start_params[i:n_params_subdist:end] for i in 1:n_params_subdist]...)
-  n_vars = length(start_params_ordered) # number of unknowns in the system
+  n_vars = length(start_params) # number of unknowns in the system
 
   # Set up system of equations relating moments to the unknown parameters.
-  c(x) = construct_system(x, dist, target_moments)
+  c(x, p) = construct_system(x, dist, p)
 
-  # Use Ipopt to solve for the unknowns, using the distribution parameters at
+  # Use NewtonRaphson to solve for the unknowns, using the distribution parameters at
   # the previous time step as an initial guess for the parameters at the
-  # current time step. ADNLPModel is an AbstractNLPModel using ForwardDiff to 
-  # compute the derivative.
-  model = ADNLPModel(x -> 0.0, start_params_ordered; c=c,
-                     lcon=zeros(n_equations), ucon=zeros(n_equations),
-                     lvar=zeros(n_vars))
-  stats = ipopt(model, print_level=0)
-  sol = stats.solution
+  # current time step.
+  sol = zeros(n_vars)
+  try
+    model = NLS.NonlinearProblem(c, start_params, target_moments)
+    sol = NLS.solve(model, NLS.NewtonRaphson())
+  catch
+    model = NLS.NonlinearProblem(c, start_params .* rand(n_vars), target_moments)
+    sol = NLS.solve(model, NLS.NewtonRaphson())
+  end
 
   # Get parameters in the correct order for use as input to update_params
-  params_ordered = vcat([sol[i:m:end] for i in 1:m]...)
+  params = vcat([sol[i*n_params_subdist+1:(i+1)*n_params_subdist] for i in 0:m-1]...)
   # Update distribution with the new parameters
-  update_params(dist, params_ordered)
+  update_params(dist, params)
 end
-
-@init @require NLPModelsKnitro = "bec4dd0d-7755-52d5-9a02-22f0ffc7efcb" begin
-  function moments_to_params(dist::Union{ExponentialAdditiveParticleDistribution, GammaAdditiveParticleDistribution}, target_moments::Array{FT}) where {FT<:Real}
-    # number of equations
-    n_equations = length(target_moments)
-    # number of subdistributions
-    m = length(dist.subdists)
-    # number of parameters per subdistribution
-    n_params_subdist = nparams(dist.subdists[1])
-
-    start_params = reduce(vcat, get_params(dist)[2])
-    start_params_ordered = vcat([start_params[i:n_params_subdist:end] for i in 1:n_params_subdist]...)
-    n_vars = length(start_params_ordered) # number of unknowns in the system
-
-    # Set up system of equations relating moments to the unknown parameters.
-    c(x) = construct_system(x, dist, target_moments)
-    # Use Knitro to solve for the unknowns, formulating the problem as a
-    # nonlinear least-squares problem, and using the distribution parameters at
-    # the previous time step as an initial guess for the parameters at the
-    # current time step
-    # Note: Problem formulation includes positivity constraints on all parameters
-    model = ADNLSModel(c, start_params_ordered, n_equations, lvar=zeros(n_vars))
-    stats = knitro(model, x0=model.meta.x0, outlev=0)
-    sol = stats.solution
-
-    # Get parameters in the correct order for use as input to update_params
-    params_ordered = vcat([sol[i:m:end] for i in 1:m]...)
-    # Update distribution with the new parameters
-    update_params(dist, params_ordered)
-  end
-end
-
 
 """
   construct_system(x, dist, M::Array{FT})
@@ -633,49 +711,86 @@ parameters (x) of the given distribution
 """
 function construct_system(x, dist::GammaAdditiveParticleDistribution{FT}, M::Array{FT}) where {FT<:Real}
   n_equations = length(M)
-  m = length(dist.subdists)
 
-  # x: [n_1, ..., n_m, θ_1, ..., θ_m, k_1, ..., k_m]
+  # x: [n_1, θ_1, k_1, ..., n_m, θ_m, k_m]
   # Construct system of n_equations equations relating moments to parameters
-  # M[i] = n[1] * θ[1]^i * (k[1] + i-1)*(k[1] + i-2)*...*k[1]
+  # M_i = n[1] * θ[1]^i * (k[1] + i-1)*(k[1] + i-2)*...*k[1]
   #         + ...
   #         + n[m] * θ[m]^i * (k[m] + i-1)*(k[m] + i-2)*...*k[m]
-  F = []
-  # M0 (==M[1]) is the sum of all n_j: M[1] = ∑n_j
-  F_0 = M[1] - sum(x[1:m])
-  push!(F, F_0)
-  for i in 1:(n_equations-1)
-    F_i = M[i+1]
-    for j in 1:m
-      # x[j+2*m] is k_j
-      factor = prod([(x[j+2*m]+counter) for counter in 0:(i-1)])
-      # x[j] is n_j,  x[j+m] is θ_j
-      F_i -= x[j] * x[j+m]^i * factor
-    end
-    push!(F, F_i)
-  end
+  p1 = ones(FT, 1, n_equations)
+  p2 = collect(reshape(0:n_equations-1, 1, n_equations))
+  k_prod(k, n) = (n == 0) ? 1 : k_prod(k, n-1) * (k + n-1)
+  g(n, θ, k) = sum(n.^p1 .* θ.^p2 .* k_prod.(k, p2), dims = 1)[:]
 
-  return F
+  return log.(M) - log.(g(x[1:3:end], x[2:3:end], x[3:3:end]))
 end
 
 function construct_system(x, dist::ExponentialAdditiveParticleDistribution{FT}, M::Array{FT}) where {FT<:Real}
   n_equations = length(M)
-  m = length(dist.subdists)
 
-  # x: [n_1, ..., n_m, θ_1, ..., θ_m]
+  # x: [n_1, θ_1, ..., n_m, θ_m]
   # Construct system of n_equations equations relating moments to parameters
-  # M[i] = i! * ∑(n[j] * θ[j]^i) 
-  F = []
-  # M0 (==M[1]) is the sum of all n_j: M[1] = ∑n_j
-  F_0 = M[1] - sum(x[1:m])
-  push!(F, F_0)
-  for i in 1:(n_equations-1)
-    # x[j] is n_j, x[j+m] is θ_j
-    F_i = M[i+1] - factorial(i) * sum([x[j] * x[j+m]^i for j in 1:m])
-    push!(F, F_i)
-  end
+  # M_i = i! * ∑(n[j] * θ[j]^i)
+  c1 = factorial.(0:n_equations-1)
+  p1 = ones(FT, 1, n_equations)
+  p2 = collect(reshape(0:n_equations-1, 1, n_equations))
+  g(n, θ) = c1 .* sum(n.^p1 .* θ.^p2, dims = 1)[:]
 
-  return F
+  return M - g(x[1:2:end], x[2:2:end])
+end
+
+function construct_system(x, dist::MonodisperseAdditiveParticleDistribution{FT}, M::Array{FT}) where {FT<:Real}
+  n_equations = length(M)
+
+  # x: [n_1, θ_1, ..., n_m, θ_m]
+  # Construct system of n_equations equations relating moments to parameters
+  # M_i = ∑(n[j] * θ[j]^i) 
+  p1 = ones(FT, 1, n_equations)
+  p2 = collect(reshape(0:n_equations-1, 1, n_equations))
+  g(n, θ) = sum(n.^p1 .* θ.^p2, dims = 1)[:]
+    
+  return M - g(x[1:2:end], x[2:2:end])
+end
+
+"""
+  moment_source_helper(dist, a, b, x_star)
+
+  - `dist` - AbstractParticleDistribution
+  - `p1` - power of particle mass
+  - `p2` - power of particle mass
+  - `x_star`- particle mass threshold
+
+Returns ∫_0^x_star ∫_0^(x_star-x') x^p1 x'^p2 f(x) f(x') dx dx' for computations of the source of moments of the distribution below
+the given threshold x_star.
+"""
+function moment_source_helper(dist::MonodispersePrimitiveParticleDistribution{FT}, p1::FT, p2::FT, x_star::FT) where {FT<:Real}
+  n, θ = get_params(dist)[2]
+  source = (θ < x_star/2) ? n^2 * θ^(p1+p2) : 0
+  return source
+end
+
+function moment_source_helper(dist::ExponentialPrimitiveParticleDistribution{FT}, p1::FT, p2::FT, x_star::FT) where {FT<:Real}
+  n, θ = get_params(dist)[2]
+
+  f(x) = x^p1 * exp(-x/θ) * gamma_inc(p2 + 1, (x_star - x)/θ)[1] * gamma(p2 + 1)
+  
+  logx = range(log(1e-5), log(x_star), 51)
+  x = exp.(logx)
+  y = [x[1:end-1] .* f.(x[1:end-1]); FT(0)]
+
+  return n^2 * θ^(p2 - 1) * NI.integrate(logx, y, NI.SimpsonEvenFast())
+end
+
+function moment_source_helper(dist::GammaPrimitiveParticleDistribution{FT}, p1::FT, p2::FT, x_star::FT) where {FT<:Real}
+  n, θ, k = get_params(dist)[2]
+
+  f(x) = x^(p1 + k - 1) * exp(-x/θ) * gamma_inc(p2 + k, (x_star - x)/θ)[1] * gamma(p2 + k)
+
+  logx = range(log(1e-5), log(x_star), 51)
+  x = exp.(logx)
+  y = [x[1:end-1] .* f.(x[1:end-1]); FT(0)]
+
+  return n^2 * θ^(p2 - k) / gamma(k)^2 * NI.integrate(logx, y, NI.SimpsonEvenFast())
 end
 
 end #module ParticleDistributions.jl
