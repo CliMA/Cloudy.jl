@@ -1,4 +1,4 @@
-using Cloudy.SuperParticleDistributions
+using Cloudy.ParticleDistributions
 using Cloudy.KernelFunctions
 using Cloudy.MultiParticleSources: weighting_fn, q_integrand_inner,
     q_integrand_outer, r_integrand_inner, r_integrand_outer,
@@ -13,10 +13,10 @@ using Distributions: pdf
 rtol = 1e-4
 
 # weighting function
-dist1a = GammaParticleDistribution(10.0, 3.0, 100.0)
-dist1b = ExponentialParticleDistribution(10.0, 100.0)
-dist2a = GammaParticleDistribution(1.0, 5.0, 10.0)
-dist2b = ExponentialParticleDistribution(10.0, 1000.0)
+dist1a = GammaPrimitiveParticleDistribution(10.0, 100.0, 3.0)
+dist1b = ExponentialPrimitiveParticleDistribution(10.0, 100.0)
+dist2a = GammaPrimitiveParticleDistribution(1.0, 10.0, 5.0)
+dist2b = ExponentialPrimitiveParticleDistribution(10.0, 1000.0)
 
 x = 50.0
 y = 20.0

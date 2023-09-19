@@ -1,4 +1,4 @@
-using Cloudy.SuperParticleDistributions
+using Cloudy.ParticleDistributions
 using Cloudy.KernelFunctions
 using Cloudy.MultiParticleSources: weighting_fn, q_integrand_inner,
     q_integrand_outer, r_integrand_inner, r_integrand_outer, 
@@ -9,20 +9,20 @@ using Cloudy.MultiParticleSources: weighting_fn, q_integrand_inner,
 rtol = 1e-4
 
 # weighting function
-dist1 = GammaParticleDistribution(10.0, 3.0, 100.0)
+dist1 = GammaPrimitiveParticleDistribution(10.0, 10.0, 3.0)
 pdists = [dist1]
 @test weighting_fn(10.0, 1, pdists) == 1.0
 @test_throws AssertionError weighting_fn(10.0, 2, pdists)
 
-dist2 = GammaParticleDistribution(20.0, 5.0, 10.0)
+dist2 = GammaPrimitiveParticleDistribution(20.0, 100.0, 5.0)
 pdists = [dist1, dist2]
-@test weighting_fn(10.0, 1, pdists) == 0.02866906313141952
-@test weighting_fn(10.0, 2, pdists) == 1.0
+@test weighting_fn(100.0, 1, pdists) == 0.5969233398831713
+@test weighting_fn(100.0, 2, pdists) == 1.0
 @test abs(weighting_fn(rtol, 1, pdists) - 1.0) <= rtol
 
 # q_integrands
 kernel = LinearKernelFunction(1.0)
-dist3 = GammaParticleDistribution(2.0, 6.0, 50.0)
+dist3 = GammaPrimitiveParticleDistribution(2.0, 500.0, 6.0)
 pdists = [dist1, dist2, dist3]
 x = 50.0
 y = 20.0
@@ -94,6 +94,6 @@ update_coal_ints!(3, kernel, pdists, coal_data)
 @test isapprox(sum(coal_data.coal_ints[:,2]), 0.0; atol=1e-2)
 @test sum(coal_data.coal_ints[:,3]) > 0.0
 
-dist1b = ExponentialParticleDistribution(10.0, 100.0)
+dist1b = ExponentialPrimitiveParticleDistribution(10.0, 100.0)
 pdists = [dist1b, dist2, dist3]
 @test_throws ArgumentError update_coal_ints!(3, kernel, pdists, coal_data)

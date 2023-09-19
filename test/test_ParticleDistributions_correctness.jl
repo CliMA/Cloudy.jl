@@ -99,7 +99,7 @@ update_dist_from_moments!(dist, moments)
 @test_throws Exception update_dist_from_moments!(dist, [10.0, 50.0])
 
 
-# Moment consitency checks
+# Moment consistency checks
 m = [1.1, 2.1]
 @test check_moment_consistency(m) == nothing
 m = [0.0, 0.0]

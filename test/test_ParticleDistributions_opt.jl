@@ -1,15 +1,15 @@
-using Cloudy.SuperParticleDistributions
+using Cloudy.ParticleDistributions
 using JET: @test_opt
 
 rtol = 1e-3
 
 # Initialization
-@test_opt GammaParticleDistribution(1.0, 2.0, 3.0)
-@test_opt ExponentialParticleDistribution(1.0, 2.0)
+@test_opt GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0)
+@test_opt ExponentialPrimitiveParticleDistribution(1.0, 2.0)
 # Evaluations
-dist1 = GammaParticleDistribution(1.0, 2.0, 3.0)
+dist1 = GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0)
 @test_opt dist1(1.0)
-dist2 = ExponentialParticleDistribution(1.0, 2.0)
+dist2 = ExponentialPrimitiveParticleDistribution(1.0, 2.0)
 @test_opt dist2(1.0)
 
 # moments <-> params

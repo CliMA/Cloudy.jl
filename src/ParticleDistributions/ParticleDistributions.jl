@@ -452,34 +452,6 @@ function get_params(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdd
 end
 
 """
-    update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT})
-
-Updates parameters of the gamma distribution given the first three moments
-"""
-function update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT}) where {FT<:Real}
-  if length(moments) != 3
-    throw(ArgumentError("must specify exactly 3 moments for gamma distribution"))
-  end
-  pdist.n = moments[1]
-  pdist.k = (moments[2]/moments[1])/(moments[3]/moments[2]-moments[2]/moments[1])
-  pdist.θ = moments[3]/moments[2]-moments[2]/moments[1]
-  pdist.dist = Gamma(pdist.k, pdist.θ)
-end
-
-"""
-    update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Array{FT})
-
-Updates parameters of the gamma distribution given the first three moments
-"""
-function update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Array{FT}) where {FT<:Real}
-  if length(moments) != 2
-    throw(ArgumentError("must specify exactly 2 moments for exponential distribution"))
-  end
-  pdist.n = moments[1]
-  pdist.θ = moments[2]/moments[1]
-  pdist.dist = Exponential(pdist.θ)
-end
-"""
   update_params(dist, params)
 
   - `dist` - is a particle mass distribution
