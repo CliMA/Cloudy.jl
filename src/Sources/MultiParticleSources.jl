@@ -111,9 +111,9 @@ function weighting_fn(x::FT, k::Int64, pdists) where {FT<:Real}
         throw(AssertionError("k out of range"))
     end
     for j=1:Ndist
-      denom += pdists[j](x) / pdists[j].n
+      denom += normed_density(pdists[j], x) #pdists[j](x) / pdists[j].n
       if j<= k
-        num += pdists[j](x) / pdists[j].n
+        num += normed_density(pdists[j], x) #pdists[j](x) / pdists[j].n
       end
     end
     if denom == 0.0

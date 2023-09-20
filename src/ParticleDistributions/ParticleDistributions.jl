@@ -32,6 +32,7 @@ export GammaAdditiveParticleDistribution
 export moment
 export get_moments
 export density
+export normed_density
 export nparams
 export update_params
 export moments_to_params
@@ -398,6 +399,26 @@ function density_func(dist::Union{AdditiveParticleDistribution{FT}, ExponentialA
   return f
 end
 
+"""
+  normed_density_func(dist)
+
+  - `dist` - is a particle mass distribution
+Returns the normalized particle mass density function.
+"""
+function normed_density_func(dist::ExponentialPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  function f(x)
+    1 ./ dist.θ .* exp.(-x ./ dist.θ)
+  end
+  return f
+end
+
+function normed_density_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  # density = n / θ^k / Γ(k) * x^(k-1) * exp(-x/θ)
+  function f(x)
+    x.^(dist.k .- 1) ./ dist.θ.^dist.k ./ gamma.(dist.k) .* exp.(-x ./ dist.θ)
+  end
+  return f
+end
 
 """
   density(dist, x)
@@ -411,6 +432,20 @@ function density(dist::AbstractParticleDistribution{FT}, x::FT) where {FT<:Real}
     error("Density can only be evaluated at nonnegative values.")
   end
   density_func(dist)(x)
+end
+
+"""
+  normed_density(dist, x)
+
+  - `dist` - is a particle mass distribution
+  - `x` - is a point to evaluate the density of `dist` at
+Returns the particle normalized mass density evaluated at point `x`.
+"""
+function normed_density(dist::AbstractParticleDistribution{FT}, x::FT) where {FT<:Real}
+  if any(x .< zero(x))
+    error("Density can only be evaluated at nonnegative values.")
+  end
+  normed_density_func(dist)(x)
 end
 
 
@@ -578,9 +613,11 @@ function update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}
   if length(moments) != 3
     throw(ArgumentError("must specify exactly 3 moments for gamma distribution"))
   end
-  pdist.k = max(param_range["k"][1], min(param_range["k"][2], (moments[2]/moments[1])/(moments[3]/moments[2]-moments[2]/moments[1])))
-  pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[3]/moments[2]-moments[2]/moments[1]))
-  pdist.n = moments[2]/(pdist.k * pdist.θ)
+  if moments[1] > eps(FT)
+    pdist.k = max(param_range["k"][1], min(param_range["k"][2], (moments[2]/moments[1])/(moments[3]/moments[2]-moments[2]/moments[1])))
+    pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[3]/moments[2]-moments[2]/moments[1]))
+    pdist.n = moments[2]/(pdist.k * pdist.θ)
+  end # else do nothing
 end
 
 """
@@ -592,8 +629,10 @@ function update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistributi
   if length(moments) != 2
     throw(ArgumentError("must specify exactly 2 moments for exponential distribution"))
   end
-  pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[2]/moments[1]))
-  pdist.n = moments[2] / pdist.θ
+  if moments[1] > eps(FT)
+    pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[2]/moments[1]))
+    pdist.n = moments[2] / pdist.θ
+  end # else do nothing
 end
 
 """

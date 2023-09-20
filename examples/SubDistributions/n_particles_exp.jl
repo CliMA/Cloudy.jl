@@ -16,7 +16,6 @@ FT = Float64
 tol = 1e-4
 
 function rhs!(ddist_moments, dist_moments, p, t)
-    #@show dist_moments
     # update the ParticleDistributions
     for i=1:p.Ndist
         update_dist_from_moments!(p.pdists[i], dist_moments[i,:])
@@ -24,21 +23,25 @@ function rhs!(ddist_moments, dist_moments, p, t)
     # update the information
     update_coal_ints!(p.Nmom, p.kernel_func, p.pdists, p.coal_data)
     ddist_moments .= p.coal_data.coal_ints
+    #@show (t, dist_moments, ddist_moments)
 end
 
 function main()
-    T_end = 1.0
-    coalescence_coeff = 1e-3
-    kernel = LinearKernelFunction(coalescence_coeff)
+    T_end = 0.2
+    #coalescence_coeff = 1e-3
+    #kernel = LinearKernelFunction(coalescence_coeff)
+    coalescence_eff = 1e-12
+    kernel = HydrodynamicKernelFunction(coalescence_eff)
 
     # Initial condition 
-    Ndist = 3
+    Ndist = 2
     N0 = 100.0
     m0 = 100.0
     Nmom = 2
 
-    particle_number = N0 * [100.0^(-k) for k in 1:Ndist] / sum(100.0^(-k) for k in 1:Ndist)
-    mass_scale = m0 * [10.0^(k-1) for k in 1:Ndist]
+    particle_number = [0.0 for k in 1:Ndist] #N0 * [100.0^(-k) for k in 1:Ndist] / sum(100.0^(-k) for k in 1:Ndist)
+    particle_number[1] = N0
+    mass_scale = m0 * [1000.0^(k-1) for k in 1:Ndist]
 
     # Initialize distributions
     pdists = map(1:Ndist) do i
@@ -57,7 +60,6 @@ function main()
     tspan = (0.0, T_end)
     prob = ODEProblem(rhs!, dist_moments, tspan, p; progress=true)
     sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
-    @show sol.u
     plot_moments!(sol, p; plt_title="n_particle_exp_moments")
     plot_spectra!(sol, p; plt_title="n_particle_exp_spectra")
 end
