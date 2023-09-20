@@ -568,19 +568,19 @@ function check_moment_consistency(m::Array{FT}) where {FT<:Real}
 
   nothing
 end
-
+# TODO: merge this functionality with update_params
 """
     update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT})
 
 Updates parameters of the gamma distribution given the first three moments
 """
-function update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT}) where {FT<:Real}
+function update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT}; param_range = Dict("θ" => (eps(FT), Inf), "k" => (eps(FT), Inf))) where {FT<:Real}
   if length(moments) != 3
     throw(ArgumentError("must specify exactly 3 moments for gamma distribution"))
   end
-  pdist.n = moments[1]
-  pdist.k = (moments[2]/moments[1])/(moments[3]/moments[2]-moments[2]/moments[1])
-  pdist.θ = moments[3]/moments[2]-moments[2]/moments[1]
+  pdist.k = max(param_range["k"][1], min(param_range["k"][2], (moments[2]/moments[1])/(moments[3]/moments[2]-moments[2]/moments[1])))
+  pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[3]/moments[2]-moments[2]/moments[1]))
+  pdist.n = moments[2]/(pdist.k * pdist.θ)
 end
 
 """
@@ -588,12 +588,12 @@ end
 
 Updates parameters of the gamma distribution given the first three moments
 """
-function update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Array{FT}) where {FT<:Real}
+function update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Array{FT}; param_range = Dict("θ" => (eps(FT), Inf))) where {FT<:Real}
   if length(moments) != 2
     throw(ArgumentError("must specify exactly 2 moments for exponential distribution"))
   end
-  pdist.n = moments[1]
-  pdist.θ = moments[2]/moments[1]
+  pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[2]/moments[1]))
+  pdist.n = moments[2] / pdist.θ
 end
 
 """

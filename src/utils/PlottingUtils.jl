@@ -82,8 +82,8 @@ function plot_spectra!(sol, p; plt_title="test_spectra", logxrange=(0, 8))
         xlim=(minimum(r), maximum(r)),
         label="Initial, pdist 1"
     )
+    prinit = 3*x.*p.pdists[1].(x)
     if p.Ndist > 1
-        prinit = 3*x.*p.pdists[1].(x)
         for i=2:p.Ndist
             plot!(pinit, r,
                 3*x.*p.pdists[i].(x),
@@ -119,8 +119,8 @@ function plot_spectra!(sol, p; plt_title="test_spectra", logxrange=(0, 8))
         xlim=(minimum(r), maximum(r)),
         label="Final, pdist 1"
     )
+    prfini = 3*x.*p.pdists[1].(x)
     if p.Ndist > 1
-        prfini = 3*x.*p.pdists[1].(x)
         for i=2:p.Ndist
             plot!(pfin, r,
                 3*x.*p.pdists[i].(x),

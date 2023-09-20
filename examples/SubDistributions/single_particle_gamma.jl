@@ -1,11 +1,10 @@
-"Test case with N exponential distributions"
+"Test case with a single gamma distribution"
 
 using Logging: global_logger
 using TerminalLoggers: TerminalLogger
 global_logger(TerminalLogger())
 
 using DifferentialEquations
-using Plots
 
 using Cloudy.KernelFunctions
 using Cloudy.ParticleDistributions
@@ -16,7 +15,6 @@ FT = Float64
 tol = 1e-4
 
 function rhs!(ddist_moments, dist_moments, p, t)
-    #@show dist_moments
     # update the ParticleDistributions
     for i=1:p.Ndist
         update_dist_from_moments!(p.pdists[i], dist_moments[i,:])
@@ -27,22 +25,20 @@ function rhs!(ddist_moments, dist_moments, p, t)
 end
 
 function main()
-    T_end = 1.0
+    T_end = 0.2
     coalescence_coeff = 1e-3
     kernel = LinearKernelFunction(coalescence_coeff)
 
     # Initial condition 
-    Ndist = 3
-    N0 = 100.0
-    m0 = 100.0
-    Nmom = 2
-
-    particle_number = N0 * [100.0^(-k) for k in 1:Ndist] / sum(100.0^(-k) for k in 1:Ndist)
-    mass_scale = m0 * [10.0^(k-1) for k in 1:Ndist]
+    Ndist = 1
+    particle_number = [100.0]
+    mass_scale = [30.0]
+    gamma_shape = [3.0]
+    Nmom = 3
 
     # Initialize distributions
     pdists = map(1:Ndist) do i
-        ExponentialPrimitiveParticleDistribution(particle_number[i], mass_scale[i])
+        GammaPrimitiveParticleDistribution(particle_number[i], mass_scale[i], gamma_shape[i])
     end
 
     dist_moments = zeros(FT, Ndist, Nmom)
@@ -58,8 +54,8 @@ function main()
     prob = ODEProblem(rhs!, dist_moments, tspan, p; progress=true)
     sol = solve(prob, Tsit5(), reltol=tol, abstol=tol)
     @show sol.u
-    plot_moments!(sol, p; plt_title="n_particle_exp_moments")
-    plot_spectra!(sol, p; plt_title="n_particle_exp_spectra")
+    plot_moments!(sol, p; plt_title="single_particle_gam_moments")
+    plot_spectra!(sol, p; plt_title="single_particle_gam_spectra")
 end
 
 @time main()
