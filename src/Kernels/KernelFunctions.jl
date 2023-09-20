@@ -14,6 +14,7 @@ export KernelFunction
 export CoalescenceKernelFunction
 export ConstantKernelFunction
 export LinearKernelFunction
+export HydrodynamicKernelFunction
 
 """
   KernelFunction
@@ -52,6 +53,19 @@ struct LinearKernelFunction{FT} <: CoalescenceKernelFunction{FT}
   coll_coal_rate::FT
 end
 
+"""
+  HydrodynamicKernelFunction <: CoalescenceKernelFunction
+
+Represents a hydrodynamic collision-coalescence kernel.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
+struct HydrodynamicKernelFunction{FT} <: CoalescenceKernelFunction{FT}
+  "coalescence efficiency"
+  coal_eff::FT
+end
+
 
 """
     (kernel::KernelFunction)(x::FT, y::FT)
@@ -64,6 +78,10 @@ end
 
 function (kern::LinearKernelFunction{FT})(x::FT, y::FT) where {FT<:Real}
   return kern.coll_coal_rate * (x + y)
+end
+
+function (kern::HydrodynamicKernelFunction{FT})(x::FT, y::FT) where {FT<:Real}
+  return kern.coal_eff * π * (x + y)^2 * abs(x^2 - y^2)
 end
 
 end
