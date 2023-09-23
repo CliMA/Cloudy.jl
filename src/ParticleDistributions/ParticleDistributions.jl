@@ -164,7 +164,7 @@ struct AdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
   end
 end
 
-function AdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}}) where {FT<:Real}
+function AdditiveParticleDistribution(dist_arr::Array{<:AbstractParticleDistribution{FT}}) where {FT<:Real}
   AdditiveParticleDistribution(dist_arr...)
 end
 
@@ -196,7 +196,7 @@ struct ExponentialAdditiveParticleDistribution{FT} <: AbstractParticleDistributi
   end
 end
 
-function ExponentialAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}}) where {FT<:Real}
+function ExponentialAdditiveParticleDistribution(dist_arr::Array{<:AbstractParticleDistribution{FT}}) where {FT<:Real}
   ExponentialAdditiveParticleDistribution(dist_arr...)
 end
 
@@ -229,7 +229,7 @@ struct GammaAdditiveParticleDistribution{FT} <: AbstractParticleDistribution{FT}
   end
 end
 
-function GammaAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}}) where {FT<:Real}
+function GammaAdditiveParticleDistribution(dist_arr::Array{<:AbstractParticleDistribution{FT}}) where {FT<:Real}
   GammaAdditiveParticleDistribution(dist_arr...)
 end
 
@@ -261,7 +261,7 @@ struct MonodisperseAdditiveParticleDistribution{FT} <: AbstractParticleDistribut
   end
 end
 
-function MonodisperseAdditiveParticleDistribution(dist_arr::Array{AbstractParticleDistribution{FT}}) where {FT<:Real}
+function MonodisperseAdditiveParticleDistribution(dist_arr::Array{<:AbstractParticleDistribution{FT}}) where {FT<:Real}
   MonodisperseAdditiveParticleDistribution(dist_arr...)
 end
 
@@ -586,9 +586,7 @@ function update_params_from_moments(ODE_parameters, target_moments::Array{FT}, p
 end
 
 function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_moments::Array{FT}; param_range = Dict("θ" => (1e-5, 1e5), "k" => (eps(FT), FT(5)))) where {FT<:Real}
-  if length(target_moments) != nparams(dist)
-    error("Number of moments must be consistent with distribution type.")
-  end
+  @assert length(target_moments) == nparams(dist)
 
   M0 = target_moments[1]
   M1 = target_moments[2]
@@ -608,9 +606,7 @@ function moments_to_params(dist::GammaPrimitiveParticleDistribution{FT}, target_
 end
 
 function moments_to_params(dist::ExponentialPrimitiveParticleDistribution{FT}, target_moments::Array{FT}; param_range = Dict("θ" => (1e-5, 1e5))) where {FT<:Real}
-  if length(target_moments) != nparams(dist)
-    error("Number of moments must be consistent with distribution type.")
-  end
+  @assert length(target_moments) == nparams(dist)
 
   M0 = target_moments[1]
   M1 = target_moments[2]
@@ -627,9 +623,7 @@ function moments_to_params(dist::ExponentialPrimitiveParticleDistribution{FT}, t
 end
 
 function moments_to_params(dist::MonodispersePrimitiveParticleDistribution{FT}, target_moments::Array{FT}; param_range = Dict("θ" => (1e-5, 1e5))) where {FT<:Real}
-  if length(target_moments) != nparams(dist)
-    error("Number of moments must be consistent with distribution type.")
-  end
+  @assert length(target_moments) == nparams(dist)
 
   M0 = target_moments[1]
   M1 = target_moments[2]
@@ -638,7 +632,7 @@ function moments_to_params(dist::MonodispersePrimitiveParticleDistribution{FT}, 
     θ = FT(1)
   else
     θ = max(param_range["θ"][1], min(param_range["θ"][2], M1/M0))
-    n = M1/m
+    n = M1/θ
   end 
 
   update_params(dist, [n, θ])
@@ -647,9 +641,7 @@ end
 
 function moments_to_params(dist::AbstractParticleDistribution{FT}, target_moments::Array{FT}) where {FT<:Real}
   n_moments = length(target_moments)
-  if n_moments != nparams(dist)
-    error("Number of moments must be consistent with distribution type.")
-  end
+  @assert n_moments == nparams(dist)
   check_moment_consistency(target_moments)
 
   # Function whose minimum defines new parameters of dist given target_moments
@@ -753,40 +745,54 @@ function construct_system(x, dist::MonodisperseAdditiveParticleDistribution{FT},
 end
 
 """
-  moment_source_helper(dist, a, b, x_star)
+  moment_source_helper(dist, p1, p2, x_threshold)
 
   - `dist` - AbstractParticleDistribution
   - `p1` - power of particle mass
   - `p2` - power of particle mass
-  - `x_star`- particle mass threshold
+  - `x_threshold`- particle mass threshold
 
-Returns ∫_0^x_star ∫_0^(x_star-x') x^p1 x'^p2 f(x) f(x') dx dx' for computations of the source of moments of the distribution below
-the given threshold x_star.
+Returns ∫_0^x_threshold ∫_0^(x_threshold-x') x^p1 x'^p2 f(x) f(x') dx dx' for computations of the source of moments of the distribution below
+the given threshold x_threshold.
 """
-function moment_source_helper(dist::MonodispersePrimitiveParticleDistribution{FT}, p1::FT, p2::FT, x_star::FT) where {FT<:Real}
+function moment_source_helper(dist::MonodispersePrimitiveParticleDistribution{FT}, p1::FT, p2::FT, x_threshold::FT) where {FT<:Real}
   n, θ = get_params(dist)[2]
-  source = (θ < x_star/2) ? n^2 * θ^(p1+p2) : 0
+  source = (θ < x_threshold/2) ? n^2 * θ^(p1+p2) : 0
   return source
 end
 
-function moment_source_helper(dist::ExponentialPrimitiveParticleDistribution{FT}, p1::FT, p2::FT, x_star::FT) where {FT<:Real}
+function moment_source_helper(
+  dist::ExponentialPrimitiveParticleDistribution{FT}, 
+  p1::FT, 
+  p2::FT, 
+  x_threshold::FT; 
+  x_lowerbound = 1e-5, 
+  n_bins = 50
+  ) where {FT<:Real}
   n, θ = get_params(dist)[2]
 
-  f(x) = x^p1 * exp(-x/θ) * gamma_inc(p2 + 1, (x_star - x)/θ)[1] * gamma(p2 + 1)
+  f(x) = x^p1 * exp(-x/θ) * gamma_inc(p2 + 1, (x_threshold - x)/θ)[1] * gamma(p2 + 1)
   
-  logx = range(log(1e-5), log(x_star), 51)
+  logx = range(log(x_lowerbound), log(x_threshold), n_bins+1)
   x = exp.(logx)
   y = [x[1:end-1] .* f.(x[1:end-1]); FT(0)]
 
   return n^2 * θ^(p2 - 1) * NI.integrate(logx, y, NI.SimpsonEvenFast())
 end
 
-function moment_source_helper(dist::GammaPrimitiveParticleDistribution{FT}, p1::FT, p2::FT, x_star::FT) where {FT<:Real}
+function moment_source_helper(
+  dist::GammaPrimitiveParticleDistribution{FT}, 
+  p1::FT, 
+  p2::FT, 
+  x_threshold::FT; 
+  x_lowerbound = 1e-5, 
+  n_bins = 50
+  ) where {FT<:Real}
   n, θ, k = get_params(dist)[2]
 
-  f(x) = x^(p1 + k - 1) * exp(-x/θ) * gamma_inc(p2 + k, (x_star - x)/θ)[1] * gamma(p2 + k)
+  f(x) = x^(p1 + k - 1) * exp(-x/θ) * gamma_inc(p2 + k, (x_threshold - x)/θ)[1] * gamma(p2 + k)
 
-  logx = range(log(1e-5), log(x_star), 51)
+  logx = range(log(x_lowerbound), log(x_threshold), n_bins+1)
   x = exp.(logx)
   y = [x[1:end-1] .* f.(x[1:end-1]); FT(0)]
 

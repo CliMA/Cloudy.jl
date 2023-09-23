@@ -11,15 +11,15 @@ module Sources
 
 using ..ParticleDistributions
 using ..KernelTensors
+using ..EquationTypes
 
 # methods that compute source terms from microphysical parameterizations
 export get_int_coalescence
 export get_flux_sedimentation
-export get_int_coalescence_two_modes
 
 
 """
-get_int_coalescence(mom_p::Array{Real}, ODE_parameters::Dict, ker::KernelTensor{Real})
+get_int_coalescence(::OneModeCoalStyle, mom_p::Array{Real}, ODE_parameters::Dict, ker::KernelTensor{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
   - `ODE_parameters` - ODE parameters, a Dict containing a key ":dist" whose 
@@ -31,15 +31,16 @@ get_int_coalescence(mom_p::Array{Real}, ODE_parameters::Dict, ker::KernelTensor{
   - `ker` - coalescence kernel tensor
 Returns the coalescence integral for all moments in `mom_p`.
 """
-function get_int_coalescence(mom_p::Array{FT}, ODE_parameters::Dict, ker::KernelTensor{FT}) where {FT <: Real}
+function get_int_coalescence(::OneModeCoalStyle, mom_p::Array{FT}, ODE_parameters::Dict, ker::KernelTensor{FT}) where {FT <: Real}
   r = ker.r
   s = length(mom_p)
 
   # Need to build diagnostic moments
-  dist = update_params_from_moments(ODE_parameters, mom_p)
+  dist_prev = ODE_parameters[:dist][1]
+  dist = moments_to_params(dist_prev, mom_p)
   # Update the distribution that is carried along in the ODE_parameters for use
   # in next time step
-  ODE_parameters[:dist] = dist
+  ODE_parameters[:dist][1] = dist
   mom_d = Array{FT}(undef, r)
   for k in 0:r-1
     mom_d[k+1] = moment(dist, FT(s+k))
@@ -75,7 +76,7 @@ function get_int_coalescence(mom_p::Array{FT}, ODE_parameters::Dict, ker::Kernel
 end
 
 """
-get_int_coalescence_two_modes(mom_p::Array{Real}, ODE_parameters::Dict, ker::KernelTensor{Real})
+get_int_coalescence(::TwoModesCoalStyle, mom_p::Array{Real}, ODE_parameters::Dict, ker::KernelTensor{Real})
 
   - `mom_p` - prognostic moments of the two particle mass distributions
   - `ODE_parameters` - ODE parameters, a Dict containing a key ":dist" which 
@@ -87,7 +88,7 @@ get_int_coalescence_two_modes(mom_p::Array{Real}, ODE_parameters::Dict, ker::Ker
   - `ker` - coalescence kernel tensor
 Returns the coalescence integral for all moments in `mom_p`.
 """
-function get_int_coalescence_two_modes(mom_p::Array{FT}, ODE_parameters::Dict, ker::KernelTensor{FT}) where {FT <: Real}
+function get_int_coalescence(::TwoModesCoalStyle, mom_p::Array{FT}, ODE_parameters::Dict, ker::KernelTensor{FT}) where {FT <: Real}
   r = ker.r
 
   dist_prev = ODE_parameters[:dist]
