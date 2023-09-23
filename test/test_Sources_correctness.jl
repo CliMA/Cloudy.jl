@@ -2,6 +2,7 @@
 
 using Cloudy.ParticleDistributions
 using Cloudy.Sources
+using Cloudy.EquationTypes
 
 
 rtol = 1e-3
