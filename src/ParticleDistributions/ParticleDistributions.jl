@@ -753,7 +753,10 @@ end
   - `x_threshold`- particle mass threshold
 
 Returns ∫_0^x_threshold ∫_0^(x_threshold-x') x^p1 x'^p2 f(x) f(x') dx dx' for computations of the source of moments of the distribution below
-the given threshold x_threshold.
+the given threshold x_threshold. For MonodispersePrimitiveParticleDistribution The integral can be computed analytically: 
+∫_0^x_threshold ∫_0^(x_threshold-x') x^p1 x'^p2 f(x) f(x') dx dx = n^2 * θ^(p1+p2) if θ < x_threshold/2, and equals zero otherwise. For
+ExponentialPrimitiveParticleDistribution and GammaPrimitiveParticleDistribution the two-dimensional integral reduces to a one-dimensional 
+integral over incomplete gamma functions.
 """
 function moment_source_helper(dist::MonodispersePrimitiveParticleDistribution{FT}, p1::FT, p2::FT, x_threshold::FT) where {FT<:Real}
   n, θ = get_params(dist)[2]
