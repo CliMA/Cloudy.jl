@@ -8,6 +8,41 @@ import Cloudy.ParticleDistributions: nparams, get_params, update_params,
                                      density_func
 rtol = 1e-3
 
+# Monodisperse distribution
+# Initialization
+dist = MonodispersePrimitiveParticleDistribution(1.0, 1.0)
+@test (dist.n, dist.θ) == (FT(1.0), FT(1.0))
+@test_throws Exception MonodispersePrimitiveParticleDistribution(-1.0, 2.)
+@test_throws Exception MonodispersePrimitiveParticleDistribution(1.0, -2.)
+
+# Getters and setters
+@test nparams(dist) == 2
+@test get_params(dist) == ([:n, :θ], [1.0, 1.0])
+dist = update_params(dist, [1.0, 2.0])
+@test get_params(dist) == ([:n, :θ], [1.0, 2.0])
+@test_throws Exception update_params(dist, [-0.2, 1.1])
+@test_throws Exception update_params(dist, [0.2, -1.1])
+
+# Moments, moments, density
+dist = MonodispersePrimitiveParticleDistribution(1.0, 2.0)
+@test moment_func(dist)(1.0, 2.0, 0.0) == 1.0
+@test moment(dist, 1.0) == 2.0
+@test moment(dist, 0.0) == 1.0
+@test moment(dist, 10.0) == 2.0^10.0
+
+## Update params from moments
+dist_dict = Dict(:dist => dist)
+dist = update_params_from_moments(dist_dict, [1.0, 1.0], Dict("θ" => (0.1, 0.5)))
+@test moment(dist, 0.0) ≈ 2.0 rtol=rtol
+@test moment(dist, 1.0) ≈ 1.0 rtol=rtol
+dist = update_params_from_moments(dist_dict, [1.1, 2.0])
+@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
+@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
+dist = update_params_from_moments(dist_dict, [1.1, 0.0])
+@test moment(dist, 0.0) ≈ 0.0 rtol=rtol
+@test moment(dist, 1.0) ≈ 0.0 rtol=rtol
+
+
 # Exponential distribution
 # Initialization
 dist = ExponentialPrimitiveParticleDistribution(1.0, 1.0)
@@ -40,6 +75,9 @@ dist_dict = Dict(:dist => dist)
 dist = update_params_from_moments(dist_dict, [1.1, 2.0])
 @test moment(dist, 0.0) ≈ 1.1 rtol=rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol=rtol
+dist = update_params_from_moments(dist_dict, [1.1, 0.0])
+@test moment(dist, 0.0) ≈ 0.0 rtol=rtol
+@test moment(dist, 1.0) ≈ 0.0 rtol=rtol
 
 
 # Gamma distribution
@@ -75,14 +113,18 @@ dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 
 # Update params from moments
 dist_dict = Dict(:dist => dist)
-dist = update_params_from_moments(dist_dict, [1.1, 2.0, 4.1])
-@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
+dist = update_params_from_moments(dist_dict, [1.1, 2.0, 4.1], Dict("θ" => (1e-5, 1e5), "k" => (eps(Float64), 5.0)))
+@test moment(dist, 0.0) ≈ 1.726 rtol=rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol=rtol
-@test moment(dist, 2.0) ≈ 4.1 rtol=rtol
+@test moment(dist, 2.0) ≈ 2.782 rtol=rtol
 dist = update_params_from_moments(dist_dict, [1.1, 2.423, 8.112])
 @test moment(dist, 0.0) ≈ 1.1 rtol=rtol
 @test moment(dist, 1.0) ≈ 2.423 rtol=rtol
 @test moment(dist, 2.0) ≈ 8.112 rtol=rtol
+dist = update_params_from_moments(dist_dict, [1.1, 0.0, 8.112])
+@test moment(dist, 0.0) ≈ 0.0 rtol=rtol
+@test moment(dist, 1.0) ≈ 0.0 rtol=rtol
+@test moment(dist, 2.0) ≈ 0.0 rtol=rtol
 
 
 # Additive distributions
@@ -141,6 +183,67 @@ dist4 = update_params_from_moments(dist_dict, [3.0, 4.9, 18.0, 102.0])
 @test moment(dist4, 1.0) ≈ 4.9 rtol=rtol
 @test moment(dist4, 2.0) ≈ 18.0 rtol=rtol
 @test moment(dist4, 3.0) ≈ 102.0 rtol=rtol
+
+# Moments to params for Monodisperse, exponential and gamma additive dists
+dist = MonodisperseAdditiveParticleDistribution(
+     MonodispersePrimitiveParticleDistribution(1.0, 0.1), 
+     MonodispersePrimitiveParticleDistribution(1.0, 1.0)
+)
+@test get_params(dist)[2] ≈ get_params(moments_to_params(dist, [2, 1.1, 1.01, 1.001]))[2] rtol=rtol
+dist = ExponentialAdditiveParticleDistribution(
+     ExponentialPrimitiveParticleDistribution(1.0, 0.1), 
+     ExponentialPrimitiveParticleDistribution(1.0, 1.0)
+)
+@test get_params(dist)[2] ≈ get_params(moments_to_params(dist, [2, 1.1, 2.02, 6.006]))[2] rtol=rtol
+dist = GammaAdditiveParticleDistribution(
+     GammaPrimitiveParticleDistribution(1.0, 0.1, 1.0), 
+     GammaPrimitiveParticleDistribution(1.0, 1.0, 1.0)
+)
+@test get_params(dist)[2] ≈ get_params(moments_to_params(dist, [2, 1.1, 2.02, 6.006, 24.0024, 120.0012]))[2] rtol=rtol
+
+
+# Monodisperse Additive distribution
+# Initialization
+@test_throws Exception MonodisperseAdditiveParticleDistribution(MonodispersePrimitiveParticleDistribution(1.0, 1.0))
+@test_throws Exception MonodisperseAdditiveParticleDistribution(
+          ExponentialPrimitiveParticleDistribution(1.0, 0.1),
+          MonodispersePrimitiveParticleDistribution(1.0, 1.0)
+     )
+@test get_params(MonodisperseAdditiveParticleDistribution(
+          MonodispersePrimitiveParticleDistribution(1.0, 0.1),
+          MonodispersePrimitiveParticleDistribution(1.0, 1.0)
+     )) == get_params(MonodisperseAdditiveParticleDistribution(
+          [MonodispersePrimitiveParticleDistribution(1.0, 0.1),
+          MonodispersePrimitiveParticleDistribution(1.0, 1.0)]
+     ))
+dist = MonodisperseAdditiveParticleDistribution(
+     MonodispersePrimitiveParticleDistribution(1.0, 1.0), 
+     MonodispersePrimitiveParticleDistribution(2.0, 2.0)
+)
+@test nparams(dist) == 4
+@test get_params(dist) == ([[:n, :θ], [:n, :θ]], [[1.0, 1.0], [2.0, 2.0]])
+dist = update_params(dist, [0.2, 0.4, 3.1, 4.1])
+@test get_params(dist) == ([[:n, :θ], [:n, :θ]], [[0.2, 0.4], [3.1, 4.1]])
+@test_throws Exception update_params(dist, [-0.2, 1.1, 1.1, 2.1])
+@test_throws Exception update_params(dist, [0.2, -1.1, 0.1, 3.1])
+@test_throws Exception update_params(dist, [0.2, 1.1, -0.1, 3.1])
+@test_throws Exception update_params(dist, [0.2, 1.1, 0.1, -3.1])
+@test_throws Exception update_params(dist, [0.2, 1.1, 0.1])
+
+# Moment source helper
+dist = MonodispersePrimitiveParticleDistribution(1.0, 0.5)
+@test moment_source_helper(dist, 0.0, 0.0, 0.5) ≈ 0.0 rtol = rtol
+@test moment_source_helper(dist, 0.0, 0.0, 1.2) ≈ 1.0 rtol = rtol
+@test moment_source_helper(dist, 1.0, 0.0, 0.5) ≈ 0.0 rtol = rtol
+@test moment_source_helper(dist, 0.0, 1.0, 1.2) ≈ 0.5 rtol = rtol
+dist = ExponentialPrimitiveParticleDistribution(1.0, 0.5)
+@test moment_source_helper(dist, 0.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 2.842e-1 rtol = rtol
+@test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 4.797e-2 rtol = rtol
+@test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 5.142e-3 rtol = rtol
+dist = GammaPrimitiveParticleDistribution(1.0, 0.5, 2.0)
+@test moment_source_helper(dist, 0.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 2.056e-2 rtol = rtol
+@test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 4.268e-3 rtol = rtol
+@test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 6.387e-4 rtol = rtol
 
 
 # Moment consitency checks
