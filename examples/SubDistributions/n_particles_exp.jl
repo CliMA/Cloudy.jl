@@ -27,8 +27,7 @@ function rhs!(ddist_moments, dist_moments, p, t)
 end
 
 function main()
-    T_end = 0.2
-    #coalescence_coeff = 1e-3
+    T_end = 0.3
     #kernel = LinearKernelFunction(coalescence_coeff)
     coalescence_eff = 1e-12
     kernel = HydrodynamicKernelFunction(coalescence_eff)
