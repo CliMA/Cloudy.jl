@@ -34,48 +34,6 @@ function initial_condition(z, mom_amp)
 end
 
 """
-  get_sedimentation_flux_two_modes(mom_p, ODE_parameters)
-
-  `mom_p` - prognostic moments
-  `ODE_parameters` - a dict containing array of distributions and terminal celocity coefficients
-Returns sedimentation flux of all prognostic moments, which is the integral of terminal velocity times prognostic moments. The
-Terminal velocity is assumed to be a power series.
-"""
-function sedimentation_flux(mom_p, ODE_parameters) 
-
-    vel = ODE_parameters[:vel]
-    dist_prev = ODE_parameters[:dist]
-    n_dist = length(dist_prev)
-    n_params = [nparams(dist) for dist in dist_prev]
-    mom_p_ = []
-    ind = 1
-    for i in 1:n_dist
-        push!(mom_p_, mom_p[ind:ind-1+n_params[i]])
-        ind += n_params[i]
-    end
-
-    # Need to build diagnostic moments
-    dist = [moments_to_params(dist_prev[i], mom_p_[i]) for i in 1:n_dist]
-    ODE_parameters[:dist] = dist
-    mom_d = [zeros(nd) for nd in n_params]
-    for i in 1:n_dist
-        for j in 0:n_params[i]-1
-            mom_d[i][j+1] = moment(dist[i], FT(j+1.0/6))
-        end
-    end
-
-    # only calculate sedimentation flux for prognostic moments
-    sedi_int = [zeros(ns) for ns in n_params]
-    for i in 1:n_dist
-        for k in 1:n_params[i]
-            sedi_int[i][k] = -vel[1] * mom_p_[i][k] - vel[2] * mom_d[i][k]
-        end
-    end
-
-    return vcat(sedi_int...)
-end
-
-"""
   make_rainshaft_rhs(coal_type::CoalescenceStyle)
 
   `coal_type` type of coal source term function: OneModeCoalStyle or TwoModesCoalStyle
@@ -100,7 +58,7 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
 
         u = similar(m)
         for i in 1:nz
-            u[i, :] = sedimentation_flux(m[i, :], par)
+            u[i, :] = get_sedimentation_flux(m[i, :], par)
         end
         u_top = zeros(1, nmom)
         u = [u; u_top]

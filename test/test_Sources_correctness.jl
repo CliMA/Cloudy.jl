@@ -77,7 +77,6 @@ par2 = Dict(
   0.6130] rtol = rtol
 
 # Sedimentation moment flux tests
-c = [1.0, -1.0]
-dist = Dict(:dist => ExponentialPrimitiveParticleDistribution(1.0, 1.0))
+dist = Dict(:dist => [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], :vel => [1.0, -1.0])
 mom = [1.0, 1.0]
-@test get_flux_sedimentation(mom, dist, c) ≈ [0.0, 1.0] rtol=rtol
+@test get_sedimentation_flux(mom, dist) ≈ [-1.0+gamma(1.0+1.0/6), -1.0+gamma(2.0+1.0/6)] rtol=rtol

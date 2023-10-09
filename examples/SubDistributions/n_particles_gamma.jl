@@ -10,7 +10,7 @@ using Cloudy.KernelFunctions
 using Cloudy.ParticleDistributions
 using Cloudy.MultiParticleSources
 
-include("../utils/plotting_utils.jl")
+include("../utils/plotting_helpers.jl")
 
 FT = Float64
 tol = 1e-4
@@ -63,8 +63,8 @@ function main()
     prob = ODEProblem(rhs!, dist_moments, tspan, p; progress=true)
     sol = solve(prob, Tsit5(), dtmin=1e-2, force_dtmin=true, reltol=tol, abstol=tol)
     @show sol.u
-    plot_moments!(sol, p; plt_title="n_particle_gam_moments")
-    plot_spectra!(sol, p; plt_title="n_particle_gam_spectra")
+    plot_moments!(sol, p; file_name="examples/n_particle_gam_moments.png")
+    plot_spectra!(sol, p; file_name="examples/n_particle_gam_spectra.png")
 end
 
 @time main()

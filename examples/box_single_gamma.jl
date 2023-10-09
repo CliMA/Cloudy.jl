@@ -8,8 +8,8 @@ include("./utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
-moments_init = [1.0, 1, 2]
-dist_init = [GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(1))]
+moments_init = [1.0, 2, 6]
+dist_init = [GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(2))]
 
 # Solver
 tspan = (FT(0), FT(1000))
@@ -24,6 +24,6 @@ rhs = make_box_model_rhs(OneModeCoalStyle())
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters[:dt])
 
-plot_box_model_results(sol, dist_init; outfile = "box_single_gamma.pdf")
-
-
+plot_params!(sol, (;pdists = dist_init); file_name = "box_single_gamma_params.pdf")
+plot_moments!(sol, (;pdists = dist_init); file_name = "box_single_gamma_moments.pdf")
+plot_spectra!(sol, (;pdists = dist_init); file_name = "box_single_gamma_spectra.pdf", logxrange=(-2, 10))
