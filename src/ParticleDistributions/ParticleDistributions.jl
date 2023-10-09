@@ -380,7 +380,26 @@ function density_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT<:R
   return f
 end
 
-function density_func(dist::Union{AdditiveParticleDistribution{FT}, ExponentialAdditiveParticleDistribution{FT}, GammaAdditiveParticleDistribution{FT}}) where {FT<:Real}
+function density_func(dist::MonodispersePrimitiveParticleDistribution{FT}) where {FT<:Real}
+  # density = n δ(θ); here we return a rectangular pulse only for visualizations: n/(2Δx) * [H(x-θ+Δx) - H(x-θ-Δx)]
+  # where 2Δx = 2θ/10 is the pulse width and H represents the heaviside function
+  function f(n, θ, x)
+    if abs(x-θ) < θ/10.0
+      return n / (2 * θ / 10.0)
+    else
+      return 0.0
+    end
+  end
+  return f
+end
+
+function density_func(
+  dist::Union{
+    AdditiveParticleDistribution{FT}, 
+    ExponentialAdditiveParticleDistribution{FT}, 
+    GammaAdditiveParticleDistribution{FT}, 
+    MonodisperseAdditiveParticleDistribution{FT}}
+    ) where {FT<:Real}
   # mixture density is sum of densities of subdistributions
   num_pars = [nparams(d) for d in dist.subdists]
   dens_funcs = [density_func(d) for d in dist.subdists]
