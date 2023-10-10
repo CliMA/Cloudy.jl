@@ -174,7 +174,7 @@ p2 = moment(ExponentialPrimitiveParticleDistribution(2.0, 2.0), 2.23)
 @test moment(dist, 0.0) == 3.0
 @test moment(dist, 1.0) == 5.0
 @test moment(dist, 11.0) ≈ gamma(12) + 2.0 * 2.0^11 * gamma(12.0) rtol=rtol
-@test density_func(dist)(reduce(vcat, get_params(dist)[2])..., 0.0) == 2.0
+@test density_func(dist)(0.0) == 2.0
 @test density(dist, 0.0) == 2.0
 @test density(dist, 1.0) == exp(-1.0) + exp(-0.5)
 @test_throws Exception density(dist, -3.1)

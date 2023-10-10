@@ -384,15 +384,10 @@ function density_func(dist::Union{AdditiveParticleDistribution{FT}, ExponentialA
   # mixture density is sum of densities of subdistributions
   num_pars = [nparams(d) for d in dist.subdists]
   dens_funcs = [density_func(d) for d in dist.subdists]
-  function f(params...)
-    inputs = collect(params)
-    dist_params = inputs[1:end-1]
-    x = inputs[end]
-    i = 1
+  function f(x)
     output = 0.0
-    for (n, dens_func)  in zip(num_pars, dens_funcs)
-      output += dens_func(dist_params[i:i+n-1]..., x)
-      i += n
+    for (dens_func) in dens_funcs
+      output += dens_func(x)
     end
     return output
   end
@@ -610,10 +605,8 @@ end
 Updates parameters of the gamma distribution given the first three moments
 """
 function update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT}; param_range = Dict("θ" => (eps(FT), Inf), "k" => (eps(FT), Inf))) where {FT<:Real}
-  if length(moments) != 3
-    throw(ArgumentError("must specify exactly 3 moments for gamma distribution"))
-  end
-  if moments[1] > eps(FT)
+  @assert length(moments) == 3
+  if moments[1] > eps(FT) && moments[2] > eps(FT) && moments[3] > eps(FT)
     pdist.k = max(param_range["k"][1], min(param_range["k"][2], (moments[2]/moments[1])/(moments[3]/moments[2]-moments[2]/moments[1])))
     pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[3]/moments[2]-moments[2]/moments[1]))
     pdist.n = moments[2]/(pdist.k * pdist.θ)
