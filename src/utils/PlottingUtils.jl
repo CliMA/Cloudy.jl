@@ -5,6 +5,13 @@ using Cloudy.ParticleDistributions
 
 export plot_moments!, plot_spectra!
 
+"""
+  plot_moments(sol, p; plt_title = "test_moments.png")
+
+  `sol` - ODE solution
+  `p` - additional ODE parameters carried in the solver
+Plots the moment time series results
+"""
 function plot_moments!(sol, p; plt_title="test_moments")
     Plots.gr()
     time = sol.t
@@ -60,6 +67,13 @@ function plot_moments!(sol, p; plt_title="test_moments")
     savefig("examples/"*plt_title*".png")
 end
 
+"""
+  plot_spectra(sol, p; plt_title = "test_spectra.png", logxrange=(0, 8))
+
+  `sol` - ODE solution
+  `p` - additional ODE parameters carried in the solver
+Plots the moment time series results
+"""
 function plot_spectra!(sol, p; plt_title="test_spectra", logxrange=(0, 8))
     Plots.gr()
     x = 10 .^ (collect(range(logxrange[1], logxrange[2], 100)))
