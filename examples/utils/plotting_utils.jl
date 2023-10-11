@@ -1,9 +1,6 @@
-module PlottingUtils
 
 using Plots
 using Cloudy.ParticleDistributions
-
-export plot_moments!, plot_spectra!
 
 """
   plot_moments(sol, p; plt_title = "test_moments.png")

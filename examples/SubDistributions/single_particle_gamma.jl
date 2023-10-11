@@ -9,7 +9,8 @@ using DifferentialEquations
 using Cloudy.KernelFunctions
 using Cloudy.ParticleDistributions
 using Cloudy.MultiParticleSources
-using Cloudy.PlottingUtils
+
+include("../utils/plotting_utils.jl")
 
 FT = Float64
 tol = 1e-4
