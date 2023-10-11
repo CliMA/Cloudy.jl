@@ -152,5 +152,3 @@ function plot_spectra!(sol, p; plt_title="test_spectra", logxrange=(0, 8))
     plot(pinit, pfin)
     savefig("examples/"*plt_title*".png")
 end
-
-end # module 
