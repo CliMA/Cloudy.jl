@@ -9,10 +9,13 @@ CurrentModule = Cloudy.ParticleDistributions
 ## Functions
 
 ```@docs
-ParticleDistribution
-Gamma
-Exponential
-compute_moment
-compute_density
-update_params!
+moment
+get_moments
+density
+normed_density
+nparams
+update_params
+update_params_from_moments
+update_dist_from_moments!
+moment_source_helper
 ```
