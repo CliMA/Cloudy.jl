@@ -8,7 +8,6 @@ using Cloudy.MultiParticleSources: weighting_fn, q_integrand_inner,
     get_coalescence_integral_moment_qrs!, update_coal_ints!
 using JET: @test_opt
 using QuadGK
-using Distributions: pdf
 
 rtol = 1e-4
 
