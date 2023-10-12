@@ -10,6 +10,5 @@ CurrentModule = Cloudy.KernelTensors
 
 ```@docs
 KernelTensor
-ConstantCoalescenceTensor
-LinearCoalescenceTensor
+CoalescenceTensor
 ```

@@ -9,6 +9,6 @@ CurrentModule = Cloudy.Sources
 ## Functions
 
 ```@docs
-get_src_coalescence
+get_int_coalescence
 ```
 
