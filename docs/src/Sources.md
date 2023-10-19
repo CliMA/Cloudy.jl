@@ -10,5 +10,6 @@ CurrentModule = Cloudy.Sources
 
 ```@docs
 get_int_coalescence
+get_sedimentation_flux
 ```
 

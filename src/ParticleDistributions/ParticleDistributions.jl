@@ -30,7 +30,7 @@ export get_moments
 export density
 export normed_density
 export nparams
-export update_dist
+export update_dist!
 export update_dist_from_moments!
 export moment_source_helper
 

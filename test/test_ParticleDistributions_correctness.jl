@@ -29,6 +29,12 @@ dist = MonodispersePrimitiveParticleDistribution(1.0, 2.0)
 @test moment(dist, 1.0) == 2.0
 @test moment(dist, 0.0) == 1.0
 @test moment(dist, 10.0) == 2.0^10.0
+@test density_func(dist)(0.0) == 0.0
+@test density_func(dist)(2.0) == 2.5
+@test density_func(dist)(3.1) == 0.0
+@test density(dist, 0.0) == 0.0
+@test density(dist, 2.0) == 2.5
+@test density(dist, 3.1) == 0.0
 
 ## Update params from moments
 update_dist_from_moments!(dist, [1.0, 1.0]; param_range =  Dict("θ" => (0.1, 0.5)))
