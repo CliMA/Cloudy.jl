@@ -35,5 +35,5 @@ prob = ODEProblem(rhs, m, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters[:dt])
 res = sol.u
 
-plot_rainshaft_results(z, res, ODE_parameters, outfile = "rainshaft_gamma_mixture.pdf")
+plot_rainshaft_results(z, res, ODE_parameters, file_name = "rainshaft_gamma_mixture.pdf")
 plot!()

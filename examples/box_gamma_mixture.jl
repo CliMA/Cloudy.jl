@@ -28,5 +28,6 @@ ODE_parameters = Dict(
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters[:dt])
 
-plot_box_model_results(sol, dist_init; outfile = "box_gamma_mixture.pdf")
-plot!()
+plot_moments_and_params!(sol, (;pdists = dist_init); file_name = "box_gamma_mixture_params.pdf")
+plot_moments!(sol, (;pdists = dist_init); file_name = "box_gamma_mixture_moments.pdf")
+plot_spectra!(sol, (;pdists = dist_init); file_name = "box_gamma_mixture_spectra.pdf", logxrange=(-2, 5))
