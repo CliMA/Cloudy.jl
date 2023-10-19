@@ -33,7 +33,7 @@ end
 Returns analytical solution for Golovin kernel K(x, x') = b(x+x').
 """
 function golovin_analytical_solution(x, x0, t; b = 1.5e-3, n = 1)
-  FT = eltype(r)
+  FT = eltype(x)
   if t < eps(FT)
       return n/x0 * exp(-x/x0)
   end

@@ -31,7 +31,7 @@ function plot_box_model_results(ode_sol, dists;
     for i in 1:n_dist
         rng = ind:ind+n_params[i]-1
         for j in 1:size(params)[1]
-            dists[i] = CPD.moments_to_params(dists[i], moments[j, rng])
+            CPD.update_dist_from_moments!(dists[i], moments[j, rng])
             params[j, rng] = vcat(CPD.get_params(dists[i])[2]...)
         end
 
@@ -47,18 +47,19 @@ function plot_box_model_results(ode_sol, dists;
         end
         p[2*i] = plot!(xaxis="time", yaxis="parameters (mode "*string(i)*")")
 
-        f = CPD.density_func(dists[i])
-        p[end-1] = plot(p[end-1], x, x.^1 .* f.(params[1, rng]..., x), linewidth=1, c=1, ls = :dashdotdot)
-        plot!(x, x.^1 .* f.(params[floor(Int, end/2), rng]..., x), linewidth=1, c=2, ls = :dashdotdot)
-        plot!(x, x.^1 .* f.(params[end, rng]..., x), linewidth=1, c=3, xscale = :log10, ls = :dashdotdot)
-
-        p[end] = plot(p[end], x, x.^2 .* f.(params[1, rng]..., x), linewidth=1, c=1, ls = :dashdotdot)
-        plot!(x, x.^2 .* f.(params[floor(Int, end/2), rng]..., x), linewidth=1, c=2, ls = :dashdotdot)
-        plot!(x, x.^2 .* f.(params[end, rng]..., x), linewidth=1, c=3, xscale = :log10, ls = :dashdotdot)
+        CPD.update_dist!(dists[i], params[1, rng])
+        p[end-1] = plot(p[end-1], x, x.^1 .* CPD.density_func(dists[i]).(x), linewidth=1, c=1, ls = :dashdotdot)
+        p[end] = plot(p[end], x, x.^2 .* CPD.density_func(dists[i]).(x), linewidth=1, c=1, ls = :dashdotdot)
+        CPD.update_dist!(dists[i], params[floor(Int, end/2), rng])
+        p[end-1] = plot(p[end-1], x, x.^1 .* CPD.density_func(dists[i]).(x), linewidth=1, c=2, ls = :dashdotdot)
+        p[end] = plot(p[end], x, x.^2 .* CPD.density_func(dists[i]).(x), linewidth=1, c=2, ls = :dashdotdot)
+        CPD.update_dist!(dists[i], params[end, rng])
+        p[end-1] = plot(p[end-1], x, x.^1 .* CPD.density_func(dists[i]).(x), linewidth=1, c=3, xscale = :log10, ls = :dashdotdot)
+        p[end] = plot(p[end], x, x.^2 .* CPD.density_func(dists[i]).(x), linewidth=1, c=3, xscale = :log10, ls = :dashdotdot)
 
         ind += n_params[i]
     end
-    # plot sum of number density and mass distributions
+    # plot sum of number density distributions and mass distributions
     num = [p[end-1][1][1][:y], p[end-1][1][2][:y], p[end-1][1][3][:y]]
     mass = [p[end][1][1][:y], p[end][1][2][:y], p[end][1][3][:y]]
     for i in 2:n_dist
