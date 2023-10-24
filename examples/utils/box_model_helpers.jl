@@ -5,7 +5,7 @@ using SpecialFunctions
 using Cloudy
 using Cloudy.KernelTensors
 using Cloudy.ParticleDistributions
-using Cloudy.Sources
+using Cloudy.Coalescence
 using Cloudy.EquationTypes
 
 const CPD = Cloudy.ParticleDistributions
