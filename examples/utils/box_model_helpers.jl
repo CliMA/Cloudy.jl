@@ -13,13 +13,26 @@ const CPD = Cloudy.ParticleDistributions
 """
   make_box_model_rhs(coal_type::CoalescenceStyle)
 
-  `coal_type` type of coal source term function: OneModeCoalStyle or TwoModesCoalStyle
+  `coal_type` type of coal source term function: OneModeCoalStyle, TwoModesCoalStyle, NumericalCoalStyle
 Returns a function representing the right hand side of the ODE equation containing divergence 
-of sedimentation flux and coalescence source term.
+of coalescence source term.
 """
-function make_box_model_rhs(coal_type::CoalescenceStyle)
-
+# TODO: update the analytical coalescence style to NOT re-allocate matrices
+function make_box_model_rhs(coal_type::AnalyticalCoalStyle)
     rhs(m, par, t) = get_int_coalescence(coal_type, m, par, par[:kernel])
+end
+
+function make_box_model_rhs(coal_type::NumericalCoalStyle)
+    rhs!(dm, m, par, t) = rhs_numerical_coal!(coal_type, dm, m, par)
+end
+
+# helper function
+function rhs_numerical_coal!(coal_type::NumericalCoalStyle, ddist_moments, dist_moments, p)
+  for i=1:p.Ndist
+      update_dist_from_moments!(p.pdists[i], dist_moments[i,:])
+  end
+  update_coal_ints!(coal_type, p.Nmom, p.kernel_func, p.pdists, p.coal_data)
+  ddist_moments .= p.coal_data.coal_ints
 end
 
 """
