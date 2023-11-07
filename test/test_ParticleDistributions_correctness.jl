@@ -3,9 +3,8 @@
 using SpecialFunctions: gamma, gamma_inc
 using Cloudy.ParticleDistributions
 
-import Cloudy.ParticleDistributions: nparams, get_params, update_dist!,
-                                     check_moment_consistency, moment_func, 
-                                     density_func, density
+import Cloudy.ParticleDistributions: get_params, check_moment_consistency,
+                                     moment_func, density_func, density
 rtol = 1e-3
 
 # Monodisperse distribution
@@ -18,7 +17,7 @@ dist = MonodispersePrimitiveParticleDistribution(1.0, 1.0)
 # Getters and setters
 @test nparams(dist) == 2
 @test get_params(dist) == ([:n, :θ], [1.0, 1.0])
-update_dist!(dist, [1.0, 2.0])
+dist.n, dist.θ = [1.0, 2.0]
 @test get_params(dist) == ([:n, :θ], [1.0, 2.0])
 @test_throws Exception update_params(dist, [-0.2, 1.1])
 @test_throws Exception update_params(dist, [0.2, -1.1])
@@ -58,7 +57,7 @@ dist = ExponentialPrimitiveParticleDistribution(1.0, 1.0)
 # Getters and setters
 @test nparams(dist) == 2
 @test get_params(dist) == ([:n, :θ], [1.0, 1.0])
-update_dist!(dist, [1.0, 2.0])
+dist.n, dist.θ = [1.0, 2.0]
 @test get_params(dist) == ([:n, :θ], [1.0, 2.0])
 @test_throws Exception update_params(dist, [-0.2, 1.1])
 @test_throws Exception update_params(dist, [0.2, -1.1])
@@ -102,11 +101,8 @@ dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 # Getters and settes
 @test nparams(dist) == 3
 @test get_params(dist) == ([:n, :θ, :k], [1.0, 1.0, 2.0])
-update_dist!(dist, [1.0, 2.0, 1.0])
+dist.n, dist.θ, dist.k = [1.0, 2.0, 1.0]
 @test get_params(dist) == ([:n, :θ, :k], [1.0, 2.0, 1.0])
-@test_throws Exception update_dist!(dist, [-0.2, 1.1, 3.4])
-@test_throws Exception update_dist!(dist, [0.2, -1.1, 3.4])
-@test_throws Exception update_dist!(dist, [0.2, 1.1, -3.4])
 
 # Moments, moments, density
 dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)

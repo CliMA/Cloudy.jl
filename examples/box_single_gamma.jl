@@ -24,6 +24,6 @@ rhs = make_box_model_rhs(OneModeCoalStyle())
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters[:dt])
 
-plot_moments_and_params!(sol, (;pdists = dist_init); file_name = "box_single_gamma_params.pdf")
+plot_params!(sol, (;pdists = dist_init); file_name = "box_single_gamma_params.pdf")
 plot_moments!(sol, (;pdists = dist_init); file_name = "box_single_gamma_moments.pdf")
 plot_spectra!(sol, (;pdists = dist_init); file_name = "box_single_gamma_spectra.pdf", logxrange=(-2, 10))

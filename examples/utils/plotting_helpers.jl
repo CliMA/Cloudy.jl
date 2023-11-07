@@ -111,6 +111,7 @@ function plot_spectra!(sol, p; file_name="examples/test_spectra.png", logxrange=
             label="Sum"
         )
     end
+    
 
     plot(plt..., layout = grid(1,3), 
         size = (1500, 350), 
@@ -121,19 +122,19 @@ function plot_spectra!(sol, p; file_name="examples/test_spectra.png", logxrange=
 end
 
 """
-  plot_box_model_results(ode_sol, dists; outfile = "box_model.pdf")
+  plot_params!(sol, p; file_name = "examples/box_model.pdf")
 
   `sol` - ODE solution
   `p` - additional ODE parameters carried in the solver
-Plots box model simulation results for arbitrary number and any combination of modes
+Plots the evolution of particle distribution parameters in time.
 """
-function plot_moments_and_params!(sol, p; yscale = :log10, file_name = "examples/box_model.pdf")
+function plot_params!(sol, p; yscale = :log10, file_name = "examples/box_model.pdf")
     time = sol.t
     moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
     params = similar(moments)
 
     n_dist = length(p.pdists)
-    plt = Array{Plots.Plot}(undef, n_dist * 2)
+    plt = Array{Plots.Plot}(undef, n_dist)
     n_params = [nparams(p.pdists[i]) for i in 1:n_dist]
     ind = 1
     for i in 1:n_dist
@@ -142,27 +143,26 @@ function plot_moments_and_params!(sol, p; yscale = :log10, file_name = "examples
             CPD.update_dist_from_moments!(p.pdists[i], moments[j, rng])
             params[j, rng] = vcat(CPD.get_params(p.pdists[i])[2]...)
         end
-
-        plot()
-        for j in rng
-            plot!(time, moments[:, j], linewidth=3, label="M_"*string(j-1), yscale = yscale)
-        end
-        plt[2*i-1] = plot!(xaxis="time", yaxis="moments (mode "*string(i)*")")
         
         plot()
         for j in rng
-            plot!(time, params[:, j], linewidth=3, label="p_"*string(j-ind+1), yscale = yscale)
+            plot!(time, params[:, j], linewidth=2, label="p_"*string(j-ind+1), yscale = yscale)
         end
-        plt[2*i] = plot!(xaxis="time", yaxis="parameters (mode "*string(i)*")")
+        plt[i] = plot!(xaxis="time", yaxis="parameters (mode "*string(i)*")")
 
         ind += n_params[i]
     end
-
-    plot(plt..., layout = grid(n_dist, 2), foreground_color_legend = nothing,
-        size = (800, 270 * n_dist), 
-        left_margin = 5Plots.mm,
+    nrow = floor(Int, sqrt(n_dist))
+    ncol = ceil(Int, sqrt(n_dist))
+    if nrow * ncol < n_dist
+        nrow += 1
+    end
+    plot(plt..., layout = grid(nrow, ncol), 
+        size = (ncol*400, nrow*270), 
+        foreground_color_legend = nothing,
+        left_margin = 5Plots.mm, 
         bottom_margin = 5Plots.mm
-    )
+        )
     savefig(file_name)
 end
 

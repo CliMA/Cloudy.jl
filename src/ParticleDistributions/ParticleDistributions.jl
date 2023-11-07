@@ -30,7 +30,6 @@ export get_moments
 export density
 export normed_density
 export nparams
-export update_dist!
 export update_dist_from_moments!
 export moment_source_helper
 
@@ -303,34 +302,6 @@ function get_params(dist::PrimitiveParticleDistribution{FT}) where {FT<:Real}
   params = Array{Symbol, 1}(collect(propertynames(dist)))
   values = Array{FT, 1}([getproperty(dist, p) for p in params])
   return params, values
-end
-
-"""
-  update_dist!(dist, params)
-
-  - `dist` - is a particle mass distribution
-Returns a new distribution of same type as input with `params` as parameters.
-"""
-function update_dist!(dist::ExponentialPrimitiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
-  @assert length(values) == 2
-  @assert all(x -> x >= FT(0), values)
-  dist.n = values[1]
-  dist.θ = values[2]
-end
-
-function update_dist!(dist::GammaPrimitiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
-  @assert length(values) == 3
-  @assert all(x -> x >= FT(0), values)
-  dist.n = values[1]
-  dist.θ = values[2]
-  dist.k = values[3]
-end
-
-function update_dist!(dist::MonodispersePrimitiveParticleDistribution{FT}, values::Array{FT}) where {FT<:Real}
-  @assert length(values) == 2
-  @assert all(x -> x >= FT(0), values)
-  dist.n = values[1]
-  dist.θ = values[2]
 end
 
 """
