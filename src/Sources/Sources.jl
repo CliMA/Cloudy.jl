@@ -15,35 +15,28 @@ using ..EquationTypes
 
 # methods that compute source terms from microphysical parameterizations
 export get_int_coalescence
-export get_flux_sedimentation
+export get_sedimentation_flux
 
 
 """
-get_int_coalescence(::OneModeCoalStyle, mom_p::Array{Real}, ODE_parameters::Dict, ker::KernelTensor{Real})
+get_int_coalescence(::OneModeCoalStyle, mom_p::Array{Real}, par::Dict, ker::KernelTensor{Real})
 
   - `mom_p` - prognostic moments of particle mass distribution
-  - `ODE_parameters` - ODE parameters, a Dict containing a key ":dist" whose 
-                       is the distribution at the previous time step. dist is a 
-                       ParticleDistribution; it is used to calculate the 
-                       diagnostic moments and also to dispatch to the
-                       moments-to-parameters mapping (done by the function
-                       moments_to_params) for the given type of distribution
+  - `par` - ODE parameters, a Dict containing a key ":dist" whose value is a list of ParticleDistribution;
+            it is used to calculate the diagnostic moments.
   - `ker` - coalescence kernel tensor
 Returns the coalescence integral for all moments in `mom_p`.
 """
-function get_int_coalescence(::OneModeCoalStyle, mom_p::Array{FT}, ODE_parameters::Dict, ker::KernelTensor{FT}) where {FT <: Real}
+function get_int_coalescence(::OneModeCoalStyle, mom_p::Array{FT}, par::Dict, ker::KernelTensor{FT}) where {FT <: Real}
   r = ker.r
   s = length(mom_p)
 
   # Need to build diagnostic moments
-  dist_prev = ODE_parameters[:dist][1]
-  dist = moments_to_params(dist_prev, mom_p)
-  # Update the distribution that is carried along in the ODE_parameters for use
-  # in next time step
-  ODE_parameters[:dist][1] = dist
+  update_dist_from_moments!(par[:dist][1], mom_p)
+  # Update the distribution that is carried along in par for use in next time steps
   mom_d = Array{FT}(undef, r)
   for k in 0:r-1
-    mom_d[k+1] = moment(dist, FT(s+k))
+    mom_d[k+1] = moment(par[:dist][1], FT(s+k))
   end
   mom = vcat(mom_p, mom_d)
 
@@ -75,32 +68,19 @@ function get_int_coalescence(::OneModeCoalStyle, mom_p::Array{FT}, ODE_parameter
   return coal_int
 end
 
-"""
-get_int_coalescence(::TwoModesCoalStyle, mom_p::Array{Real}, ODE_parameters::Dict, ker::KernelTensor{Real})
-
-  - `mom_p` - prognostic moments of the two particle mass distributions
-  - `ODE_parameters` - ODE parameters, a Dict containing a key ":dist" which 
-                       contains the two distributions at the previous time step. dists is an 
-                       array of ParticleDistribution; it is used to calculate the 
-                       diagnostic moments and also to dispatch to the
-                       moments-to-parameters mapping (done by the function
-                       moments_to_params) for the given types of distribution
-  - `ker` - coalescence kernel tensor
-Returns the coalescence integral for all moments in `mom_p`.
-"""
-function get_int_coalescence(::TwoModesCoalStyle, mom_p::Array{FT}, ODE_parameters::Dict, ker::KernelTensor{FT}) where {FT <: Real}
+function get_int_coalescence(::TwoModesCoalStyle, mom_p::Array{FT}, par::Dict, ker::KernelTensor{FT}) where {FT <: Real}
   r = ker.r
 
-  dist_prev = ODE_parameters[:dist]
-  n_params = [nparams(dist_prev[i]) for i in 1:2]
+  n_params = [nparams(par[:dist][i]) for i in 1:2]
   mom_p_ = [mom_p[1:n_params[1]], mom_p[n_params[1]+1:end]]
   s = [length(mom_p_[i]) for i in 1:2]
 
+  # update distributions from moments
+  for i in 1:2
+    update_dist_from_moments!(par[:dist][i], mom_p_[i])
+  end
+  
   # Need to build diagnostic moments
-  dist = [moments_to_params(dist_prev[i], mom_p_[i]) for i in 1:2]
-  # Update the distributions that is carried along in the ODE_parameters for use
-  # in next time step
-  ODE_parameters[:dist] = dist
   n_mom = maximum(s) + r
   mom = zeros(FT, 2, n_mom)
   for i in 1:2
@@ -108,7 +88,7 @@ function get_int_coalescence(::TwoModesCoalStyle, mom_p::Array{FT}, ODE_paramete
       if j <= s[i]
         mom[i, j] = mom_p_[i][j]
       else
-        mom[i, j] = moment(dist[i], FT(j-1))
+        mom[i, j] = moment(par[:dist][i], FT(j-1))
       end
     end
   end
@@ -119,7 +99,7 @@ function get_int_coalescence(::TwoModesCoalStyle, mom_p::Array{FT}, ODE_paramete
   for i in 1:n_mom
     for j in i:n_mom
       mom_times_mom[i, j] = mom[1, i] * mom[1, j]
-      tmp = (mom_times_mom[i, j] < eps(FT)) ? FT(0) : moment_source_helper(dist[1], FT(i-1), FT(j-1), ODE_parameters[:x_th])
+      tmp = (mom_times_mom[i, j] < eps(FT)) ? FT(0) : moment_source_helper(par[:dist][1], FT(i-1), FT(j-1), par[:x_th])
       int_w_thrsh[i, j] = min(mom_times_mom[i, j], tmp)
       mom_times_mom[j, i] = mom_times_mom[i, j]
       int_w_thrsh[j, i] = int_w_thrsh[i, j]
@@ -159,45 +139,44 @@ function get_int_coalescence(::TwoModesCoalStyle, mom_p::Array{FT}, ODE_paramete
 end
 
 """
-  get_flux_sedimentation(mom_p::Array{Real}, ODE_parameters::Dict, vel::Array{Real})
+  get_sedimentation_flux(mom_p::Array{Real}, par::Dict)
 
-  - `mom_p` - prognostic moments of particle mass distribution
-  - `ODE_parameters` - ODE parameters, a Dict containing a key ":dist" whose 
-                       is the distribution at the previous time step. dist is a 
-                       ParticleDistribution; it is used to calculate the 
-                       diagnostic moments and also to dispatch to the
-                       moments-to-parameters mapping (done by the function
-                       moments_to_params) for the given type of distribution
-  - `vel` - settling velocity coefficient tensor
-Returns the sedimentation flux for all moments in `mom_p`.
+  `mom_p` - prognostic moments
+  `par` - ODE parameters, a dict containing a list of ParticleDistributions and terminal celocity coefficients.
+Returns sedimentation flux of all prognostic moments, which is the integral of terminal velocity times prognostic moments. The
+Terminal velocity of particles is assumed to be expressed as: vel[1] + vel[2] * x^(1/6).
 """
-function get_flux_sedimentation(mom_p::Array{FT}, ODE_parameters::Dict, vel::Array{FT}) where {FT <: Real}
-  r = length(vel)-1
-  s = length(mom_p)
+function get_sedimentation_flux(mom_p::Array{FT}, par::Dict) where {FT <: Real}
 
-  # Need to build diagnostic moments
-  dist = update_params_from_moments(ODE_parameters, mom_p)
-  mom_d = Array{FT}(undef, r)
-  # Update the distribution that is carried along in the ODE_parameters for use
-  # in next time step
-  ODE_parameters[:dist] = dist
-  for k in 0:r-1
-    mom_d[k+1] = moment(dist, FT(s+k))
-  end
-  mom = vcat(mom_p, mom_d)
-
-  # only calculate sedimentation flux for prognostic moments
-  sedi_int = similar(mom_p)
-  for k in 0:s-1
-    temp = 0.0
-    for i in 0:r
-      coef = vel[i+1]
-      temp -= coef * mom[i+k+1]
+    vel = par[:vel]
+    n_dist = length(par[:dist])
+    n_params = [nparams(dist) for dist in par[:dist]]
+    mom_p_ = []
+    ind = 1
+    for i in 1:n_dist
+        push!(mom_p_, mom_p[ind:ind-1+n_params[i]])
+        ind += n_params[i]
+        # update distributions from moments
+        update_dist_from_moments!(par[:dist][i], mom_p_[i])
     end
-    sedi_int[k+1] = temp
-  end
 
-  return sedi_int
+    # Need to build diagnostic moments
+    mom_d = [zeros(nd) for nd in n_params]
+    for i in 1:n_dist
+        for j in 0:n_params[i]-1
+            mom_d[i][j+1] = moment(par[:dist][i], FT(j+1.0/6))
+        end
+    end
+
+    # only calculate sedimentation flux for prognostic moments
+    sedi_int = [zeros(ns) for ns in n_params]
+    for i in 1:n_dist
+        for k in 1:n_params[i]
+            sedi_int[i][k] = -vel[1] * mom_p_[i][k] - vel[2] * mom_d[i][k]
+        end
+    end
+
+    return vcat(sedi_int...)
 end
 
 end #module Sources.jl

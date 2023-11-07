@@ -21,7 +21,7 @@ ic = initial_condition(z, mom_max)
 m = ic
 
 # Solver
-kernel_func => x -> 5e-3 * (x[1] + x[2])
+kernel_func = x -> 5e-3 * (x[1] + x[2])
 ODE_parameters = Dict(
     :dist => [GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(1))],
     :kernel => CoalescenceTensor(kernel_func, 1, FT(500)),
@@ -34,4 +34,5 @@ prob = ODEProblem(rhs, m, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters[:dt])
 res = sol.u
 
-plot_rainshaft_results(z, res, ODE_parameters, outfile = "rainshaft_single_gamma.pdf")
+plot_rainshaft_results(z, res, ODE_parameters, file_name = "rainshaft_single_gamma.pdf")
+plot!()

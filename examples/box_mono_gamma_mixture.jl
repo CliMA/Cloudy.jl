@@ -8,11 +8,11 @@ include("./utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
-moments_init = [2.0, 1.1, 1.01, 1.001]
-dist_init = [MonodisperseAdditiveParticleDistribution(
+moments_init = [1.0, 0.1, 1.0, 1.0, 2.0]
+dist_init = [
     MonodispersePrimitiveParticleDistribution(FT(1), FT(0.1)),
-    MonodispersePrimitiveParticleDistribution(FT(1), FT(1))
-    )]
+    GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(2))
+    ]
 
 # Solver
 tspan = (FT(0), FT(1000))
@@ -21,10 +21,13 @@ kernel = CoalescenceTensor(kernel_func, 1, FT(500))
 ODE_parameters = Dict(
     :dist => dist_init, 
     :kernel => kernel,
-    :dt => FT(1)
+    :dt => FT(1),
+    :x_th => FT(0.5)
     )
-rhs = make_box_model_rhs(OneModeCoalStyle())
+rhs = make_box_model_rhs(TwoModesCoalStyle())
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters[:dt])
 
-plot_box_model_results(sol, dist_init; outfile = "box_mono_mixture.pdf")
+plot_params!(sol, (;pdists = dist_init); file_name = "box_mono_gamma_mixture_params.pdf")
+plot_moments!(sol, (;pdists = dist_init); file_name = "box_mono_gamma_mixture_moments.pdf")
+plot_spectra!(sol, (;pdists = dist_init); file_name = "box_mono_gamma_mixture_spectra.pdf", logxrange=(-2, 8))
