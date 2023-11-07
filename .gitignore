@@ -8,6 +8,8 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
+Manifest.toml
+test/Manifest.toml
 
 # Backup files
 *.bu
