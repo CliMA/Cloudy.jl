@@ -2,8 +2,8 @@
 
 using DifferentialEquations
 
-include("./utils/box_model_helpers.jl")
-include("./utils/plotting_helpers.jl")
+include("../utils/box_model_helpers.jl")
+include("../utils/plotting_helpers.jl")
 
 FT = Float64
 
