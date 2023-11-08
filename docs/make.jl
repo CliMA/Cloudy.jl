@@ -9,7 +9,8 @@ makedocs(
     "Home" => "index.md",
     "KernelTensors" => "KernelTensors.md",
     "ParticleDistributions" => "ParticleDistributions.md",
-    "Sources" => "Sources.md"
+    "Coalescence" => "Coalescence.md",
+    "Sedimentation" => "Sedimentation.md"
   ]
 )
 
