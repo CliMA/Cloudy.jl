@@ -2,8 +2,8 @@
 
 using DifferentialEquations
 
-include("./utils/rainshaft_helpers.jl")
-include("./utils/plotting_helpers.jl")
+include("../utils/rainshaft_helpers.jl")
+include("../utils/plotting_helpers.jl")
 
 
 FT = Float64
@@ -22,7 +22,7 @@ m = ic
 
 # Solver
 kernel_func = x -> 5e-3 * (x[1] + x[2])
-ODE_parameters = Dict(
+ODE_parameters = Dict(  # TODO: decide whether we should use named tuple or dict
     :dist => [GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(1))],
     :kernel => CoalescenceTensor(kernel_func, 1, FT(500)),
     :vel => [0.0, 2.0],

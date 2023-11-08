@@ -16,7 +16,6 @@ FT = Float64
 
 	  @testset "Sources" begin
 	    include("test_Sources_correctness.jl")
-      include("test_MultiParticleSources_correctness.jl")
     end
   end
 
@@ -30,7 +29,7 @@ FT = Float64
     end
 
     @testset "Sources" begin
-      include("test_MultiParticleSources_opt.jl")
+      include("test_Sources_opt.jl")
     end
   end
 end

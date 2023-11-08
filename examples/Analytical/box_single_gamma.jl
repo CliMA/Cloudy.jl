@@ -2,8 +2,8 @@
 
 using DifferentialEquations
 
-include("./utils/box_model_helpers.jl")
-include("./utils/plotting_helpers.jl")
+include("../utils/box_model_helpers.jl")
+include("../utils/plotting_helpers.jl")
 
 FT = Float64
 
@@ -15,7 +15,7 @@ dist_init = [GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(2))]
 tspan = (FT(0), FT(1000))
 kernel_func = x -> 5e-3 * (x[1] + x[2])
 kernel = CoalescenceTensor(kernel_func, 1, FT(500))
-ODE_parameters = Dict(
+ODE_parameters = Dict( # TODO: decide whether we should use named tuple or dict
     :dist => dist_init,
     :kernel => kernel,
     :dt => FT(1)

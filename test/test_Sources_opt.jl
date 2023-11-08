@@ -1,6 +1,6 @@
 using Cloudy.ParticleDistributions
 using Cloudy.KernelFunctions
-using Cloudy.MultiParticleSources: weighting_fn, q_integrand_inner,
+using Cloudy.Coalescence: weighting_fn, q_integrand_inner,
     q_integrand_outer, r_integrand_inner, r_integrand_outer,
     s_integrand1, s_integrand2, s_integrand_inner,
     update_R_coalescence_matrix!, update_S_coalescence_matrix!,
@@ -9,6 +9,7 @@ using Cloudy.MultiParticleSources: weighting_fn, q_integrand_inner,
 using JET: @test_opt
 using QuadGK
 
+# TODO: test analytical cases type stability as well as sedimentation
 rtol = 1e-4
 
 # weighting function
@@ -58,7 +59,7 @@ for pdists in ([dist1a], [dist1a, dist2a], )
     @test_opt update_R_coalescence_matrix!(moment_order, kernel, pdists, cd.R)
     @test_opt update_S_coalescence_matrix!(moment_order, kernel, pdists, cd.S)
     @test_opt get_coalescence_integral_moment_qrs!(moment_order, kernel, pdists, cd.Q, cd.R, cd.S)
-    @test_opt update_coal_ints!(3, kernel, pdists, cd)
+    @test_opt update_coal_ints!(NumericalCoalStyle(), 3, kernel, pdists, cd)
 end
 
 for pdists in ([dist1b], [dist1b, dist2b])
@@ -68,5 +69,5 @@ for pdists in ([dist1b], [dist1b, dist2b])
     @test_opt update_R_coalescence_matrix!(moment_order, kernel, pdists, cd.R)
     @test_opt update_S_coalescence_matrix!(moment_order, kernel, pdists, cd.S)
     @test_opt get_coalescence_integral_moment_qrs!(moment_order, kernel, pdists, cd.Q, cd.R, cd.S)
-    @test_opt update_coal_ints!(2, kernel, pdists, cd)
+    @test_opt update_coal_ints!(NumericalCoalStyle(), 2, kernel, pdists, cd)
 end

@@ -3,7 +3,8 @@ using LinearAlgebra
 
 using Cloudy.KernelTensors
 using Cloudy.ParticleDistributions
-using Cloudy.Sources
+using Cloudy.Coalescence
+using Cloudy.Sedimentation
 using Cloudy.EquationTypes
 
 import Cloudy.ParticleDistributions: density

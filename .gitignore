@@ -9,6 +9,11 @@
 *.jl.*.cov
 *.jl.mem
 
+# Manifest files
+Manifest.toml
+test/Manifest.toml
+docs/Manifest.toml
+
 # Backup files
 *.bu
 *.bckp

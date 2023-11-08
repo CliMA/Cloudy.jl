@@ -3,13 +3,12 @@
 TODO
 
 ```@meta
-CurrentModule = Cloudy.Sources
+CurrentModule = Cloudy.Sedimentation
 ```
 
 ## Functions
 
 ```@docs
-get_int_coalescence
 get_sedimentation_flux
 ```
 
