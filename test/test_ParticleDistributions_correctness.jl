@@ -79,6 +79,7 @@ dist = ExponentialPrimitiveParticleDistribution(1.0, 2.0)
 
 ## Update params or dist from moments
 update_dist_from_moments!(dist, [1.1, 2.0])
+@test normed_density(dist, 0.0) == 1.1
 @test moment(dist, 0.0) ≈ 1.1 rtol=rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol=rtol
 moments = [10.0, 50.0]
@@ -123,6 +124,7 @@ dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 
 # Update params or dist from moments
 update_dist_from_moments!(dist, [1.1, 2.0, 4.1]; param_range = Dict("θ" => (1e-5, 1e5), "k" => (eps(Float64), 5.0)))
+@test normed_density(dist, 1.0) = 1.1
 @test moment(dist, 0.0) ≈ 1.726 rtol=rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol=rtol
 @test moment(dist, 2.0) ≈ 2.782 rtol=rtol
@@ -134,6 +136,52 @@ moments = [10.0, 50.0, 300.0]
 update_dist_from_moments!(dist, moments)
 @test (dist.n, dist.k, dist.θ) == (10.0, 5.0, 1.0)
 @test_throws Exception update_dist_from_moments!(dist, [10.0, 50.0])
+
+# Lognormal distribution
+# Initialization
+dist = LognormalPrimitiveParticleDistribution(1.0, 1.0, 2.0)
+@test (dist.n, dist.μ, dist.σ) == (FT(1.0), FT(1.0), FT(2.0))
+@test_throws Exception LognormalPrimitiveParticleDistribution(-1.0, 2.0, 3.0)
+@test_throws Exception LognormalPrimitiveParticleDistribution(1.0, 2.0, -3.0)
+
+# Getters and settes
+@test nparams(dist) == 3
+@test get_params(dist) == ([:n, :μ, :σ], [1.0, 1.0, 2.0])
+dist.n, dist.μ, dist.σ = [1.0, 2.0, 1.0]
+@test get_params(dist) == ([:n, :μ, :σ], [1.0, 2.0, 1.0])
+
+# Moments, moments, density
+dist = LognormalPrimitiveParticleDistribution(1.0, 1.0, 2.0)
+@test moment_func(dist)(0.0) == 1.0
+@test moment(dist, 0.0) == 1.0
+@test moment(dist, 1.0) == exp(2.0)
+@test moment(dist, 2.0) == exp(6.0)
+@test get_moments(dist) == [1.0, exp(2.0), exp(6.0)]
+@test moment_func(dist)([0.0, 1.0, 2.0]) == [1.0, exp(2.0), exp(6.0)]
+@test moment(dist, 0.5) ≈ exp(1.0)
+@test density_func(dist)(exp(1.0)) == 1 / 2.0 / sqrt(2*π)
+@test density_func(dist)(0.0) == 0.0
+@test density(dist, 0.0) == 0.0
+@test density(dist, exp(1.0)) == 1 / 2.0 / sqrt(2*π)
+@test dist(0.0) == 0.0
+@test dist(exp(1.0)) == 1 / 2.0 / sqrt(2*π)
+@test_throws Exception density(dist, -0.1)
+
+# Update params or dist from moments
+update_dist_from_moments!(dist, [1.1, 2.0, 4.1]; param_range = Dict("μ" => (-1e5, 1e5), "σ" => (eps(Float64), 5.0)))
+@test normed_density(dist, 1.0) = 1.1
+@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
+@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
+@test moment(dist, 2.0) ≈ 4.1 * exp(2.0) rtol=rtol
+update_dist_from_moments!(dist, [1.1, 2.423, 8.112])
+@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
+@test moment(dist, 1.0) ≈ 2.423 rtol=rtol
+@test moment(dist, 2.0) ≈ 8.112 rtol=rtol
+moments = [10.0, 50.0, 300.0]
+update_dist_from_moments!(dist, moments)
+@test (dist.n, dist.μ, dist.σ) == (10.0, 5.0, 1.0)
+@test_throws Exception update_dist_from_moments!(dist, [10.0, 50.0])
+
 
 # Moment consistency checks
 update_dist_from_moments!(dist, [1.1, 0.0, 8.112])

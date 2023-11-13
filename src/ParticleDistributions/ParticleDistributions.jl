@@ -23,6 +23,7 @@ export PrimitiveParticleDistribution
 export ExponentialPrimitiveParticleDistribution
 export GammaPrimitiveParticleDistribution
 export MonodispersePrimitiveParticleDistribution
+export LognormalPrimitiveParticleDistribution
 
 # methods that query particle mass distributions
 export moment
@@ -135,6 +136,33 @@ mutable struct MonodispersePrimitiveParticleDistribution{FT} <: PrimitiveParticl
 end
 
 """
+  LognormalPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+
+Represents lognormal particle size distribution function.
+
+# Constructors
+  LognormalPrimitiveParticleSizeDistribution(n::Real, μ::Real, σ::Real)
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
+mutable struct LognormalPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+  "normalization constant (e.g., droplet number concentration)"
+  n::FT
+  "logarithmic mean size"
+  μ::FT
+  "logarithmic standard deviation"
+  σ::FT
+  
+  function LognormalPrimitiveParticleDistribution(n::FT, μ::FT, σ::FT) where {FT<:Real}
+    if n < 0 || σ <= 0
+      error("n needs to be nonnegative. σ needs to be positive.")
+    end
+    new{FT}(n, μ, σ)
+  end
+end
+
+"""
   (pdist::ParticleDistribution{FT}(x::FT)
 
   - `x` - is an array of points to evaluate the density of `pdist` at
@@ -174,6 +202,14 @@ function moment_func(dist::MonodispersePrimitiveParticleDistribution{FT}) where 
   return f
 end
 
+function moment_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  # moment_of_dist = n * exp(q * μ + 1/2 * q^2 * σ^2)
+  function f(q)
+    dist.n .* exp.(q .* dist.μ + q^2 .* dist.σ.^2 ./ 2)
+  end
+  return f 
+end
+
 """
   moment(dist, q)
 
@@ -192,6 +228,11 @@ numer of prognostic moments
 """
 function get_moments(pdist::GammaPrimitiveParticleDistribution{FT}) where {FT<:Real}
   return [pdist.n, pdist.n * pdist.k * pdist.θ, pdist.n*pdist.k*(pdist.k+1)*pdist.θ^2]
+end
+
+function get_moments(pdist::LognormalPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  return [pdist.n, pdist.n * exp(pdist.μ + pdist.σ^2 / 2), 
+    pdist.n * exp(2.0 * pdist.μ + 2.0 * pdist.σ^2)]
 end
 
 function get_moments(pdist::ExponentialPrimitiveParticleDistribution{FT}) where {FT<:Real}
@@ -223,6 +264,14 @@ function density_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT<:R
   return f
 end
 
+function density_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  # density = n * 1 / (x σ √2π) exp((-ln(x) - μ)^2 / 2σ^2 )
+  function f(x)
+    dist.n .* exp.(-(ln.(x) - dist.μ).^2 ./ 2*dist.σ^2 ) ./ (x .* dist.σ .* sqrt(2 * π)) 
+  end
+  return f
+end
+
 function density_func(dist::MonodispersePrimitiveParticleDistribution{FT}) where {FT<:Real}
   # density = n δ(θ); here we return a rectangular pulse only for visualizations: n/(2Δx) * [H(x-θ+Δx) - H(x-θ-Δx)]
   # where 2Δx = 2θ/10 is the pulse width and H represents the heaviside function
@@ -249,6 +298,14 @@ function normed_density_func(dist::GammaPrimitiveParticleDistribution{FT}) where
   # density = n / θ^k / Γ(k) * x^(k-1) * exp(-x/θ)
   function f(x)
     x.^(dist.k .- 1) ./ dist.θ.^dist.k ./ gamma.(dist.k) .* exp.(-x ./ dist.θ)
+  end
+  return f
+end
+
+function normed_density_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT<:Real}
+  # density = n * 1 / (x σ √2π) exp((-ln(x) - μ)^2 / 2σ^2 )
+  function f(x)
+    exp.(-(ln.(x) - dist.μ).^2 ./ 2*dist.σ^2 ) ./ (x .* dist.σ .* sqrt(2 * π)) 
   end
   return f
 end
@@ -346,6 +403,22 @@ function update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}
     pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[3]/moments[2]-moments[2]/moments[1]))
     pdist.n = moments[2]/(pdist.k * pdist.θ)
   else #don't change θ and k
+    pdist.n = FT(0)
+  end
+end
+
+"""
+    update_dist_from_moments!(pdist::LognormalPrimitiveParticleDistribution{FT}, moments::Array{FT})
+
+Updates parameters of the lognormal distribution given the first three moments
+"""
+function update_dist_from_moments!(pdist::LognormalPrimitiveParticleDistribution{FT}, moments::Array{FT}; param_range = Dict("μ" => (-Inf, Inf), "σ" => (eps(FT), Inf))) where {FT<:Real}
+  @assert length(moments) == 3
+  if moments[1] > eps(FT) && moments[2] > eps(FT) && moments[3] > eps(FT)
+    pdist.μ = max(param_range["μ"][1], min(param_range["μ"][2], ln(moments[2]^2 / moments[1]^(3/2) / moments[3]^(1/2))))
+    pdist.σ = max(param_range["θ"][1], min(param_range["θ"][2], sqrt(ln(moments[1]*moments[3]/moments[2]^2))))
+    pdist.n = moments[2]/exp(pdist.μ + 1/2 * pdist.σ^2)
+  else #don't change μ and σ
     pdist.n = FT(0)
   end
 end
