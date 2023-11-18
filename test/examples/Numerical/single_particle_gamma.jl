@@ -1,4 +1,4 @@
-"Test case with N exponential distributions"
+"Test case with a single gamma distribution"
 
 
 using DifferentialEquations
@@ -9,23 +9,21 @@ include("../utils/plotting_helpers.jl")
 
 FT = Float64
 
-# Dynamical info
-T_end = 1.0
-coalescence_coeff = 1e-3
-dt = FT(0.1)
+# Dynamical Info
+T_end = 1000
+coalescence_coeff = 5e-3
+dt = FT(100)
 
 # Initial condition 
-Ndist = 2
-N0 = 100.0
-m0 = 100.0
-Nmom = 2
-particle_number = [1e-10 for k in 1:Ndist]
-particle_number[1] = N0
-mass_scale = m0 * [1000.0^(k-1) for k in 1:Ndist]
+Ndist = 1
+particle_number = [1.0]
+mass_scale = [1.0]
+gamma_shape = [2.0]
+Nmom = 3
 
 # Initialize ODE info
 pdists = map(1:Ndist) do i
-    ExponentialPrimitiveParticleDistribution(particle_number[i], mass_scale[i])
+    GammaPrimitiveParticleDistribution(particle_number[i], mass_scale[i], gamma_shape[i])
 end
 dist_moments = zeros(FT, Ndist, Nmom)
 for i in 1:Ndist
@@ -33,14 +31,14 @@ for i in 1:Ndist
 end
 coal_data = initialize_coalescence_data(Ndist, Nmom)
 
-# Set up ODE
+# Set up ODE information
 tspan = (0.0, T_end)
 kernel = LinearKernelFunction(coalescence_coeff)
 rhs = make_box_model_rhs(NumericalCoalStyle())
 # TODO: decide whether we should use named tuple or dict
 ODE_parameters = (Ndist=Ndist, Nmom=Nmom, pdists=pdists, kernel_func=kernel, coal_data=coal_data, dt=dt)
 prob = ODEProblem(rhs, dist_moments, tspan, ODE_parameters; progress=true)
-sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
-plot_params!(sol, ODE_parameters; file_name="examples/n_particle_exp_params.png")
-plot_moments!(sol, ODE_parameters; file_name="examples/n_particle_exp_moments.png")
-plot_spectra!(sol, ODE_parameters; file_name="examples/n_particle_exp_spectra.png")
+sol = solve(prob, SSPRK33(), dt=ODE_parameters.dt)
+plot_params!(sol, ODE_parameters; file_name="single_particle_gam_params.png")
+plot_moments!(sol, ODE_parameters; file_name="single_particle_gam_moments.png")
+plot_spectra!(sol, ODE_parameters; file_name="single_particle_gam_spectra.png")

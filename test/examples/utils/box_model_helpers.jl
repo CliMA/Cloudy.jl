@@ -1,6 +1,6 @@
-using Interpolations
 using LinearAlgebra
 using SpecialFunctions
+using RecursiveArrayTools
 
 using Cloudy
 using Cloudy.KernelTensors
@@ -13,21 +13,23 @@ const CPD = Cloudy.ParticleDistributions
 """
   make_box_model_rhs(coal_type::CoalescenceStyle)
 
-  `coal_type` type of coal source term function: OneModeCoalStyle, TwoModesCoalStyle, NumericalCoalStyle
+  `coal_type` type of coal source term function: AnalyticalCoalStyle, NumericalCoalStyle
 Returns a function representing the right hand side of the ODE equation containing divergence 
 of coalescence source term.
 """
-# TODO: update the analytical coalescence style to NOT re-allocate matrices
-function make_box_model_rhs(coal_type::AnalyticalCoalStyle)
-    rhs(m, par, t) = get_int_coalescence(coal_type, m, par, par[:kernel])
+function make_box_model_rhs(coal_type::CoalescenceStyle)
+    rhs!(dm, m, par, t) = rhs_coal!(coal_type, dm, m, par)
 end
 
-function make_box_model_rhs(coal_type::NumericalCoalStyle)
-    rhs!(dm, m, par, t) = rhs_numerical_coal!(coal_type, dm, m, par)
+function rhs_coal!(coal_type::AnalyticalCoalStyle, ddist_moments, dist_moments, p)
+  for (i, dist) in enumerate(p.pdists)
+      update_dist_from_moments!(dist, dist_moments.x[i])
+  end
+  update_coal_ints!(coal_type, p.kernel, p.pdists, p.dist_thresholds, p.coal_data)
+  ddist_moments .= p[:coal_data].coal_ints
 end
 
-# helper function
-function rhs_numerical_coal!(coal_type::NumericalCoalStyle, ddist_moments, dist_moments, p)
+function rhs_coal!(coal_type::NumericalCoalStyle, ddist_moments, dist_moments, p)
   for i=1:p.Ndist
       update_dist_from_moments!(p.pdists[i], dist_moments[i,:])
   end
