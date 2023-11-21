@@ -11,6 +11,7 @@ module ParticleDistributions
 
 using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
+using QuadGK
 
 import NonlinearSolve as NLS
 import LinearAlgebra: norm
@@ -205,7 +206,7 @@ end
 function moment_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT<:Real}
   # moment_of_dist = n * exp(q * μ + 1/2 * q^2 * σ^2)
   function f(q)
-    dist.n .* exp.(q .* dist.μ + q^2 .* dist.σ.^2 ./ 2)
+    dist.n .* exp.(q .* dist.μ + q.^2 .* dist.σ.^2 ./ 2)
   end
   return f 
 end
@@ -267,7 +268,7 @@ end
 function density_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT<:Real}
   # density = n * 1 / (x σ √2π) exp((-ln(x) - μ)^2 / 2σ^2 )
   function f(x)
-    dist.n .* exp.(-(ln.(x) - dist.μ).^2 ./ 2*dist.σ^2 ) ./ (x .* dist.σ .* sqrt(2 * π)) 
+    dist.n .* exp.(-(log.(x) - dist.μ).^2 ./ 2*dist.σ^2 ) ./ (x .* dist.σ .* sqrt(2 * π)) 
   end
   return f
 end
@@ -305,7 +306,7 @@ end
 function normed_density_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT<:Real}
   # density = n * 1 / (x σ √2π) exp((-ln(x) - μ)^2 / 2σ^2 )
   function f(x)
-    exp.(-(ln.(x) - dist.μ).^2 ./ 2*dist.σ^2 ) ./ (x .* dist.σ .* sqrt(2 * π)) 
+    exp.(-(log.(x) - dist.μ).^2 ./ 2*dist.σ^2 ) ./ (x .* dist.σ .* sqrt(2 * π)) 
   end
   return f
 end
@@ -415,8 +416,8 @@ Updates parameters of the lognormal distribution given the first three moments
 function update_dist_from_moments!(pdist::LognormalPrimitiveParticleDistribution{FT}, moments::Array{FT}; param_range = Dict("μ" => (-Inf, Inf), "σ" => (eps(FT), Inf))) where {FT<:Real}
   @assert length(moments) == 3
   if moments[1] > eps(FT) && moments[2] > eps(FT) && moments[3] > eps(FT)
-    pdist.μ = max(param_range["μ"][1], min(param_range["μ"][2], ln(moments[2]^2 / moments[1]^(3/2) / moments[3]^(1/2))))
-    pdist.σ = max(param_range["θ"][1], min(param_range["θ"][2], sqrt(ln(moments[1]*moments[3]/moments[2]^2))))
+    pdist.μ = max(param_range["μ"][1], min(param_range["μ"][2], log(moments[2]^2 / moments[1]^(3/2) / moments[3]^(1/2))))
+    pdist.σ = max(param_range["σ"][1], min(param_range["σ"][2], sqrt(log(moments[1]*moments[3]/moments[2]^2))))
     pdist.n = moments[2]/exp(pdist.μ + 1/2 * pdist.σ^2)
   else #don't change μ and σ
     pdist.n = FT(0)
@@ -509,6 +510,21 @@ function moment_source_helper(
   y = [x[1:end-1] .* f.(x[1:end-1]); FT(0)]
 
   return n^2 * θ^(p2 - k) / gamma(k)^2 * NI.integrate(logx, y, NI.SimpsonEvenFast())
+end
+
+function moment_source_helper(
+  dist::LognormalPrimitiveParticleDistribution{FT}, 
+  p1::FT, 
+  p2::FT, 
+  x_threshold::FT; 
+  x_lowerbound = 1e-5, 
+  n_bins = 50,
+  ) where {FT<:Real}
+
+  g(x, y) = x.^(p1) .* y.^(p2) .* density_func(dist).(x) .* density_func(dist).(y)
+  f(y) = quadgk(xx -> g(xx,y), x_lowerbound, x_threshold - y)[1]
+  
+  return quadgk(f, x_lowerbound, x_threshold)[1]
 end
 
 end #module ParticleDistributions.jl
