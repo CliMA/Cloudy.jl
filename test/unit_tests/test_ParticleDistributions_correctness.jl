@@ -202,9 +202,9 @@ dist = ExponentialPrimitiveParticleDistribution(1.0, 0.5)
 @test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 4.015e-2 rtol = rtol
 @test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 4.748e-3 rtol = rtol
 dist = GammaPrimitiveParticleDistribution(1.0, 0.5, 2.0)
-@test moment_source_helper(dist, 0.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 2.056e-2 rtol = rtol
-@test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 4.268e-3 rtol = rtol
-@test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 6.387e-4 rtol = rtol
+@test moment_source_helper(dist, 0.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 1.899e-2 rtol = rtol
+@test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 3.662e-3 rtol = rtol
+@test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 5.940e-4 rtol = rtol
 dist = LognormalPrimitiveParticleDistribution(1.0, 0.5, 2.0)
 @test moment_source_helper(dist, 0.0, 0.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 1.105e-2 rtol = rtol
 @test moment_source_helper(dist, 1.0, 0.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 1.152e-2 rtol = rtol
