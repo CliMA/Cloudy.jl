@@ -265,7 +265,7 @@ end
 function density_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT<:Real}
   # density = n * 1 / (x σ √2π) exp((-ln(x) - μ)^2 / 2σ^2 )
   function f(x)
-    dist.n .* exp.(-(log.(x) - dist.μ).^2 ./ (2*dist.σ^2) ) ./ (x .* dist.σ .* sqrt(2 * π)) 
+    dist.n .* exp.(-((log.(x) - dist.μ).^2 ./ (2*dist.σ^2)) ) ./ (x .* dist.σ .* sqrt(2 * π)) 
   end
   return f
 end
