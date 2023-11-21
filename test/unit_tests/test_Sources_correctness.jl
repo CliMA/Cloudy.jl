@@ -1,5 +1,6 @@
 "Testing correctness of Sources modules, including Coalescence and Sedimentation"
 
+using RecursiveArrayTools
 using Cloudy.ParticleDistributions
 using Cloudy.EquationTypes
 using Cloudy.Coalescence: weighting_fn, q_integrand_inner,
@@ -7,7 +8,7 @@ using Cloudy.Coalescence: weighting_fn, q_integrand_inner,
     s_integrand1, s_integrand2, s_integrand_inner,
     update_R_coalescence_matrix!, update_S_coalescence_matrix!,
     update_Q_coalescence_matrix!, get_coalescence_integral_moment_qrs!,
-    initialize_coalescence_data, update_coal_ints!, get_int_coalescence
+    initialize_coalescence_data, update_coal_ints!
 using Cloudy.Sedimentation
 
 
@@ -15,11 +16,9 @@ rtol = 1e-3
 
 ## EquationTypes.jl
 CoalescenceStyle <: AbstractStyle
-OneModeCoalStyle <: CoalescenceStyle
-TwoModesCoalStyle <: CoalescenceStyle
+AnalyticalCoalStyle <: CoalescenceStyle
 NumericalCoalStyle <: CoalescenceStyle
-OneModeCoalStyle() isa OneModeCoalStyle
-TwoModesCoalStyle() isa TwoModesCoalStyle
+AnalyticalCoalStyle() isa NumericalCoalStyle
 NumericalCoalStyle() isa NumericalCoalStyle
 
 ## Coalescence.jl
@@ -31,17 +30,15 @@ function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
   ker = (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) : CoalescenceTensor([1.0])
 
   # Initial condition
-  mom = (is_one_mode) ? [1.0, 2.0] : [0.0, 0.0, 1.0, 2.0]
-  dist_one_mode = Dict(:dist => [ExponentialPrimitiveParticleDistribution(1.0, 1.0)])
-  dist_two_modes = Dict(:dist => [
-    ExponentialPrimitiveParticleDistribution(0.0, 1.0), 
-    ExponentialPrimitiveParticleDistribution(1.0, 1.0)])
+  mom = ArrayPartition([1.0, 2.0])
+  dist = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)]
+  coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), [nparams(dist[1])], ker)
 
   # Euler steps
   for i in 1:n_steps
-    dmom = (is_one_mode) ? 
-      get_int_coalescence(OneModeCoalStyle(), mom, dist_one_mode, ker) : 
-      get_int_coalescence(TwoModesCoalStyle(), mom, dist_two_modes, ker)
+    update_dist_from_moments!(dist[1], mom.x[1])
+    update_coal_ints!(AnalyticalCoalStyle(), ker, dist, [Inf], coal_data)
+    dmom = coal_data.coal_ints
     mom += δt * dmom
   end
 
@@ -61,30 +58,80 @@ for i in 0:n_steps
   t = δt * i
   @test sm1916(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol=rtol
   @test sm1916(n_steps, δt, is_kernel_function = false) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol=rtol
-  @test sm1916(n_steps, δt, is_one_mode = false) ≈ Array{FT}([0.0, 0.0, sm1916_ana(t, 1, 1), 2.0]) rtol=rtol
-  @test sm1916(n_steps, δt, is_kernel_function = false, is_one_mode = false) ≈ Array{FT}([0.0, 0.0, sm1916_ana(t, 1, 1), 2.0]) rtol=rtol
 end
 
-# get_int_coalescence
+# Test Exponential + Gamma
 # setup
-ker = CoalescenceTensor(x -> 5e-3 * (x[1] + x[2]), 0, 100.0)
-mom = [1, 0.1, 0.02, 1, 1, 2]
-par1 = Dict(:dist => [GammaPrimitiveParticleDistribution(FT(1), FT(0.1), FT(1))])
-par2 = Dict(
-    :dist => [
-      GammaPrimitiveParticleDistribution(FT(1), FT(0.1), FT(1)), 
-      GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(1))],
-    :x_th => 0.5)
+mom_p = ArrayPartition([100.0, 10.0, 2.0], [1.0, 1])
+dist = [
+    GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),
+    ExponentialPrimitiveParticleDistribution(FT(1), FT(1))]
+kernel = CoalescenceTensor(x -> 5e-3 * (x[1] + x[2]), 1, FT(500))
+NProgMoms = [nparams(d) for d in dist]
+r = kernel.r
+s = [length(mom_p.x[i]) for i in 1:2]
+thresholds = [0.5, Inf]
+coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)
+
+# action
+update_coal_ints!(AnalyticalCoalStyle(), kernel, dist, thresholds, coal_data)
+
+n_mom = maximum(s) + r
+mom = zeros(FT, 2, n_mom)
+for i in 1:2
+    for j in 1:n_mom
+        mom[i, j] = moment(dist[i], FT(j-1))
+    end
+end
+
+int_w_thrsh = zeros(FT, n_mom, n_mom)
+mom_times_mom = zeros(FT, n_mom, n_mom)
+for i in 1:n_mom
+    for j in i:n_mom
+        mom_times_mom[i, j] = mom[1, i] * mom[1, j]
+        tmp = (mom_times_mom[i, j] < eps(FT)) ? FT(0) : moment_source_helper(dist[1], FT(i-1), FT(j-1), thresholds[1])
+        int_w_thrsh[i, j] = min(mom_times_mom[i, j], tmp)
+        mom_times_mom[j, i] = mom_times_mom[i, j]
+        int_w_thrsh[j, i] = int_w_thrsh[i, j]
+    end
+end
+
+coal_int = similar(mom_p)
+for i in 1:2
+    j = (i==1) ? 2 : 1
+    for k in 0:s[i]-1
+        temp = 0.0
+
+        for a in 0:r
+            for b in 0:r
+                coef = kernel.c[a+1, b+1]
+                temp -= coef * mom[i, a+k+1] * mom[i, b+1]
+                temp -= coef * mom[i, a+k+1] * mom[j, b+1]
+                for c in 0:k
+                    coef_binomial = coef * binomial(k, c)
+                    if i == 1
+                        temp += 0.5 * coef_binomial * int_w_thrsh[a+c+1, b+k-c+1]
+                    elseif i == 2
+                        tmp_s12 = 0.5 * coef_binomial * (mom_times_mom[a+c+1, b+k-c+1] - int_w_thrsh[a+c+1, b+k-c+1])
+                        temp += tmp_s12
+                        tmp_s21 = 0.5 * coef_binomial * mom[i, a+c+1] * mom[i, b+k-c+1]
+                        temp += tmp_s21
+                        temp += coef_binomial * mom[j, a+c+1] * mom[i, b+k-c+1]
+                    end
+                end
+            end
+        end
+
+    coal_int.x[i][k+1] = temp
+    end
+end
 
 # test
-@test get_int_coalescence(OneModeCoalStyle(), mom[1:3], par1, ker) ≈ [-0.25, 0.0, 0.005] rtol = rtol
-@test get_int_coalescence(TwoModesCoalStyle(), mom, par2, ker) ≈ [
-  -0.75, 
-  -0.05389, 
-  -0.008031, 
-  -0.25, 
-  0.05389, 
-  0.6130] rtol = rtol
+@test coal_data.coal_ints.x[1][1] ≈ coal_int.x[1][1] rtol = 10*eps(FT)
+@test coal_data.coal_ints.x[1][2] ≈ coal_int.x[1][2] rtol = 10*eps(FT)
+@test coal_data.coal_ints.x[1][3] ≈ coal_int.x[1][3] rtol = 10*eps(FT)
+@test coal_data.coal_ints.x[2][1] ≈ coal_int.x[2][1] rtol = 10*eps(FT)
+@test coal_data.coal_ints.x[2][2] ≈ coal_int.x[2][2] rtol = 10*eps(FT)
 
 # Numerical cases
 # weighting function
@@ -179,6 +226,6 @@ pdists = [dist1b, dist2, dist3]
 
 ## Sedimentation.jl
 # Sedimentation moment flux tests
-dist = Dict(:dist => [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], :vel => [1.0, -1.0])
+par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], vel = [(1.0, 0.0), (-1.0, 1.0/6)])
 mom = [1.0, 1.0]
-@test get_sedimentation_flux(mom, dist) ≈ [-1.0+gamma(1.0+1.0/6), -1.0+gamma(2.0+1.0/6)] rtol=rtol
+@test get_sedimentation_flux(par) ≈ [-1.0+gamma(1.0+1.0/6), -1.0+gamma(2.0+1.0/6)] rtol=rtol

@@ -1,5 +1,5 @@
-using Interpolations
 using LinearAlgebra
+using RecursiveArrayTools
 
 using Cloudy.KernelTensors
 using Cloudy.ParticleDistributions
@@ -43,29 +43,35 @@ of sedimentation flux and coalescence source term.
 """
 function make_rainshaft_rhs(coal_type::CoalescenceStyle)
 
-    function rhs(m, par, t)
+    function rhs(m, p, t)
         nz = size(m)[1]
         nmom = size(m)[2]
-        m[findall(x -> x<0, m)] .= 0
 
+        m[findall(x -> x<0, m)] .= 0
         coal_source = similar(m)
+        sedi_flux = similar(m)
         for i in 1:nz
-            if all(m[i, :] .< eps(Float64))
+            m_z = ArrayPartition([zeros(nparams(d)) for d in p.pdists]...)
+            m_z[:] = m[i, :]
+            for (j, dist) in enumerate(p.pdists)
+                update_dist_from_moments!(dist, m_z.x[j])
+            end
+
+            if all(m_z[:] .< eps(Float64))
                 coal_source[i, :] = zeros(1, nmom)
             else
-                coal_source[i, :] = get_int_coalescence(coal_type, m[i, :], par, par[:kernel])
+                update_coal_ints!(coal_type, p.kernel, p.pdists, p.dist_thresholds, p.coal_data)
+                coal_source[i, :] = p.coal_data.coal_ints
             end
+
+            sedi_flux[i, :] = get_sedimentation_flux(p)
         end
 
-        u = similar(m)
-        for i in 1:nz
-            u[i, :] = get_sedimentation_flux(m[i, :], par)
-        end
-        u_top = zeros(1, nmom)
-        u = [u; u_top]
+        sedi_flux_top = zeros(1, nmom)
+        sedi_flux = [sedi_flux; sedi_flux_top]
         sedi_source = similar(m)
         for i in 1:nz
-            sedi_source[i, :] = -(u[i+1, :] - u[i, :]) / par[:dz]
+            sedi_source[i, :] = -(sedi_flux[i+1, :] - sedi_flux[i, :]) / p[:dz]
         end
 
         return coal_source .+ sedi_source

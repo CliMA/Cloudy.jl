@@ -10,7 +10,7 @@ include("./rainshaft_helpers.jl")
   `p` - additional ODE parameters carried in the solver
 Plots the moment time series results
 """
-function plot_moments!(sol, p; file_name="examples/test_moments.png")
+function plot_moments!(sol, p; file_name="test_moments.png")
     time = sol.t
     moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
 
@@ -64,7 +64,10 @@ function plot_moments!(sol, p; file_name="examples/test_moments.png")
         foreground_color_legend = nothing,
         left_margin = 5Plots.mm, 
         bottom_margin = 5Plots.mm)
-    savefig(file_name)
+
+    path = joinpath(pkgdir(Cloudy), "test/outputs/")
+    mkpath(path)
+    savefig(path*file_name)
 end
 
 """
@@ -74,7 +77,7 @@ end
   `p` - additional ODE parameters carried in the solver
 Plots the spectra
 """
-function plot_spectra!(sol, p; file_name="examples/test_spectra.png", logxrange=(0, 8))
+function plot_spectra!(sol, p; file_name="test_spectra.png", logxrange=(0, 8))
     x = 10 .^ (collect(range(logxrange[1], logxrange[2], 100)))
     r = (x * 3 / 4 / π) .^ (1/3)
 
@@ -118,17 +121,20 @@ function plot_spectra!(sol, p; file_name="examples/test_spectra.png", logxrange=
         foreground_color_legend = nothing,
         left_margin = 7Plots.mm, 
         bottom_margin = 8Plots.mm)
-    savefig(file_name)
+        
+    path = joinpath(pkgdir(Cloudy), "test/outputs/")
+    mkpath(path)
+    savefig(path*file_name)
 end
 
 """
-  plot_params!(sol, p; file_name = "examples/box_model.pdf")
+  plot_params!(sol, p; file_name = "box_model.pdf")
 
   `sol` - ODE solution
   `p` - additional ODE parameters carried in the solver
 Plots the evolution of particle distribution parameters in time.
 """
-function plot_params!(sol, p; yscale = :log10, file_name = "examples/box_model.pdf")
+function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     time = sol.t
     moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
     params = similar(moments)
@@ -163,30 +169,33 @@ function plot_params!(sol, p; yscale = :log10, file_name = "examples/box_model.p
         left_margin = 5Plots.mm, 
         bottom_margin = 5Plots.mm
         )
-    savefig(file_name)
+        
+    path = joinpath(pkgdir(Cloudy), "test/outputs/")
+    mkpath(path)
+    savefig(path*file_name)
 end
 
 """
-  plot_rainshaft_results(z, res, par; outfile = "rainshaft.pdf")
+  plot_rainshaft_results(z, res, p; outfile = "rainshaft.pdf")
 
   `z` - array of discrete hieghts
   `res` - results of ODE; an array containing matrices of prognostic moments of arbitrary number of modes at discrete times.
-  `ODE_parameters` - a dict containing array of distributions and terminal celocity coefficients
+  `p` - additional ODE parameters carried in the solver
 Plots rainshaft simulation results for arbitrary number and any combination of modes
 """
-function plot_rainshaft_results(z, res, par; file_name = "examples/rainshaft.pdf", plot_analytical_sedimentation = false)
+function plot_rainshaft_results(z, res, p; file_name = "rainshaft.pdf", plot_analytical_sedimentation = false)
     ic = res[1]
-    n_dist = length(par[:dist])
-    nm = [nparams(dist) for dist in par[:dist]]
+    n_dist = length(p.pdists)
+    nm = [nparams(dist) for dist in p.pdists]
     nm_max = maximum(nm)
     n_plots = nm_max * n_dist
-    p = Array{Plots.Plot}(undef, n_plots)
+    plt = Array{Plots.Plot}(undef, n_plots)
     nt = length(res)
     plot_time_inds = [1, floor(Int, nt/5), floor(Int, 2*nt/5), floor(Int, 3*nt/5), floor(Int, 4*nt/5), nt]
     for i in 1:n_dist
         for j in 1:nm_max
             xlabel_ext = " (mode "*string(i)*")"
-            p[(i-1)*nm_max+j] = plot(xaxis = "M_" * string(j-1) * xlabel_ext, yaxis = "z(km)")
+            plt[(i-1)*nm_max+j] = plot(xaxis = "M_" * string(j-1) * xlabel_ext, yaxis = "z(km)")
             if j > nm[i] continue end
             for (k, t_ind) in enumerate(plot_time_inds)
                 plot!(res[t_ind][:,(i-1)*nm_max+j], z/1000, lw = 3, c = k, label = false)
@@ -196,26 +205,29 @@ function plot_rainshaft_results(z, res, par; file_name = "examples/rainshaft.pdf
 
     if plot_analytical_sedimentation
         for (k, t_ind) in enumerate(plot_time_inds)
-            t = t_ind * par[:dt]
+            t = t_ind * p.dt
             ind = 1
             for i in 1:n_dist
-                sdm_anl = analytical_sol(par[:dist][i], ic[:, ind:ind-1+nm[i]], par[:vel], z, t)
+                sdm_anl = analytical_sol(p.pdists[i], ic[:, ind:ind-1+nm[i]], p.vel, z, t)
                 for j in 1:nm[i]
-                    plot!(p[(i-1)*nm_max+j], sdm_anl[:, j], z/1000, lw = 1, ls = :dash, c = k, label = false)
+                    plot!(plt[(i-1)*nm_max+j], sdm_anl[:, j], z/1000, lw = 1, ls = :dash, c = k, label = false)
                 end
                 ind += nm[i]
             end
         end
-        plot!(p[1], NaN.*z, z/1000, lw = 3, ls = :solid, c = :black, label = "numerical solution")
-        plot!(p[1], NaN.*z, z/1000, lw = 1, ls = :dash, c = :black, label = "analytical sedimentation")
+        plot!(plt[1], NaN.*z, z/1000, lw = 3, ls = :solid, c = :black, label = "numerical solution")
+        plot!(plt[1], NaN.*z, z/1000, lw = 1, ls = :dash, c = :black, label = "analytical sedimentation")
     end
     plot(
-        p..., 
+        plt..., 
         layout = grid(n_dist, nm_max), 
         foreground_color_legend = nothing, 
         size = (400 * nm_max, 270 * n_dist),
         left_margin = 5Plots.mm,
         bottom_margin = 7Plots.mm,
         )
-    savefig(file_name)
+        
+    path = joinpath(pkgdir(Cloudy), "test/outputs/")
+    mkpath(path)
+    savefig(path*file_name)
 end

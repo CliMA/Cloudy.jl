@@ -1,35 +1,14 @@
-using Test
+# Unit tests
+include("./unit_tests/run_unit_tests.jl")
 
-FT = Float64
-
-
-@testset "Cloudy" begin
-  @testset "Correctness" begin
-    @testset "Kernels" begin
-      include("test_KernelTensors_correctness.jl")
-      include("test_KernelFunctions_correctness.jl")
-	  end
-
-	  @testset "ParticleDistributions" begin
-	    include("test_ParticleDistributions_correctness.jl")
-    end
-
-	  @testset "Sources" begin
-	    include("test_Sources_correctness.jl")
-    end
-  end
-
-  @testset "Type stability" begin
-    @testset "Kernels" begin
-      include("test_KernelFunctions_opt.jl")
-    end
-
-    @testset "ParticleDistributions" begin
-      include("test_ParticleDistributions_opt.jl")
-    end
-
-    @testset "Sources" begin
-      include("test_Sources_opt.jl")
-    end
-  end
-end
+# Examples
+include("./examples/Analytical/box_single_gamma.jl")
+include("./examples/Analytical/box_gamma_mixture.jl")
+include("./examples/Analytical/box_mono_gamma_mixture.jl")
+include("./examples/Analytical/rainshaft_single_gamma.jl")
+include("./examples/Analytical/rainshaft_gamma_mixture.jl")
+include("./examples/Analytical/rainshaft_gamma_mixture.jl")
+include("./examples/Numerical/single_particle_exp.jl")
+include("./examples/Numerical/single_particle_gamma.jl")
+include("./examples/Numerical/n_particles_exp.jl")
+include("./examples/Numerical/n_particles_gamma.jl")
