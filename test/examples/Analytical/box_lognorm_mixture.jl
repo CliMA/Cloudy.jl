@@ -30,8 +30,7 @@ ODE_parameters = (;
     )
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
-@show sol.u
 
-#plot_params!(sol, (;pdists = dist_init); yscale = :identity, file_name = "box_gamma_mixture_params.pdf")
-plot_moments!(sol, (;pdists = dist_init); file_name = "box_gamma_mixture_moments.pdf")
-#plot_spectra!(sol, (;pdists = dist_init); file_name = "box_gamma_mixture_spectra.pdf", logxrange=(-2, 5))
+plot_params!(sol, (;pdists = dist_init); yscale = :identity, file_name = "box_lognorm_mixture_params.pdf")
+plot_moments!(sol, (;pdists = dist_init); file_name = "box_lognorm_mixture_moments.pdf")
+plot_spectra!(sol, (;pdists = dist_init); file_name = "box_lognorm_mixture_spectra.pdf", logxrange=(-2, 5))
