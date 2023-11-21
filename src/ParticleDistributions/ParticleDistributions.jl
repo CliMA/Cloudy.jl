@@ -13,9 +13,6 @@ using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
 using QuadGK
 
-import NonlinearSolve as NLS
-import LinearAlgebra: norm
-import Optim: optimize, LBFGS
 import NumericalIntegration as NI
 
 # particle mass distributions available for microphysics

@@ -37,6 +37,6 @@ ODE_parameters = (Ndist=Ndist, Nmom=Nmom, pdists=pdists, kernel_func=kernel, coa
 prob = ODEProblem(rhs, dist_moments, tspan, ODE_parameters; progress=true)
 sol = solve(prob, SSPRK33(), dt=ODE_parameters.dt)
 @show sol.u
-plot_params!(sol, ODE_parameters; file_name="examples/n_particle_gam_params.png")
-plot_moments!(sol, ODE_parameters; file_name="examples/n_particle_gam_moments.png")
-plot_spectra!(sol, ODE_parameters; file_name="examples/n_particle_gam_spectra.png", logxrange=(-2,5))
+plot_params!(sol, ODE_parameters; file_name="n_particle_gam_params.png")
+plot_moments!(sol, ODE_parameters; file_name="n_particle_gam_moments.png")
+plot_spectra!(sol, ODE_parameters; file_name="n_particle_gam_spectra.png", logxrange=(-2,5))

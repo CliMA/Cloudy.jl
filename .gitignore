@@ -3,6 +3,10 @@
 *.png
 *.jpg
 *.pdf
+outputs/
+*/outputs/
+*/*/outputs/
+
 
 # Coverage
 *.jl.cov

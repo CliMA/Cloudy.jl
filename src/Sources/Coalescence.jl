@@ -12,131 +12,171 @@ using Cloudy.ParticleDistributions
 using Cloudy.KernelTensors
 using Cloudy.EquationTypes
 using QuadGK
+using RecursiveArrayTools
 
 
 # methods that compute source terms from microphysical parameterizations
-export get_int_coalescence
 export update_coal_ints!
 export initialize_coalescence_data
 
 """
-get_int_coalescence(::OneModeCoalStyle, mom_p::Array{Real}, par::Dict, ker::KernelTensor{Real})
+update_coal_ints!(::AnalyticalCoalStyle, kernel::KernelTensor{FT}, pdists::Array{ParticleDistribution{FT}}, thresholds::Vector{FT}, coal_data::NamedTuple)
 
-  - `mom_p` - prognostic moments of particle mass distribution
-  - `par` - ODE parameters, a Dict containing a key ":dist" whose value is a list of ParticleDistribution;
-            it is used to calculate the diagnostic moments.
-  - `ker` - coalescence kernel tensor
-Returns the coalescence integral for all moments in `mom_p`.
+  - `kernel`: function that determines rate of coalescence based on size of particles x, y
+  - `pdists`: array of PSD subdistributions
+  - `thresholds`: PSD upper thresholds for computing S terms
+  - `coal_data`: Dictionary carried by ODE solver that contains all dynamical parameters, including the coalescence integrals
+Updates the collision-coalescence integrals.
 """
-function get_int_coalescence(::OneModeCoalStyle, mom_p::Array{FT}, par::Dict, ker::KernelTensor{FT}) where {FT <: Real}
-  r = ker.r
-  s = length(mom_p)
+function update_coal_ints!(::AnalyticalCoalStyle,
+  kernel::KernelTensor{FT}, pdists, thresholds, coal_data
+) where{FT <: Real}
 
-  # Need to build diagnostic moments
-  update_dist_from_moments!(par[:dist][1], mom_p)
-  # Update the distribution that is carried along in par for use in next time steps
-  mom_d = Array{FT}(undef, r)
-  for k in 0:r-1
-    mom_d[k+1] = moment(par[:dist][1], FT(s+k))
-  end
-  mom = vcat(mom_p, mom_d)
+  NProgMoms = [nparams(pdist) for pdist in pdists]
+  Nmom = maximum(NProgMoms)
+  
+  update_moments!(pdists, coal_data.moments)
+  update_finite_2d_integrals!(pdists, thresholds, coal_data.moments, coal_data.finite_2d_ints)
 
-  # only calculate coalescence integral for prognostic moments
-  coal_int = similar(mom_p)
-  for k in 0:s-1
-    if k == 1
-      # implies conservation of 1st moment (~mass) under coalescence processes
-      temp = 0.0
-    end
-    if k != 1
-      temp = 0.0
-      # coalescence integral for kth moment (k = 0 or k > 1)
-      # see design document's microphysics for details of derivation
-      for a in 0:r
-        for b in 0:r
-          coef = ker.c[a+1, b+1]
-          temp -= coef * mom[a+k+1] * mom[b+1]
-          for c in 0:k
-            temp += 0.5 * coef * binomial(k, c) * mom[a+c+1] * mom[b+k-c+1]
+  coal_data.coal_ints .= 0
+  for m in 1:Nmom
+
+      get_coalescence_integral_moment_qrs!(AnalyticalCoalStyle(), m-1, kernel, NProgMoms, coal_data)
+      
+      for (k, pdist) in enumerate(pdists)
+          if m > nparams(pdist)
+              continue
           end
-        end
+          coal_data.coal_ints.x[k][m] += sum(@views coal_data.Q[:,k])
+          coal_data.coal_ints.x[k][m] -= sum(@views coal_data.R[:,k])
+          coal_data.coal_ints.x[k][m] += coal_data.S[k,1]
+          if k > 1
+              coal_data.coal_ints.x[k][m] += coal_data.S[k-1, 2]
+          end
       end
-    end
-
-  coal_int[k+1] = temp
   end
-
-  return coal_int
 end
 
-function get_int_coalescence(::TwoModesCoalStyle, mom_p::Array{FT}, par::Dict, ker::KernelTensor{FT}) where {FT <: Real}
-  r = ker.r
+function initialize_coalescence_data(::AnalyticalCoalStyle, NProgMoms, kernel::KernelTensor{FT}) where{FT <: Real}
+  Ndist = length(NProgMoms)
+  Q = zeros(FT, Ndist, Ndist)
+  R = zeros(FT, Ndist, Ndist)
+  S = zeros(FT, Ndist, 2)
+  Nmom = maximum(NProgMoms) + kernel.r
+  moments = zeros(FT, Ndist, Nmom)
+  finite_2d_ints = zeros(FT, Ndist, Nmom, Nmom)
+  coal_ints = ArrayPartition([zeros(FT, NProgMoms[i]) for i in 1:Ndist]...)
+  return (Q=Q, R=R, S=S, moments = moments, finite_2d_ints = finite_2d_ints, coal_ints=coal_ints)
+end
 
-  n_params = [nparams(par[:dist][i]) for i in 1:2]
-  mom_p_ = [mom_p[1:n_params[1]], mom_p[n_params[1]+1:end]]
-  s = [length(mom_p_[i]) for i in 1:2]
-
-  # update distributions from moments
-  for i in 1:2
-    update_dist_from_moments!(par[:dist][i], mom_p_[i])
-  end
-  
-  # Need to build diagnostic moments
-  n_mom = maximum(s) + r
-  mom = zeros(FT, 2, n_mom)
-  for i in 1:2
-    for j in 1:n_mom
-      if j <= s[i]
-        mom[i, j] = mom_p_[i][j]
-      else
-        mom[i, j] = moment(par[:dist][i], FT(j-1))
+function update_moments!(pdists::Vector{<:PrimitiveParticleDistribution{FT}}, moments) where{FT <: Real}
+  Ndist, Nmom = size(moments)
+  for i in 1:Ndist
+      for j in 1:Nmom
+          moments[i, j] = moment(pdists[i], FT(j-1))
       end
-    end
   end
+end
 
-  # Compute the integral term with threshold (mode1-mode1 coalescence contributing to both mode 1 and 2)
-  int_w_thrsh = zeros(FT, n_mom, n_mom)
-  mom_times_mom = zeros(FT, n_mom, n_mom)
-  for i in 1:n_mom
-    for j in i:n_mom
-      mom_times_mom[i, j] = mom[1, i] * mom[1, j]
-      tmp = (mom_times_mom[i, j] < eps(FT)) ? FT(0) : moment_source_helper(par[:dist][1], FT(i-1), FT(j-1), par[:x_th])
-      int_w_thrsh[i, j] = min(mom_times_mom[i, j], tmp)
-      mom_times_mom[j, i] = mom_times_mom[i, j]
-      int_w_thrsh[j, i] = int_w_thrsh[i, j]
-    end
-  end
-
-  # only calculate coalescence integral for prognostic moments
-  coal_int = [similar(mom_p_[1]), similar(mom_p_[2])]
-  for i in 1:2
-    j = (i==1) ? 2 : 1
-    for k in 0:s[i]-1
-      temp = 0.0
-
-      for a in 0:r
-        for b in 0:r
-          coef = ker.c[a+1, b+1]
-          temp -= coef * mom[i, a+k+1] * mom[i, b+1]
-          temp -= coef * mom[i, a+k+1] * mom[j, b+1]
-          for c in 0:k
-            coef_binomial = coef * binomial(k, c)
-            if i == 1
-              temp += 0.5 * coef_binomial * int_w_thrsh[a+c+1, b+k-c+1]
-            elseif i == 2
-              temp += 0.5 * coef_binomial * (mom_times_mom[a+c+1, b+k-c+1] - int_w_thrsh[a+c+1, b+k-c+1])
-              temp += 0.5 * coef_binomial * mom[i, a+c+1] * mom[i, b+k-c+1]
-              temp += coef_binomial * mom[j, a+c+1] * mom[i, b+k-c+1]
-            end
+function update_finite_2d_integrals!(pdists::Vector{<:PrimitiveParticleDistribution{FT}}, thresholds, moments, finite_2d_ints) where{FT <: Real}
+  Ndist, Nmom = size(moments)
+  for i in 1:Ndist
+      for j in 1:Nmom
+          for k in j:Nmom
+              mom_times_mom = moments[i, j] * moments[i, k]
+              if mom_times_mom < eps(FT)
+                  finite_2d_ints[i,j,k] = FT(0)
+              else
+                  if i < Ndist
+                      finite_2d_ints[i,j,k] = min(mom_times_mom, moment_source_helper(pdists[i], FT(j-1), FT(k-1), thresholds[i]))
+                  else
+                      finite_2d_ints[i,j,k] = mom_times_mom
+                  end
+              end
+              finite_2d_ints[i,k,j] = finite_2d_ints[i,j,k]
           end
-        end
       end
+  end  
+end
 
-    coal_int[i][k+1] = temp
-    end
+function get_coalescence_integral_moment_qrs!(::AnalyticalCoalStyle, moment_order, kernel, NProgMoms, coal_data)
+  update_Q_coalescence_matrix!(AnalyticalCoalStyle(), moment_order, kernel, coal_data.moments, NProgMoms, coal_data.Q)
+  update_R_coalescence_matrix!(AnalyticalCoalStyle(), moment_order, kernel, coal_data.moments, NProgMoms, coal_data.R)
+  update_S_coalescence_matrix!(AnalyticalCoalStyle(), moment_order, kernel, coal_data.moments, coal_data.finite_2d_ints, NProgMoms, coal_data.S)
+end
+
+function update_Q_coalescence_matrix!(::AnalyticalCoalStyle,
+  moment_order, kernel, moments, NProgMoms, Q
+)
+  Ndist = size(moments)[1]
+  r = kernel.r
+
+  for j in 1:Ndist
+      for k in j+1:Ndist
+          Q[j,k] = 0.0
+          if NProgMoms[k] <= moment_order
+              continue
+          end
+          for a in 0:r
+              for b in 0:r
+                for c in 0:moment_order
+                  Q[j,k] += kernel.c[a+1, b+1] * binomial(moment_order, c) * moments[j, a+c+1] * moments[k, b+moment_order-c+1]
+                end
+              end
+          end
+      end
   end
+end
 
-  return vcat(coal_int[1], coal_int[2])
+function update_R_coalescence_matrix!(::AnalyticalCoalStyle,
+  moment_order, kernel, moments, NProgMoms, R
+)
+  Ndist = size(moments)[1]
+  r = kernel.r
+
+  for j in 1:Ndist
+      for k in 1:Ndist
+          R[j,k] = 0.0
+          if NProgMoms[k] <= moment_order
+              continue
+          end
+          for a in 0:r
+              for b in 0:r
+                  R[j,k] += kernel.c[a+1, b+1] * moments[j, a+1] * moments[k, b+moment_order+1]
+              end
+          end
+      end
+  end
+end
+
+function update_S_coalescence_matrix!(::AnalyticalCoalStyle,
+  moment_order, kernel, moments, finite_2d_ints, NProgMoms, S
+)
+  Ndist = size(moments)[1]
+  r = kernel.r
+
+  for k in 1:Ndist
+      S[k,1] = 0.0
+      S[k,2] = 0.0
+      if k < Ndist
+          if NProgMoms[k] <= moment_order & NProgMoms[k+1] <= moment_order
+              continue
+          end
+      else
+          if NProgMoms[k] <= moment_order
+              continue
+          end
+      end
+      for a in 0:r
+          for b in 0:r
+              for c in 0:moment_order
+                  _s1 = 0.5 * kernel.c[a+1, b+1] * binomial(moment_order, c) * finite_2d_ints[k, a+c+1, b+moment_order-c+1]
+                  S[k,1] += _s1
+                  S[k,2] += 0.5 * kernel.c[a+1, b+1] * binomial(moment_order, c) * moments[k, a+c+1] * moments[k, b+moment_order-c+1] - _s1
+              end
+          end
+      end
+  end
 end
 
 
