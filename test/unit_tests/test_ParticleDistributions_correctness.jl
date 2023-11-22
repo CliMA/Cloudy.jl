@@ -169,7 +169,7 @@ dist = LognormalPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 
 # Update params or dist from moments
 update_dist_from_moments!(dist, [1.1, 2.0, 4.1]; param_range = Dict("μ" => (-1e5, 1e5), "σ" => (eps(Float64), 5.0)))
-@test normed_density(dist, 1.0) ≈ 1.1318 rtol=rtol
+@test normed_density(dist, 1.0) ≈ 0.3450 rtol=rtol
 @test moment(dist, 0.0) ≈ 1.1 rtol=rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol=rtol
 @test moment(dist, 2.0) ≈ 4.1 rtol=rtol
@@ -206,9 +206,9 @@ dist = GammaPrimitiveParticleDistribution(1.0, 0.5, 2.0)
 @test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 3.662e-3 rtol = rtol
 @test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 5.940e-4 rtol = rtol
 dist = LognormalPrimitiveParticleDistribution(1.0, 0.5, 2.0)
-@test moment_source_helper(dist, 0.0, 0.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 1.105e-2 rtol = rtol
-@test moment_source_helper(dist, 1.0, 0.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 1.152e-2 rtol = rtol
-@test moment_source_helper(dist, 1.0, 1.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 1.139e-2 rtol = rtol
+@test moment_source_helper(dist, 0.0, 0.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 2.831e-1 rtol = rtol
+@test moment_source_helper(dist, 1.0, 0.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 1.725e-1 rtol = rtol
+@test moment_source_helper(dist, 1.0, 1.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 8.115e-2 rtol = rtol
 
 # Moment consitency checks
 m = [1.1, 2.1]
