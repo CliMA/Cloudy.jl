@@ -70,7 +70,7 @@ end
 """
     (kernel::KernelFunction)(x::FT, y::FT)
     
-Returns evaluations of kernel function at locations `x` and `y`.
+Returns evaluations of kernel function at vector of paired locations (x[1], x[2]).
 """
 function (kern::ConstantKernelFunction)(x::FT, y::FT) where {FT<:Real}
   return kern.coll_coal_rate
