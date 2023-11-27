@@ -2,21 +2,20 @@
 
 using Cloudy.KernelTensors
 
-import Cloudy.KernelTensors: check_symmetry, symmetrize!,
-                             unpack_vector_index_to_poly_index, polyfit
+import Cloudy.KernelTensors: check_symmetry, symmetrize!, unpack_vector_index_to_poly_index, polyfit
 
-rtol=1e-5
+rtol = 1e-5
 
 # test initialization with arrays
 c = [0.1 0.0; 0.0 0.2]
 ker = CoalescenceTensor(c)
-@test ker.r  == 1
+@test ker.r == 1
 @test ker.c == Array{FT}(c)
 
 #test initialization with kernel function
 kernel_func = x -> 0.02 + x[1] + x[2]
 ker = CoalescenceTensor(kernel_func, 1, 10.0)
-@test ker.c ≈ [0.02 1.0; 1.0 0.0] rtol=rtol
+@test ker.c ≈ [0.02 1.0; 1.0 0.0] rtol = rtol
 
 # test auxilliary functions
 # test symmetry checks
@@ -80,15 +79,15 @@ i, r = 9, 3
 @test unpack_vector_index_to_poly_index(i, r) == (2, 2)
 
 # test polynomial fitting routines
-c = x -> 0.1 + 0.2*x[1]*x[2]
-@test polyfit(c, 1, 10.0) ≈ [0.1 0.0; 0.0 0.2] rtol=rtol
-c = x -> 0.1 - 0.23*x[1] - 0.23*x[2] +  0.2*x[1]*x[2]
-@test polyfit(c, 1, 100.0) ≈ [0.1 -0.23; -0.23 0.2] rtol=rtol
-c = x -> 0.1 - 0.23*x[1] - 0.23*x[2] +  0.2*x[1]*x[2]
-@test polyfit(c, 1, 1000.0) ≈ [0.1 -0.23; -0.23 0.2] rtol=rtol
-c = x -> 0.1 - 0.23*x[1] - 0.23*x[2] +  0.2*x[1]*x[2]
-@test polyfit(c, 1, 10000.0) ≈ [0.1 -0.23; -0.23 0.2] rtol=rtol
-c = x -> 0.1 - 0.23*x[1] - 0.23*x[2] +  0.2*x[1]*x[2]
-@test polyfit(c, 1, 100000.0) ≈ [0.1 -0.23; -0.23 0.2] rtol=1e-4
-c = x -> 0.1 - 0.23*x[1] - 0.23*x[2] +  0.2*x[1]*x[2]
-@test polyfit(c, 1, 1e6) ≈ [0.1 -0.23; -0.23 0.2] rtol=5e-3
+c = x -> 0.1 + 0.2 * x[1] * x[2]
+@test polyfit(c, 1, 10.0) ≈ [0.1 0.0; 0.0 0.2] rtol = rtol
+c = x -> 0.1 - 0.23 * x[1] - 0.23 * x[2] + 0.2 * x[1] * x[2]
+@test polyfit(c, 1, 100.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
+c = x -> 0.1 - 0.23 * x[1] - 0.23 * x[2] + 0.2 * x[1] * x[2]
+@test polyfit(c, 1, 1000.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
+c = x -> 0.1 - 0.23 * x[1] - 0.23 * x[2] + 0.2 * x[1] * x[2]
+@test polyfit(c, 1, 10000.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
+c = x -> 0.1 - 0.23 * x[1] - 0.23 * x[2] + 0.2 * x[1] * x[2]
+@test polyfit(c, 1, 100000.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = 1e-4
+c = x -> 0.1 - 0.23 * x[1] - 0.23 * x[2] + 0.2 * x[1] * x[2]
+@test polyfit(c, 1, 1e6) ≈ [0.1 -0.23; -0.23 0.2] rtol = 5e-3

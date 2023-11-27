@@ -1,11 +1,20 @@
 using Cloudy.ParticleDistributions
 using Cloudy.KernelFunctions
-using Cloudy.Coalescence: weighting_fn, q_integrand_inner,
-    q_integrand_outer, r_integrand_inner, r_integrand_outer,
-    s_integrand1, s_integrand2, s_integrand_inner,
-    update_R_coalescence_matrix!, update_S_coalescence_matrix!,
-    update_Q_coalescence_matrix!, initialize_coalescence_data,
-    get_coalescence_integral_moment_qrs!, update_coal_ints!
+using Cloudy.Coalescence:
+    weighting_fn,
+    q_integrand_inner,
+    q_integrand_outer,
+    r_integrand_inner,
+    r_integrand_outer,
+    s_integrand1,
+    s_integrand2,
+    s_integrand_inner,
+    update_R_coalescence_matrix!,
+    update_S_coalescence_matrix!,
+    update_Q_coalescence_matrix!,
+    initialize_coalescence_data,
+    get_coalescence_integral_moment_qrs!,
+    update_coal_ints!
 using JET: @test_opt
 using QuadGK
 
@@ -52,9 +61,9 @@ end
 @test_opt initialize_coalescence_data(3, 3)
 moment_order = 0.0
 
-for pdists in ([dist1a], [dist1a, dist2a], )
+for pdists in ([dist1a], [dist1a, dist2a])
     cd = initialize_coalescence_data(length(pdists), 3)
-    
+
     @test_opt update_Q_coalescence_matrix!(moment_order, kernel, pdists, cd.Q)
     @test_opt update_R_coalescence_matrix!(moment_order, kernel, pdists, cd.R)
     @test_opt update_S_coalescence_matrix!(moment_order, kernel, pdists, cd.S)
@@ -64,7 +73,7 @@ end
 
 for pdists in ([dist1b], [dist1b, dist2b])
     cd = initialize_coalescence_data(length(pdists), 2)
-    
+
     @test_opt update_Q_coalescence_matrix!(moment_order, kernel, pdists, cd.Q)
     @test_opt update_R_coalescence_matrix!(moment_order, kernel, pdists, cd.R)
     @test_opt update_S_coalescence_matrix!(moment_order, kernel, pdists, cd.S)

@@ -35,8 +35,8 @@ Represents a constant collision-coalescence kernel.
 $(DocStringExtensions.FIELDS)
 """
 struct ConstantKernelFunction{FT} <: CoalescenceKernelFunction{FT}
-  "collision-coalesence rate"
-  coll_coal_rate::FT
+    "collision-coalesence rate"
+    coll_coal_rate::FT
 end
 
 
@@ -49,8 +49,8 @@ Represents a linear collision-coalescence kernel.
 $(DocStringExtensions.FIELDS)
 """
 struct LinearKernelFunction{FT} <: CoalescenceKernelFunction{FT}
-  "collision-coalesence rate"
-  coll_coal_rate::FT
+    "collision-coalesence rate"
+    coll_coal_rate::FT
 end
 
 """
@@ -62,8 +62,8 @@ Represents a hydrodynamic collision-coalescence kernel.
 $(DocStringExtensions.FIELDS)
 """
 struct HydrodynamicKernelFunction{FT} <: CoalescenceKernelFunction{FT}
-  "coalescence efficiency"
-  coal_eff::FT
+    "coalescence efficiency"
+    coal_eff::FT
 end
 
 
@@ -72,16 +72,16 @@ end
     
 Returns evaluations of kernel function at vector of paired locations (x[1], x[2]).
 """
-function (kern::ConstantKernelFunction)(x::FT, y::FT) where {FT<:Real}
-  return kern.coll_coal_rate
+function (kern::ConstantKernelFunction)(x::FT, y::FT) where {FT <: Real}
+    return kern.coll_coal_rate
 end
 
-function (kern::LinearKernelFunction{FT})(x::FT, y::FT) where {FT<:Real}
-  return kern.coll_coal_rate * (x + y)
+function (kern::LinearKernelFunction{FT})(x::FT, y::FT) where {FT <: Real}
+    return kern.coll_coal_rate * (x + y)
 end
 
-function (kern::HydrodynamicKernelFunction{FT})(x::FT, y::FT) where {FT<:Real}
-  return kern.coal_eff * π * (x + y)^2 * abs(x^2 - y^2)
+function (kern::HydrodynamicKernelFunction{FT})(x::FT, y::FT) where {FT <: Real}
+    return kern.coal_eff * π * (x + y)^2 * abs(x^2 - y^2)
 end
 
 end
