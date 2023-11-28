@@ -32,7 +32,7 @@ function get_sedimentation_flux(par::NamedTuple)
     for i in 1:n_dist
         for j in 1:n_params[i]
             for k in 1:n_vel
-                mom[i][j, k] = moment(par.pdists[i], FT(j-1+vel[k][2]))
+                mom[i][j, k] = moment(par.pdists[i], FT(j - 1 + vel[k][2]))
             end
         end
     end

@@ -3,16 +3,15 @@
 using SpecialFunctions: gamma, gamma_inc
 using Cloudy.ParticleDistributions
 
-import Cloudy.ParticleDistributions: get_params, check_moment_consistency,
-                                     moment_func, density_func, density
+import Cloudy.ParticleDistributions: get_params, check_moment_consistency, moment_func, density_func, density
 rtol = 1e-3
 
 # Monodisperse distribution
 # Initialization
 dist = MonodispersePrimitiveParticleDistribution(1.0, 1.0)
 @test (dist.n, dist.θ) == (FT(1.0), FT(1.0))
-@test_throws Exception MonodispersePrimitiveParticleDistribution(-1.0, 2.)
-@test_throws Exception MonodispersePrimitiveParticleDistribution(1.0, -2.)
+@test_throws Exception MonodispersePrimitiveParticleDistribution(-1.0, 2.0)
+@test_throws Exception MonodispersePrimitiveParticleDistribution(1.0, -2.0)
 
 # Getters and setters
 @test nparams(dist) == 2
@@ -36,23 +35,23 @@ dist = MonodispersePrimitiveParticleDistribution(1.0, 2.0)
 @test density(dist, 3.1) == 0.0
 
 ## Update params from moments
-update_dist_from_moments!(dist, [1.0, 1.0]; param_range =  Dict("θ" => (0.1, 0.5)))
-@test moment(dist, 0.0) ≈ 2.0 rtol=rtol
-@test moment(dist, 1.0) ≈ 1.0 rtol=rtol
+update_dist_from_moments!(dist, [1.0, 1.0]; param_range = Dict("θ" => (0.1, 0.5)))
+@test moment(dist, 0.0) ≈ 2.0 rtol = rtol
+@test moment(dist, 1.0) ≈ 1.0 rtol = rtol
 update_dist_from_moments!(dist, [1.1, 2.0])
-@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
+@test moment(dist, 0.0) ≈ 1.1 rtol = rtol
+@test moment(dist, 1.0) ≈ 2.0 rtol = rtol
 update_dist_from_moments!(dist, [1.1, 0.0])
-@test moment(dist, 0.0) ≈ 0.0 rtol=rtol
-@test moment(dist, 1.0) ≈ 0.0 rtol=rtol
+@test moment(dist, 0.0) ≈ 0.0 rtol = rtol
+@test moment(dist, 1.0) ≈ 0.0 rtol = rtol
 
 
 # Exponential distribution
 # Initialization
 dist = ExponentialPrimitiveParticleDistribution(1.0, 1.0)
 @test (dist.n, dist.θ) == (FT(1.0), FT(1.0))
-@test_throws Exception ExponentialPrimitiveParticleDistribution(-1.0, 2.)
-@test_throws Exception ExponentialPrimitiveParticleDistribution(1.0, -2.)
+@test_throws Exception ExponentialPrimitiveParticleDistribution(-1.0, 2.0)
+@test_throws Exception ExponentialPrimitiveParticleDistribution(1.0, -2.0)
 
 # Getters and setters
 @test nparams(dist) == 2
@@ -80,15 +79,15 @@ dist = ExponentialPrimitiveParticleDistribution(1.0, 2.0)
 ## Update params or dist from moments
 update_dist_from_moments!(dist, [1.1, 2.0])
 @test normed_density(dist, 0.0) == 0.55
-@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
+@test moment(dist, 0.0) ≈ 1.1 rtol = rtol
+@test moment(dist, 1.0) ≈ 2.0 rtol = rtol
 moments = [10.0, 50.0]
 update_dist_from_moments!(dist, moments)
 @test (dist.n, dist.θ) == (10.0, 5.0)
 @test_throws Exception update_dist_from_moments!(dist, [10.0, 50.0, 300.0])
 update_dist_from_moments!(dist, [1.1, 0.0])
-@test moment(dist, 0.0) ≈ 0.0 rtol=rtol
-@test moment(dist, 1.0) ≈ 0.0 rtol=rtol
+@test moment(dist, 0.0) ≈ 0.0 rtol = rtol
+@test moment(dist, 1.0) ≈ 0.0 rtol = rtol
 
 
 # Gamma distribution
@@ -113,25 +112,25 @@ dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 @test moment(dist, 2.0) == 6.0
 @test get_moments(dist) == [1.0, 2.0, 6.0]
 @test moment_func(dist)([0.0, 1.0, 2.0]) == [1.0, 2.0, 6.0]
-@test moment(dist, 2/3) ≈ gamma(2+2/3)/gamma(2)
+@test moment(dist, 2 / 3) ≈ gamma(2 + 2 / 3) / gamma(2)
 @test density_func(dist)(0.0) == 0.0
-@test density_func(dist)(3.0) == 3/gamma(2)*exp(-3)
+@test density_func(dist)(3.0) == 3 / gamma(2) * exp(-3)
 @test density(dist, 0.0) == 0.0
-@test density(dist, 3.0) == 3/gamma(2)*exp(-3)
+@test density(dist, 3.0) == 3 / gamma(2) * exp(-3)
 @test dist(0.0) == 0.0
-@test dist(3.0) == 3/gamma(2)*exp(-3)
+@test dist(3.0) == 3 / gamma(2) * exp(-3)
 @test_throws Exception density(dist, -3.1)
 
 # Update params or dist from moments
 update_dist_from_moments!(dist, [1.1, 2.0, 4.1]; param_range = Dict("θ" => (1e-5, 1e5), "k" => (eps(Float64), 5.0)))
-@test normed_density(dist, 1.0) ≈ 0.833 rtol=rtol
-@test moment(dist, 0.0) ≈ 1.726 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
-@test moment(dist, 2.0) ≈ 2.782 rtol=rtol
+@test normed_density(dist, 1.0) ≈ 0.833 rtol = rtol
+@test moment(dist, 0.0) ≈ 1.726 rtol = rtol
+@test moment(dist, 1.0) ≈ 2.0 rtol = rtol
+@test moment(dist, 2.0) ≈ 2.782 rtol = rtol
 update_dist_from_moments!(dist, [1.1, 2.423, 8.112])
-@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.423 rtol=rtol
-@test moment(dist, 2.0) ≈ 8.112 rtol=rtol
+@test moment(dist, 0.0) ≈ 1.1 rtol = rtol
+@test moment(dist, 1.0) ≈ 2.423 rtol = rtol
+@test moment(dist, 2.0) ≈ 8.112 rtol = rtol
 moments = [10.0, 50.0, 300.0]
 update_dist_from_moments!(dist, moments)
 @test (dist.n, dist.k, dist.θ) == (10.0, 5.0, 1.0)
@@ -159,37 +158,37 @@ dist = LognormalPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 @test get_moments(dist) == [1.0, exp(3.0), exp(10.0)]
 @test moment_func(dist)([0.0, 1.0, 2.0]) == [1.0, exp(3.0), exp(10.0)]
 @test moment(dist, 0.5) ≈ exp(1.0)
-@test density_func(dist)(exp(1.0)) == 1 / 2.0 / sqrt(2*π) / exp(1.0)
+@test density_func(dist)(exp(1.0)) == 1 / 2.0 / sqrt(2 * π) / exp(1.0)
 @test isnan(density_func(dist)(0.0))
 @test isnan(density(dist, 0.0))
-@test density(dist, exp(1.0)) == 1 / 2.0 / sqrt(2*π) / exp(1.0)
+@test density(dist, exp(1.0)) == 1 / 2.0 / sqrt(2 * π) / exp(1.0)
 @test isnan(dist(0.0))
-@test dist(exp(1.0)) == 1 / 2.0 / sqrt(2*π) / exp(1.0)
+@test dist(exp(1.0)) == 1 / 2.0 / sqrt(2 * π) / exp(1.0)
 @test_throws Exception density(dist, -0.1)
 
 # Update params or dist from moments
 update_dist_from_moments!(dist, [1.1, 2.0, 4.1]; param_range = Dict("μ" => (-1e5, 1e5), "σ" => (eps(Float64), 5.0)))
-@test normed_density(dist, 1.0) ≈ 0.3450 rtol=rtol
-@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.0 rtol=rtol
-@test moment(dist, 2.0) ≈ 4.1 rtol=rtol
+@test normed_density(dist, 1.0) ≈ 0.3450 rtol = rtol
+@test moment(dist, 0.0) ≈ 1.1 rtol = rtol
+@test moment(dist, 1.0) ≈ 2.0 rtol = rtol
+@test moment(dist, 2.0) ≈ 4.1 rtol = rtol
 update_dist_from_moments!(dist, [1.1, 2.423, 8.112])
-@test moment(dist, 0.0) ≈ 1.1 rtol=rtol
-@test moment(dist, 1.0) ≈ 2.423 rtol=rtol
-@test moment(dist, 2.0) ≈ 8.112 rtol=rtol
+@test moment(dist, 0.0) ≈ 1.1 rtol = rtol
+@test moment(dist, 1.0) ≈ 2.423 rtol = rtol
+@test moment(dist, 2.0) ≈ 8.112 rtol = rtol
 moments = [10.0, 50.0, 300.0]
 update_dist_from_moments!(dist, moments)
-@test dist.n ≈ 10.0 rtol=rtol
-@test dist.μ ≈ 1.518 rtol=rtol
-@test dist.σ ≈ 0.427 rtol=rtol
+@test dist.n ≈ 10.0 rtol = rtol
+@test dist.μ ≈ 1.518 rtol = rtol
+@test dist.σ ≈ 0.427 rtol = rtol
 @test_throws Exception update_dist_from_moments!(dist, [10.0, 50.0])
 
 
 # Moment consistency checks
 update_dist_from_moments!(dist, [1.1, 0.0, 8.112])
-@test moment(dist, 0.0) ≈ 0.0 rtol=rtol
-@test moment(dist, 1.0) ≈ 0.0 rtol=rtol
-@test moment(dist, 2.0) ≈ 0.0 rtol=rtol
+@test moment(dist, 0.0) ≈ 0.0 rtol = rtol
+@test moment(dist, 1.0) ≈ 0.0 rtol = rtol
+@test moment(dist, 2.0) ≈ 0.0 rtol = rtol
 
 # Moment source helper
 dist = MonodispersePrimitiveParticleDistribution(1.0, 0.5)

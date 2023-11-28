@@ -30,7 +30,7 @@ kernel = LinearKernelFunction(B)
 # Initialization
 Ec = 1.0
 kernel = HydrodynamicKernelFunction(Ec)
-@test kernel.coal_eff == Ec 
+@test kernel.coal_eff == Ec
 
 # evaluation, symmetry 
 @test kernel(x, y) == Ec * π * (x + y)^2 * abs(x^2 - y^2)
