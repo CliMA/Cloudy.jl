@@ -35,7 +35,7 @@ NumericalCoalStyle() isa NumericalCoalStyle
 # Constant kernel test (e.g, Smoluchowski 1916)
 function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
     # Parameters & initial condition
-    kernel_func = x -> 1.0
+    kernel_func = (x, y) -> 1.0
     ker = (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) : CoalescenceTensor([1.0])
 
     # Initial condition
@@ -76,7 +76,7 @@ dist = [
     GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),
     ExponentialPrimitiveParticleDistribution(FT(1), FT(1)),
 ]
-kernel = CoalescenceTensor(x -> 5e-3 * (x[1] + x[2]), 1, FT(500))
+kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), 1, FT(10))
 NProgMoms = [nparams(d) for d in dist]
 r = kernel.r
 s = [length(mom_p.x[i]) for i in 1:2]

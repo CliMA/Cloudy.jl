@@ -15,7 +15,7 @@ dist_init = [
 ]
 
 # Solver
-kernel_func = x -> 5e-3 * (x[1] + x[2])
+kernel_func = (x, y) -> 5e-3 * (x + y)
 kernel = CoalescenceTensor(kernel_func, 1, FT(500))
 tspan = (FT(0), FT(1000))
 # tspan = (FT(0), FT(250))

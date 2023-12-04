@@ -25,7 +25,7 @@ dist_init = [
     GammaPrimitiveParticleDistribution(FT(10), FT(0.1), FT(1)),
     GammaPrimitiveParticleDistribution(FT(0.1), FT(1), FT(1)),
 ]
-kernel_func = x -> 5e-3 * (x[1] + x[2])
+kernel_func = (x, y) -> 5e-3 * (x + y)
 kernel = CoalescenceTensor(kernel_func, 1, FT(500))
 tspan = (FT(0), FT(1000))
 NProgMoms = [nparams(dist) for dist in dist_init]

@@ -8,9 +8,9 @@ include("../utils/box_model_helpers.jl")
 
 FT = Float64
 
-T_end = 1000.0
+T_end = 50.0
 coalescence_coeff = 5e-3
-dt = FT(50)
+dt = FT(1.0)
 
 # Initial condition 
 Ndist = 2
@@ -36,6 +36,6 @@ ODE_parameters = (Ndist = Ndist, Nmom = Nmom, pdists = pdists, kernel_func = ker
 prob = ODEProblem(rhs, dist_moments, tspan, ODE_parameters; progress = true)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 @show sol.u
-plot_params!(sol, ODE_parameters; file_name = "n_particle_ln_params.png")
+plot_params!(sol, ODE_parameters; file_name = "n_particle_ln_params.png", yscale = :identity)
 plot_moments!(sol, ODE_parameters; file_name = "n_particle_ln_moments.png")
 plot_spectra!(sol, ODE_parameters; file_name = "n_particle_ln_spectra.png", logxrange = (-2, 5))

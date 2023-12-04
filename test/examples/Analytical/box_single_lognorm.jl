@@ -12,7 +12,7 @@ moments_init = ArrayPartition([1.0, 2.0, 6.0])
 dist_init = [LognormalPrimitiveParticleDistribution(FT(1), 0.213, 0.42)]
 
 # Solver
-kernel_func = x -> 5e-3 * (x[1] + x[2])
+kernel_func = (x, y) -> 5e-3 * (x + y)
 kernel = CoalescenceTensor(kernel_func, 1, FT(500))
 tspan = (FT(0), FT(1000))
 NProgMoms = [nparams(dist) for dist in dist_init]

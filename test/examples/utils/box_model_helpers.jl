@@ -3,6 +3,7 @@ using SpecialFunctions
 using RecursiveArrayTools
 
 using Cloudy
+using Cloudy.KernelFunctions
 using Cloudy.KernelTensors
 using Cloudy.ParticleDistributions
 using Cloudy.Coalescence
