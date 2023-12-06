@@ -16,7 +16,8 @@ dist_init = [
 
 # Solver
 kernel_func = HydrodynamicKernelFunction(1e-10)
-kernel = CoalescenceTensor(kernel_func, 5, FT(500))
+kernel = Array{CoalescenceTensor{FT}}(undef, length(dist_init), length(dist_init))
+kernel .= CoalescenceTensor(kernel_func, 5, FT(500))
 tspan = (FT(0), FT(500))
 NProgMoms = [nparams(dist) for dist in dist_init]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)

@@ -36,7 +36,8 @@ NumericalCoalStyle() isa NumericalCoalStyle
 function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
     # Parameters & initial condition
     kernel_func = (x, y) -> 1.0
-    ker = (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) : CoalescenceTensor([1.0])
+    ker = Array{CoalescenceTensor{FT}}(undef, 1, 1)
+    ker[1, 1] = (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) : CoalescenceTensor([1.0])
 
     # Initial condition
     mom = ArrayPartition([1.0, 2.0])
@@ -76,9 +77,10 @@ dist = [
     GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),
     ExponentialPrimitiveParticleDistribution(FT(1), FT(1)),
 ]
-kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), 1, FT(10))
+kernel = Array{CoalescenceTensor{FT}}(undef, length(dist), length(dist))
+kernel .= CoalescenceTensor((x, y) -> 5e-3 * (x + y), 1, FT(10))
 NProgMoms = [nparams(d) for d in dist]
-r = kernel.r
+r = maximum([ker.r for ker in kernel])
 s = [length(mom_p.x[i]) for i in 1:2]
 thresholds = [0.5, Inf]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)
@@ -115,7 +117,7 @@ for i in 1:2
 
         for a in 0:r
             for b in 0:r
-                coef = kernel.c[a + 1, b + 1]
+                coef = kernel[i, j].c[a + 1, b + 1]
                 temp -= coef * mom[i, a + k + 1] * mom[i, b + 1]
                 temp -= coef * mom[i, a + k + 1] * mom[j, b + 1]
                 for c in 0:k

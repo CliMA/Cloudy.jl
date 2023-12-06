@@ -13,6 +13,7 @@ using Cloudy.KernelTensors
 using Cloudy.EquationTypes
 using QuadGK
 using RecursiveArrayTools
+using LinearAlgebra
 
 
 # methods that compute source terms from microphysical parameterizations
@@ -20,9 +21,9 @@ export update_coal_ints!
 export initialize_coalescence_data
 
 """
-update_coal_ints!(::AnalyticalCoalStyle, kernel::KernelTensor{FT}, pdists::Array{ParticleDistribution{FT}}, thresholds::Vector{FT}, coal_data::NamedTuple)
+update_coal_ints!(::AnalyticalCoalStyle, kernel::Matrix{KernelTensor{FT}}, pdists::Array{ParticleDistribution{FT}}, thresholds::Vector{FT}, coal_data::NamedTuple)
 
-  - `kernel`: function that determines rate of coalescence based on size of particles x, y
+  - `kernel`: Array of kernel tensors that determine rate of coalescence based on pair of distributions and size of particles x, y
   - `pdists`: array of PSD subdistributions
   - `thresholds`: PSD upper thresholds for computing S terms
   - `coal_data`: Dictionary carried by ODE solver that contains all dynamical parameters, including the coalescence integrals
@@ -30,7 +31,7 @@ Updates the collision-coalescence integrals.
 """
 function update_coal_ints!(
     ::AnalyticalCoalStyle,
-    kernel::KernelTensor{FT},
+    kernel::Matrix{<:KernelTensor{FT}},
     pdists,
     thresholds,
     coal_data,
@@ -61,14 +62,22 @@ function update_coal_ints!(
     end
 end
 
-function initialize_coalescence_data(::AnalyticalCoalStyle, NProgMoms, kernel::KernelTensor{FT}) where {FT <: Real}
+function initialize_coalescence_data(
+    ::AnalyticalCoalStyle,
+    NProgMoms,
+    kernel::Matrix{<:KernelTensor{FT}},
+) where {FT <: Real}
     Ndist = length(NProgMoms)
+    @assert size(kernel) == (Ndist, Ndist)
+
     Q = zeros(FT, Ndist, Ndist)
     R = zeros(FT, Ndist, Ndist)
     S = zeros(FT, Ndist, 2)
-    Nmom = maximum(NProgMoms) + kernel.r
+    kernel_r = [ker.r for ker in kernel]
+    Nmom = maximum(NProgMoms) + maximum(kernel_r)
     moments = zeros(FT, Ndist, Nmom)
-    finite_2d_ints = zeros(FT, Ndist, Nmom, Nmom)
+    N_2d_ints = diag(kernel_r) .+ [i < Ndist ? max(NProgMoms[i], NProgMoms[i + 1]) : NProgMoms[i] for i in 1:Ndist]
+    finite_2d_ints = [zeros(FT, N_2d_ints[i], N_2d_ints[i]) for i in 1:Ndist]
     coal_ints = ArrayPartition([zeros(FT, NProgMoms[i]) for i in 1:Ndist]...)
     return (Q = Q, R = R, S = S, moments = moments, finite_2d_ints = finite_2d_ints, coal_ints = coal_ints)
 end
@@ -88,22 +97,23 @@ function update_finite_2d_integrals!(
     moments,
     finite_2d_ints,
 ) where {FT <: Real}
-    Ndist, Nmom = size(moments)
+    Ndist = size(moments)[1]
     for i in 1:Ndist
-        for j in 1:Nmom
-            for k in j:Nmom
+        N_2d_ints = size(finite_2d_ints[i])[1]
+        for j in 1:N_2d_ints
+            for k in j:N_2d_ints
                 mom_times_mom = moments[i, j] * moments[i, k]
                 if mom_times_mom < eps(FT)
-                    finite_2d_ints[i, j, k] = FT(0)
+                    finite_2d_ints[i][j, k] = FT(0)
                 else
                     if i < Ndist
-                        finite_2d_ints[i, j, k] =
+                        finite_2d_ints[i][j, k] =
                             min(mom_times_mom, moment_source_helper(pdists[i], FT(j - 1), FT(k - 1), thresholds[i]))
                     else
-                        finite_2d_ints[i, j, k] = mom_times_mom
+                        finite_2d_ints[i][j, k] = mom_times_mom
                     end
                 end
-                finite_2d_ints[i, k, j] = finite_2d_ints[i, j, k]
+                finite_2d_ints[i][k, j] = finite_2d_ints[i][j, k]
             end
         end
     end
@@ -125,7 +135,6 @@ end
 
 function update_Q_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, kernel, moments, NProgMoms, Q)
     Ndist = size(moments)[1]
-    r = kernel.r
 
     for j in 1:Ndist
         for k in (j + 1):Ndist
@@ -133,11 +142,12 @@ function update_Q_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, kerne
             if NProgMoms[k] <= moment_order
                 continue
             end
+            r = kernel[j, k].r
             for a in 0:r
                 for b in 0:r
                     for c in 0:moment_order
                         Q[j, k] +=
-                            kernel.c[a + 1, b + 1] *
+                            kernel[j, k].c[a + 1, b + 1] *
                             binomial(moment_order, c) *
                             moments[j, a + c + 1] *
                             moments[k, b + moment_order - c + 1]
@@ -150,7 +160,6 @@ end
 
 function update_R_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, kernel, moments, NProgMoms, R)
     Ndist = size(moments)[1]
-    r = kernel.r
 
     for j in 1:Ndist
         for k in 1:Ndist
@@ -158,9 +167,10 @@ function update_R_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, kerne
             if NProgMoms[k] <= moment_order
                 continue
             end
+            r = kernel[j, k].r
             for a in 0:r
                 for b in 0:r
-                    R[j, k] += kernel.c[a + 1, b + 1] * moments[j, a + 1] * moments[k, b + moment_order + 1]
+                    R[j, k] += kernel[j, k].c[a + 1, b + 1] * moments[j, a + 1] * moments[k, b + moment_order + 1]
                 end
             end
         end
@@ -177,7 +187,6 @@ function update_S_coalescence_matrix!(
     S,
 )
     Ndist = size(moments)[1]
-    r = kernel.r
 
     for k in 1:Ndist
         S[k, 1] = 0.0
@@ -191,18 +200,19 @@ function update_S_coalescence_matrix!(
                 continue
             end
         end
+        r = kernel[k, k].r
         for a in 0:r
             for b in 0:r
                 for c in 0:moment_order
                     _s1 =
                         0.5 *
-                        kernel.c[a + 1, b + 1] *
+                        kernel[k, k].c[a + 1, b + 1] *
                         binomial(moment_order, c) *
-                        finite_2d_ints[k, a + c + 1, b + moment_order - c + 1]
+                        finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
                     S[k, 1] += _s1
                     S[k, 2] +=
                         0.5 *
-                        kernel.c[a + 1, b + 1] *
+                        kernel[k, k].c[a + 1, b + 1] *
                         binomial(moment_order, c) *
                         moments[k, a + c + 1] *
                         moments[k, b + moment_order - c + 1] - _s1

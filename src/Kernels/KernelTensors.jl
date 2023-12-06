@@ -55,6 +55,7 @@ function CoalescenceTensor(kernel_func, order::Int, limit::FT) where {FT <: Real
     CoalescenceTensor(coef)
 end
 
+Base.broadcastable(ct::CoalescenceTensor) = Ref(ct)
 
 """
   polyfit(kernel_func, r::Int, limit:FT)

@@ -13,7 +13,8 @@ dist_init = [LognormalPrimitiveParticleDistribution(FT(1), 0.213, 0.42)]
 
 # Solver
 kernel_func = (x, y) -> 5e-3 * (x + y)
-kernel = CoalescenceTensor(kernel_func, 1, FT(500))
+kernel = Array{CoalescenceTensor{FT}}(undef, length(dist_init), length(dist_init))
+kernel .= CoalescenceTensor(kernel_func, 1, FT(500))
 tspan = (FT(0), FT(1000))
 NProgMoms = [nparams(dist) for dist in dist_init]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)

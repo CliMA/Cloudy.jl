@@ -15,9 +15,11 @@ dist_init = [
 ]
 
 # Solver
-kernel_func = (x, y) -> 5e-3 * (x + y)
+kernel_func_1 = (x, y) -> 9.44e-3 * (x^2 + y^2)
+kernel_func_2 = (x, y) -> 5.78e-3 * (x + y)
 kernel = Array{CoalescenceTensor{FT}}(undef, length(dist_init), length(dist_init))
-kernel .= CoalescenceTensor(kernel_func, 1, FT(500))
+kernel .= CoalescenceTensor(kernel_func_2, 1, FT(500))
+kernel[1, 1] = CoalescenceTensor(kernel_func_1, 2, FT(500))
 tspan = (FT(0), FT(500))
 NProgMoms = [nparams(dist) for dist in dist_init]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)
@@ -27,6 +29,6 @@ ODE_parameters =
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
-plot_params!(sol, (; pdists = dist_init); file_name = "box_gamma_mixture_params.pdf")
-plot_moments!(sol, (; pdists = dist_init); file_name = "box_gamma_mixture_moments.pdf")
-plot_spectra!(sol, (; pdists = dist_init); file_name = "box_gamma_mixture_spectra.pdf", logxrange = (-2, 5))
+plot_params!(sol, (; pdists = dist_init); file_name = "box_gamma_mix_long_params.pdf")
+plot_moments!(sol, (; pdists = dist_init); file_name = "box_gamma_mix_long_moments.pdf")
+plot_spectra!(sol, (; pdists = dist_init); file_name = "box_gamma_mix_long_spectra.pdf", logxrange = (-2, 5))
