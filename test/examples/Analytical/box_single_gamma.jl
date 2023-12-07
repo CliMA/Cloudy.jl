@@ -8,7 +8,7 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
-moments_init = ArrayPartition([1.0, 2, 6])
+moments_init = ArrayPartition([10.0, 1.0, 0.2])
 dist_init = [GammaPrimitiveParticleDistribution(FT(1), FT(1), FT(2))]
 
 # Solver
@@ -25,4 +25,4 @@ sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
 plot_params!(sol, (; pdists = dist_init); file_name = "box_single_gamma_params.pdf")
 plot_moments!(sol, (; pdists = dist_init); file_name = "box_single_gamma_moments.pdf")
-plot_spectra!(sol, (; pdists = dist_init); file_name = "box_single_gamma_spectra.pdf", logxrange = (-2, 10))
+plot_spectra!(sol, (; pdists = dist_init); file_name = "box_single_gamma_spectra.pdf", logxrange = (-3, 6))

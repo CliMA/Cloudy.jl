@@ -82,9 +82,9 @@ end
   `p` - additional ODE parameters carried in the solver
 Plots the spectra
 """
-function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (0, 8))
+function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 9))
     x = 10 .^ (collect(range(logxrange[1], logxrange[2], 100)))
-    r = (x * 3 / 4 / π) .^ (1 / 3)
+    r = (x * 3 / 4 / π) .^ (1 / 3) * 1e2 # plot in µm
 
     moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
     Ndist = length(p.pdists)
