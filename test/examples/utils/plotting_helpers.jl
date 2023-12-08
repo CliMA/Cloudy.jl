@@ -181,6 +181,39 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
 end
 
 """
+  print_box_results!(sol, p)
+
+  `sol` - ODE solution
+  `p` - additional ODE parameters carried in the solver
+Prints the evolution of moments in time, plus the distribution parameters at a few times
+"""
+function print_box_results!(sol, p)
+    time = sol.t
+    moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
+
+    Ndist = length(p.pdists)
+    n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
+
+    @show time 
+    @show moments[:,1]
+    @show moments[:,2]
+    @show moments[:,3]
+
+    t_ind = [1, ceil(Int, length(sol.t) / 2), length(sol.t)]
+    n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
+    ind = 1
+    for i in 1:Ndist
+        for i in 1:3
+            ind = 1
+            for j in 1:Ndist
+                update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind:(ind + n_params[j] - 1)])
+            end
+            @show time[t_ind[i]], p.pdists
+        end
+    end
+end
+    
+"""
   plot_rainshaft_results(z, res, p; outfile = "rainshaft.pdf")
 
   `z` - array of discrete hieghts
