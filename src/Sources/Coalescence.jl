@@ -64,7 +64,7 @@ initialize_coalescence_data(
   - `kernel`: Array of kernel tensors that determine rate of coalescence based on pair of distributions and size of particles x, y
   - `NProgMoms`: Array containing number of prognostic moments associated with each distribution
   - `dist_thresholds`: PSD upper thresholds for computing S terms
-Updates the collision-coalescence integrals.
+Initializes the coalescence data.
 """
 function initialize_coalescence_data(
     ::AnalyticalCoalStyle,

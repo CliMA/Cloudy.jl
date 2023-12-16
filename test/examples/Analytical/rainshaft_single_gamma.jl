@@ -28,8 +28,7 @@ tspan = (FT(0), FT(1000))
 NProgMoms = [nparams(dist) for dist in dist_init]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
 rhs = make_rainshaft_rhs(AnalyticalCoalStyle())
-ODE_parameters =
-    (; pdists = dist_init, kernel = kernel, coal_data = coal_data, vel = [(2.0, 1.0 / 6)], dz = dz, dt = 1.0)
+ODE_parameters = (; pdists = dist_init, coal_data = coal_data, vel = [(2.0, 1.0 / 6)], dz = dz, dt = 1.0)
 prob = ODEProblem(rhs, m, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 res = sol.u

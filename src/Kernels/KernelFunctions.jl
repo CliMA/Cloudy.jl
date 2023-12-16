@@ -79,9 +79,9 @@ struct LongKernelFunction{FT} <: CoalescenceKernelFunction{FT}
     "mass threshold"
     x_threshold::FT
     "collision-coalesence rate below threshold"
-    coll_coal_rate_below::FT
+    coal_rate_below_threshold::FT
     "collision-coalesence rate above threshold"
-    coll_coal_rate_above::FT
+    coal_rate_above_threshold::FT
 end
 
 
@@ -104,9 +104,9 @@ end
 
 function (kern::LongKernelFunction{FT})(x::FT, y::FT) where {FT <: Real}
     if x < kern.x_threshold && y < kern.x_threshold
-        return kern.coll_coal_rate_below*(x^2+y^2)
+        return kern.coal_rate_below_threshold * (x^2 + y^2)
     else
-        return kern.coll_coal_rate_above*(x+y)
+        return kern.coal_rate_above_threshold * (x + y)
     end
 end
 
