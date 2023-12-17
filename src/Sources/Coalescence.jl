@@ -27,7 +27,11 @@ update_coal_ints!(::AnalyticalCoalStyle, pdists::Array{ParticleDistribution{FT}}
   - `coal_data`: Dictionary carried by ODE solver that contains all dynamical parameters, including the coalescence integrals
 Updates the collision-coalescence integrals.
 """
-function update_coal_ints!(::AnalyticalCoalStyle, pdists, coal_data) where {FT <: Real}
+function update_coal_ints!(
+    ::AnalyticalCoalStyle,
+    pdists::Array{<:AbstractParticleDistribution{FT}},
+    coal_data::NamedTuple,
+) where {FT <: Real}
 
     NProgMoms = [nparams(pdist) for pdist in pdists]
     Nmom = maximum(NProgMoms)
