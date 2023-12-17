@@ -1,0 +1,85 @@
+env:
+  JULIA_VERSION: "1.8.1"
+  OPENMPI_VERSION: "4.0.4"
+  CUDA_VERSION: "11.2"
+  OPENBLAS_NUM_THREADS: 1
+  BUILDKITE_COMMIT: "${BUILDKITE_COMMIT}"
+  BUILDKITE_BRANCH: "${BUILDKITE_BRANCH}"
+
+agents:
+  config: cpu
+  queue: central
+  slurm_ntasks: 1
+
+steps:
+  - label: "Init environment :computer:"
+    key: "init_cpu_env"
+    command:
+      - "julia --project=test -e 'using Pkg; Pkg.develop(path = \".\")'"
+      - "julia --project=test -e 'using Pkg; Pkg.instantiate(;verbose=true)'"
+      - "julia --project=test -e 'using Pkg; Pkg.precompile()'"
+      - "julia --project=test -e 'using Pkg; Pkg.status()'"
+
+  - wait
+
+  - group: "Tests :umbrella:"
+    steps:
+
+      - label: ":partly_sunny: Unit tests"
+        command: "julia --color=yes --project=test test/unit_tests/run_unit_tests.jl"
+
+      - label: ":crystal_ball: Examples: analytical, box, single gamma"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_single_gamma.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, box, single lognorm"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_single_lognorm.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, box, gamma mixture"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_gamma_mixture.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, box, lognorm mixture"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_lognorm_mixture.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, box, mono gamma mixture"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_mono_gamma_mixture.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, box, gamma mixture, hydro"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_gamma_mixture_hydro.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, box, gamma mixture, Long"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_gamma_mixture_long.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, rainshaft, single gamma"
+        command: "julia --color=yes --project=test test/examples/Analytical/rainshaft_single_gamma.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, rainshaft, gamma mixture"
+        command: "julia --color=yes --project=test test/examples/Analytical/rainshaft_gamma_mixture.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: numerical, box, single exp"
+        command: "julia --color=yes --project=test test/examples/Analytical/single_particle_exp.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: numerical, box, single gamma"
+        command: "julia --color=yes --project=test test/examples/Analytical/single_particle_gamma.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: numerical, box, exp mixture"
+        command: "julia --color=yes --project=test test/examples/Analytical/n_particles_exp.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: numerical, box, gamma mixture"
+        command: "julia --color=yes --project=test test/examples/Analytical/n_particles_gamma.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: numerical, box, lognorm mixture"
+        command: "julia --color=yes --project=test test/examples/Analytical/n_particles_lognorm.jl"
+        artifact_paths: "test/outputs/*"
