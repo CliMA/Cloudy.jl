@@ -65,21 +65,21 @@ steps:
         artifact_paths: "test/outputs/*"
 
       - label: ":crystal_ball: Examples: numerical, box, single exp"
-        command: "julia --color=yes --project=test test/examples/Analytical/single_particle_exp.jl"
+        command: "julia --color=yes --project=test test/examples/Numerical/single_particle_exp.jl"
         artifact_paths: "test/outputs/*"
 
       - label: ":crystal_ball: Examples: numerical, box, single gamma"
-        command: "julia --color=yes --project=test test/examples/Analytical/single_particle_gamma.jl"
+        command: "julia --color=yes --project=test test/examples/Numerical/single_particle_gamma.jl"
         artifact_paths: "test/outputs/*"
 
       - label: ":crystal_ball: Examples: numerical, box, exp mixture"
-        command: "julia --color=yes --project=test test/examples/Analytical/n_particles_exp.jl"
+        command: "julia --color=yes --project=test test/examples/Numerical/n_particles_exp.jl"
         artifact_paths: "test/outputs/*"
 
       - label: ":crystal_ball: Examples: numerical, box, gamma mixture"
-        command: "julia --color=yes --project=test test/examples/Analytical/n_particles_gamma.jl"
+        command: "julia --color=yes --project=test test/examples/Numerical/n_particles_gamma.jl"
         artifact_paths: "test/outputs/*"
 
       - label: ":crystal_ball: Examples: numerical, box, lognorm mixture"
-        command: "julia --color=yes --project=test test/examples/Analytical/n_particles_lognorm.jl"
+        command: "julia --color=yes --project=test test/examples/Numerical/n_particles_lognorm.jl"
         artifact_paths: "test/outputs/*"
