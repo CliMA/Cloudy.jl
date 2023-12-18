@@ -16,6 +16,7 @@ TerminalLoggers = "5d786b92-1e48-4d6f-9151-6b4477ca9bed"
 
 [compat]
 DocStringExtensions = "0.8"
+HCubature = "1.5"
 NumericalIntegration = "0.3.3"
 SpecialFunctions = "2.1"
 julia = "1.1"
