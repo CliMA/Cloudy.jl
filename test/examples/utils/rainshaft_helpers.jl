@@ -57,7 +57,7 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
                 update_dist_from_moments!(dist, m_z.x[j])
             end
 
-            if all(m_z[:] .< eps(Float64))
+            if all(m_z .< eps(Float64))
                 coal_source[i, :] = zeros(1, nmom)
             else
                 update_coal_ints!(coal_type, p.kernel, p.pdists, p.dist_thresholds, p.coal_data)
