@@ -85,7 +85,7 @@ function (kern::HydrodynamicKernelFunction{FT})(x::FT, y::FT) where {FT <: Real}
     r2 = (3/4/π * y)^(1/3)
     A1 = π * r1^2
     A2 = π * r2^2
-    return kern.coal_eff * π * (r1 + r2)^2 * abs(A1 - A2)
+    return kern.coal_eff * (r1 + r2)^2 * abs(A1 - A2)
 end
 
 end
