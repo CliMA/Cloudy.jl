@@ -16,14 +16,12 @@ dist_init = [
 
 # Solver
 kernel_func = (x, y) -> 5e-3 * (x + y)
-kernel = Array{CoalescenceTensor{FT}}(undef, length(dist_init), length(dist_init))
-kernel .= CoalescenceTensor(kernel_func, 1, FT(500))
+kernel = CoalescenceTensor(kernel_func, 1, FT(500))
 tspan = (FT(0), FT(500))
 NProgMoms = [nparams(dist) for dist in dist_init]
-coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)
+coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, dist_thresholds = [FT(0.5), Inf])
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters =
-    (; pdists = dist_init, kernel = kernel, coal_data = coal_data, dist_thresholds = [FT(0.5), Inf], dt = FT(1))
+ODE_parameters = (; pdists = dist_init, coal_data = coal_data, dt = FT(1))
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 

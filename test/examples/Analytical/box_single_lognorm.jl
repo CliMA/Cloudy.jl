@@ -13,13 +13,12 @@ dist_init = [LognormalPrimitiveParticleDistribution(FT(1), 0.213, 0.42)]
 
 # Solver
 kernel_func = (x, y) -> 5e-3 * (x + y)
-kernel = Array{CoalescenceTensor{FT}}(undef, length(dist_init), length(dist_init))
-kernel .= CoalescenceTensor(kernel_func, 1, FT(500))
+kernel = CoalescenceTensor(kernel_func, 1, FT(500))
 tspan = (FT(0), FT(1000))
 NProgMoms = [nparams(dist) for dist in dist_init]
-coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)
+coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters = (; pdists = dist_init, kernel = kernel, coal_data = coal_data, dist_thresholds = [Inf], dt = FT(10))
+ODE_parameters = (; pdists = dist_init, coal_data = coal_data, dt = FT(10))
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 

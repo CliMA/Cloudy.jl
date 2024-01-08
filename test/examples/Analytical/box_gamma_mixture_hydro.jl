@@ -16,14 +16,12 @@ dist_init = [
 
 # Solver
 kernel_func = HydrodynamicKernelFunction(1e-4 * π)
-kernel = Array{CoalescenceTensor{FT}}(undef, length(dist_init), length(dist_init))
-kernel .= CoalescenceTensor(kernel_func, 4, FT(500))
+kernel = CoalescenceTensor(kernel_func, 4, FT(500))
 tspan = (FT(0), FT(240))
 NProgMoms = [nparams(dist) for dist in dist_init]
-coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)
+coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, dist_thresholds = [FT(4.0), Inf])
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters =
-    (; pdists = dist_init, kernel = kernel, coal_data = coal_data, dist_thresholds = [FT(4.0), Inf], dt = FT(20))
+ODE_parameters = (; pdists = dist_init, coal_data = coal_data, dt = FT(20))
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
