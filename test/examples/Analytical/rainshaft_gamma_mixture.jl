@@ -15,7 +15,7 @@ dz = (b - a) / 60
 z = (a + dz / 2):dz:b
 
 # Initial condition
-mom_max = [10, 1.0, 0.2, 0.1, 0.1, 0.2]
+mom_max = [10.0, 1.0, 0.2, 1e-6, 1e-6, 2e-6]
 nm_tot = length(mom_max)
 ic = initial_condition(z, mom_max)
 m = ic
@@ -23,7 +23,7 @@ m = ic
 # Solver
 dist_init = [
     GammaPrimitiveParticleDistribution(FT(10), FT(0.1), FT(1)),
-    GammaPrimitiveParticleDistribution(FT(0.1), FT(1), FT(1)),
+    GammaPrimitiveParticleDistribution(FT(1e-6), FT(1), FT(1)),
 ]
 kernel_func = (x, y) -> 5e-3 * (x + y)
 kernel = Array{CoalescenceTensor{FT}}(undef, length(dist_init), length(dist_init))
@@ -45,4 +45,5 @@ prob = ODEProblem(rhs, m, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 res = sol.u
 
-plot_rainshaft_results(z, res, ODE_parameters, file_name = "rainshaft_gamma_mixture.pdf")
+plot_rainshaft_results(z, res, ODE_parameters, file_name = "rainshaft_gamma_mixture.pdf", print=true)
+#plot_rainshaft_contours(z, sol.t, res, ODE_parameters, file_name="rainshaft_gamma_mixture_contours.png")

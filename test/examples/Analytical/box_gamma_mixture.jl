@@ -8,11 +8,11 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
-moment_init = ArrayPartition([100.0, 10.0, 2], [1e-6, 3e-6, 12e-6])
+moment_init = ArrayPartition([100.0, 10.0, 2], [1e-6, 1e-5, 2e-4])
 # 100/cm^3
 dist_init = [
     GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),    # 100/cm^3; 10^5 µm^3; k=1
-    GammaPrimitiveParticleDistribution(FT(1e-6), FT(10), FT(3)),   # 0/cm^3; 10^6 µm^3; k=1
+    GammaPrimitiveParticleDistribution(FT(1e-6), FT(1), FT(1)),   # 0/cm^3; 10^6 µm^3; k=1
 ]
 
 # Solver
@@ -24,7 +24,7 @@ NProgMoms = [nparams(dist) for dist in dist_init]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
 ODE_parameters =
-    (; pdists = dist_init, kernel = kernel, coal_data = coal_data, dist_thresholds = [FT(0.5), Inf], dt = FT(0.5))
+    (; pdists = dist_init, kernel = kernel, coal_data = coal_data, dist_thresholds = [FT(0.5), Inf], dt = FT(10.0))
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
