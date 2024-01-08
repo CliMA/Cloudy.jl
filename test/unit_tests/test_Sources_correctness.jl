@@ -35,18 +35,18 @@ NumericalCoalStyle() isa NumericalCoalStyle
 # Constant kernel test (e.g, Smoluchowski 1916)
 function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
     # Parameters & initial condition
-    kernel_func = x -> 1.0
+    kernel_func = (x, y) -> 1.0
     ker = (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) : CoalescenceTensor([1.0])
 
     # Initial condition
     mom = ArrayPartition([1.0, 2.0])
     dist = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)]
-    coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), [nparams(dist[1])], ker)
+    coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), ker, [nparams(dist[1])])
 
     # Euler steps
     for i in 1:n_steps
         update_dist_from_moments!(dist[1], mom.x[1])
-        update_coal_ints!(AnalyticalCoalStyle(), ker, dist, [Inf], coal_data)
+        update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
         dmom = coal_data.coal_ints
         mom += δt * dmom
     end
@@ -76,15 +76,15 @@ dist = [
     GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),
     ExponentialPrimitiveParticleDistribution(FT(1), FT(1)),
 ]
-kernel = CoalescenceTensor(x -> 5e-3 * (x[1] + x[2]), 1, FT(500))
+kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), 1, FT(10))
 NProgMoms = [nparams(d) for d in dist]
 r = kernel.r
 s = [length(mom_p.x[i]) for i in 1:2]
-thresholds = [0.5, Inf]
-coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), NProgMoms, kernel)
+thresholds = [FT(0.5), Inf]
+coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, dist_thresholds = thresholds)
 
 # action
-update_coal_ints!(AnalyticalCoalStyle(), kernel, dist, thresholds, coal_data)
+update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
 
 n_mom = maximum(s) + r
 mom = zeros(FT, 2, n_mom)

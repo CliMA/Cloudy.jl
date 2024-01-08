@@ -33,7 +33,6 @@ coal_data = initialize_coalescence_data(Ndist, Nmom)
 tspan = (0.0, T_end)
 kernel = LinearKernelFunction(coalescence_coeff)
 rhs = make_box_model_rhs(NumericalCoalStyle())
-# TODO: decide whether we should use named tuple or dict
 ODE_parameters = (Ndist = Ndist, Nmom = Nmom, pdists = pdists, kernel_func = kernel, coal_data = coal_data, dt = dt)
 prob = ODEProblem(rhs, dist_moments, tspan, ODE_parameters; progress = true)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)

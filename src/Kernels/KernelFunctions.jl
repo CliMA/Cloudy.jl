@@ -15,6 +15,7 @@ export CoalescenceKernelFunction
 export ConstantKernelFunction
 export LinearKernelFunction
 export HydrodynamicKernelFunction
+export LongKernelFunction
 
 """
   KernelFunction
@@ -66,6 +67,23 @@ struct HydrodynamicKernelFunction{FT} <: CoalescenceKernelFunction{FT}
     coal_eff::FT
 end
 
+"""
+  LongKernelFunction <: CoalescenceKernelFunction
+
+Represents the Long's collision-coalescence kernel.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
+struct LongKernelFunction{FT} <: CoalescenceKernelFunction{FT}
+    "mass threshold"
+    x_threshold::FT
+    "collision-coalesence rate below threshold"
+    coal_rate_below_threshold::FT
+    "collision-coalesence rate above threshold"
+    coal_rate_above_threshold::FT
+end
+
 
 """
     (kernel::KernelFunction)(x::FT, y::FT)
@@ -82,6 +100,14 @@ end
 
 function (kern::HydrodynamicKernelFunction{FT})(x::FT, y::FT) where {FT <: Real}
     return kern.coal_eff * π * (x + y)^2 * abs(x^2 - y^2)
+end
+
+function (kern::LongKernelFunction{FT})(x::FT, y::FT) where {FT <: Real}
+    if x < kern.x_threshold && y < kern.x_threshold
+        return kern.coal_rate_below_threshold * (x^2 + y^2)
+    else
+        return kern.coal_rate_above_threshold * (x + y)
+    end
 end
 
 end

@@ -60,7 +60,7 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
             if all(m_z .< eps(Float64))
                 coal_source[i, :] = zeros(1, nmom)
             else
-                update_coal_ints!(coal_type, p.kernel, p.pdists, p.dist_thresholds, p.coal_data)
+                update_coal_ints!(coal_type, p.pdists, p.coal_data)
                 coal_source[i, :] = p.coal_data.coal_ints
             end
 
@@ -71,7 +71,7 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
         sedi_flux = [sedi_flux; sedi_flux_top]
         sedi_source = similar(m)
         for i in 1:nz
-            sedi_source[i, :] = -(sedi_flux[i + 1, :] - sedi_flux[i, :]) / p[:dz]
+            sedi_source[i, :] = -(sedi_flux[i + 1, :] - sedi_flux[i, :]) / p.dz
         end
 
         return coal_source .+ sedi_source

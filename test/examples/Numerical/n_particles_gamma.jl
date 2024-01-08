@@ -8,9 +8,9 @@ include("../utils/box_model_helpers.jl")
 
 FT = Float64
 
-T_end = 1000.0
+T_end = 200.0
 coalescence_coeff = 5e-3
-dt = FT(50)
+dt = FT(10)
 
 # Initial condition 
 Ndist = 2

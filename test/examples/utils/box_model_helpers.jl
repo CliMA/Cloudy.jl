@@ -3,6 +3,7 @@ using SpecialFunctions
 using RecursiveArrayTools
 
 using Cloudy
+using Cloudy.KernelFunctions
 using Cloudy.KernelTensors
 using Cloudy.ParticleDistributions
 using Cloudy.Coalescence
@@ -25,7 +26,7 @@ function rhs_coal!(coal_type::AnalyticalCoalStyle, ddist_moments, dist_moments, 
     for (i, dist) in enumerate(p.pdists)
         update_dist_from_moments!(dist, dist_moments.x[i])
     end
-    update_coal_ints!(coal_type, p.kernel, p.pdists, p.dist_thresholds, p.coal_data)
+    update_coal_ints!(coal_type, p.pdists, p.coal_data)
     ddist_moments .= p[:coal_data].coal_ints
 end
 
