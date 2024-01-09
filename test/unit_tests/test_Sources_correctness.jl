@@ -19,7 +19,7 @@ using Cloudy.Coalescence:
     initialize_coalescence_data,
     update_coal_ints!
 using Cloudy.Sedimentation
-
+using Cloudy.KernelTensors
 
 rtol = 1e-3
 
