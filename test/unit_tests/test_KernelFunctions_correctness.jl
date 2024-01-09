@@ -37,5 +37,5 @@ r1 = (3 / 4 / π * x)^(1 / 3)
 r2 = (3 / 4 / π * y)^(1 / 3)
 A1 = π * r1^2
 A2 = π * r2^2
-@test kernel(x, y) == Ec * π * (r1 + r2)^2 * abs(A1 - A2)
+@test kernel(x, y) == Ec * (r1 + r2)^2 * abs(A1 - A2)
 @test kernel(x, y) == kernel(y, x)
