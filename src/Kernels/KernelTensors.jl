@@ -50,8 +50,8 @@ struct CoalescenceTensor{FT} <: KernelTensor{FT}
 end
 
 
-function CoalescenceTensor(kernel_func, order::Int, limit::FT) where {FT <: Real}
-    coef = polyfit(kernel_func, order, limit)
+function CoalescenceTensor(kernel_func, order::Int, limit::FT; lower_limit::FT = FT(0)) where {FT <: Real}
+    coef = polyfit(kernel_func, order, limit, lower_limit = lower_limit)
     CoalescenceTensor(coef)
 end
 
@@ -70,15 +70,22 @@ function polyfit(
     kernel_func,
     r::Int,
     limit::FT;
+    lower_limit = FT(0),
     npoints = 10,
     opt_tol = 10 * eps(FT),
     opt_max_iter = 100000,
 ) where {FT <: Real}
     check_symmetry(kernel_func)
+    @assert FT(0) <= lower_limit < limit
 
-    # use a grid to fit a 2d polynomial function to kernel_func
-    x = range(0, limit, npoints)
-    y = range(0, limit, npoints)
+    # use a 2d grid (with 0 < x < y and lower_limit < y < limit)
+    # to fit a 2d polynomial function to kernel_func
+    Δ = limit / (npoints - 1)
+    x_ = collect(0:(npoints * npoints - 1)) .% npoints * Δ
+    y_ = floor.(collect(0:(npoints * npoints - 1)) / npoints) * Δ
+    inds_ = intersect(findall(s -> lower_limit <= s, y_), findall(s -> 0 <= s, y_ - x_))
+    x = x_[inds_]
+    y = y_[inds_]
 
     # find the first element of the coefficients matrix - constant term in the approximation
     C_1_1 = max(eps(FT), kernel_func(FT(0), FT(0)))
@@ -95,17 +102,13 @@ function polyfit(
             j in 1:(r + 1)
         ]
 
-        z = zeros(npoints, npoints)
-        for i in 1:npoints
-            for j in i:npoints
-                z[i, j] = kernel_func(x[i], y[j])
-                for k in 1:(r + 1)
-                    for m in 1:(r + 1)
-                        z[i, j] -= C[k, m] * x[i]^(k - 1) * y[j]^(m - 1)
-                    end
-                end
+        z = kernel_func.(x, y)
+        for i in 1:(r + 1)
+            for j in 1:(r + 1)
+                z -= C[i, j] .* x .^ (i - 1) .* y .^ (j - 1)
             end
         end
+
         return norm(z)
     end
 
