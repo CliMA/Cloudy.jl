@@ -194,10 +194,10 @@ function print_box_results!(sol, p)
     Ndist = length(p.pdists)
     n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
 
-    @show time 
-    @show moments[:,1]
-    @show moments[:,2]
-    @show moments[:,3]
+    @show time
+    @show moments[:, 1]
+    @show moments[:, 2]
+    @show moments[:, 3]
 
     t_ind = [1, ceil(Int, length(sol.t) / 2), length(sol.t)]
     n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
@@ -212,7 +212,7 @@ function print_box_results!(sol, p)
         end
     end
 end
-    
+
 """
   plot_rainshaft_results(z, res, p; outfile = "rainshaft.pdf")
 
