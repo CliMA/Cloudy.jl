@@ -82,12 +82,12 @@ end
   `p` - additional ODE parameters carried in the solver
 Plots the spectra
 """
-function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 9); print=false)
+function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 9); print = false)
     x = 10 .^ (collect(range(logxrange[1], logxrange[2], 10)))
     r = (x * 3 / 4 / π) .^ (1 / 3) * 1e2 # plot in µm
 
     if print
-        @show x 
+        @show x
         @show r
     end
 
@@ -116,7 +116,7 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 
             )
             sp_sum[:, i] += 3 * x .^ 2 .* p.pdists[j].(x)
             ind += n_params[j]
-            
+
             if print
                 @show 3 * x .^ 2 .* p.pdists[j].(x)
             end
@@ -214,9 +214,9 @@ function print_box_results!(sol, p)
         ind += n_params[i]
     end
     @show time
-    @show moments_sum[:,1]
-    @show moments_sum[:,2]
-    @show moments_sum[:,3]
+    @show moments_sum[:, 1]
+    @show moments_sum[:, 2]
+    @show moments_sum[:, 3]
 
     t_ind = [1, ceil(Int, length(sol.t) / 2), length(sol.t)]
     n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
@@ -229,10 +229,10 @@ function print_box_results!(sol, p)
             ind += n_params[j]
         end
     end
-    @show t_ind 
-    @show params[:,1,:]
+    @show t_ind
+    @show params[:, 1, :]
     if Ndist > 1
-        @show params[:,2,:]
+        @show params[:, 2, :]
     end
 end
 
@@ -244,7 +244,14 @@ end
   `p` - additional ODE parameters carried in the solver
 Plots rainshaft simulation results for arbitrary number and any combination of modes
 """
-function plot_rainshaft_results(z, res, p; file_name = "rainshaft.pdf", plot_analytical_sedimentation = false, print = false)
+function plot_rainshaft_results(
+    z,
+    res,
+    p;
+    file_name = "rainshaft.pdf",
+    plot_analytical_sedimentation = false,
+    print = false,
+)
     ic = res[1]
     n_dist = length(p.pdists)
     nm = [nparams(dist) for dist in p.pdists]
@@ -263,7 +270,7 @@ function plot_rainshaft_results(z, res, p; file_name = "rainshaft.pdf", plot_ana
             for (k, t_ind) in enumerate(plot_time_inds)
                 plot!(res[t_ind][:, (i - 1) * nm_max + j], z / 1000, lw = 3, c = k, label = false)
                 if print
-                    ind = (i - 1)*nm_max + j
+                    ind = (i - 1) * nm_max + j
                     @show t_ind, i, j, res[t_ind][:, (i - 1) * nm_max + j]
                 end
             end
@@ -315,23 +322,23 @@ function plot_rainshaft_contours(z, t, res, p; file_name = "rainshaft_contour.pd
     n_plots = nm_max * n_dist
     plt = Array{Plots.Plot}(undef, n_plots)
     nt = length(t)
-    u = hcat(res[:][:,:]...)
-    @show ((u[:,1:6:end]))
+    u = hcat(res[:][:, :]...)
+    @show ((u[:, 1:6:end]))
     #u[:,1:6:end]
 
     # res[time][z_ind, moment_ind]
     for i in 1:n_dist
         for j in 1:nm_max
             xlabel_ext = " (mode " * string(i) * ")"
-            plt[(i - 1) * nm_max + j] = plot(xaxis = "t(s)", yaxis = "z(km)", title="M" * string(j) * xlabel_ext)
+            plt[(i - 1) * nm_max + j] = plot(xaxis = "t(s)", yaxis = "z(km)", title = "M" * string(j) * xlabel_ext)
             if j > nm[i]
                 continue
             end
-            qty = collect(u[:,(i - 1)*nm_max + j : n_plots : end])
-            heatmap!([1,2], z/1000, [z/1000, 2*z/1000])#z/1000, t, qty)
+            qty = collect(u[:, ((i - 1) * nm_max + j):n_plots:end])
+            heatmap!([1, 2], z / 1000, [z / 1000, 2 * z / 1000])#z/1000, t, qty)
         end
     end
-    
+
 
     plot(
         plt...,
