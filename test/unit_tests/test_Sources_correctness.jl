@@ -19,7 +19,9 @@ using Cloudy.Coalescence:
     initialize_coalescence_data,
     update_coal_ints!
 using Cloudy.Sedimentation
-
+using Cloudy.KernelTensors
+using Cloudy.KernelFunctions
+using SpecialFunctions: gamma, gamma_inc
 
 rtol = 1e-3
 
@@ -78,7 +80,7 @@ dist = [
 ]
 kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), 1, FT(10))
 NProgMoms = [nparams(d) for d in dist]
-r = kernel.r
+r = kernel.r #maximum([ker.r for ker in kernel])
 s = [length(mom_p.x[i]) for i in 1:2]
 thresholds = [FT(0.5), Inf]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, dist_thresholds = thresholds)
@@ -115,7 +117,7 @@ for i in 1:2
 
         for a in 0:r
             for b in 0:r
-                coef = kernel.c[a + 1, b + 1]
+                coef = kernel.c[a + 1, b + 1] #kernel[i, j].c[a + 1, b + 1]
                 temp -= coef * mom[i, a + k + 1] * mom[i, b + 1]
                 temp -= coef * mom[i, a + k + 1] * mom[j, b + 1]
                 for c in 0:k

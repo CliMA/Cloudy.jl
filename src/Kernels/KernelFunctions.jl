@@ -99,7 +99,11 @@ function (kern::LinearKernelFunction{FT})(x::FT, y::FT) where {FT <: Real}
 end
 
 function (kern::HydrodynamicKernelFunction{FT})(x::FT, y::FT) where {FT <: Real}
-    return kern.coal_eff * π * (x + y)^2 * abs(x^2 - y^2)
+    r1 = (3 / 4 / π * x)^(1 / 3)
+    r2 = (3 / 4 / π * y)^(1 / 3)
+    A1 = π * r1^2
+    A2 = π * r2^2
+    return kern.coal_eff * (r1 + r2)^2 * abs(A1 - A2)
 end
 
 function (kern::LongKernelFunction{FT})(x::FT, y::FT) where {FT <: Real}
