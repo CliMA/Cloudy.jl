@@ -83,7 +83,7 @@ end
 Plots the spectra
 """
 function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 9), print = false)
-    x = 10 .^ (collect(range(logxrange[1], logxrange[2], 10)))
+    x = 10 .^ (collect(range(logxrange[1], logxrange[2], 100)))
     r = (x * 3 / 4 / π) .^ (1 / 3) * 1e2 # plot in µm
 
     if print
