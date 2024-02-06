@@ -15,6 +15,8 @@ using Cloudy.Coalescence:
     initialize_coalescence_data,
     get_coalescence_integral_moment_qrs!,
     update_coal_ints!
+using Cloudy.Sedimentation
+using Cloudy.Condensation
 using JET: @test_opt
 using QuadGK
 
@@ -80,3 +82,13 @@ for pdists in ([dist1b], [dist1b, dist2b])
     @test_opt get_coalescence_integral_moment_qrs!(moment_order, kernel, pdists, cd.Q, cd.R, cd.S)
     @test_opt update_coal_ints!(NumericalCoalStyle(), 2, kernel, pdists, cd)
 end
+
+## Sedimentation.jl
+# Sedimentation moment flux tests
+par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], vel = [(1.0, 0.0), (-1.0, 1.0 / 6)])
+@test_opt get_sedimentation_flux(par)
+
+## Condensation.jl
+# Condensation moment tests
+par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], ξ = 1e-6)
+@test_opt get_cond_evap(0.01, par) 
