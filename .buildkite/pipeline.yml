@@ -40,6 +40,14 @@ steps:
         command: "julia --color=yes --project=test test/examples/Analytical/box_gamma_mixture.jl"
         artifact_paths: "test/outputs/*"
 
+      - label: ":crystal_ball: Examples: analytical, box, gamma mixture, 3 modes"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_gamma_mixture_3modes.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, box, gamma mixture, 4 modes"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_gamma_mixture_4modes.jl"
+        artifact_paths: "test/outputs/*"
+
       - label: ":crystal_ball: Examples: analytical, box, lognorm mixture"
         command: "julia --color=yes --project=test test/examples/Analytical/box_lognorm_mixture.jl"
         artifact_paths: "test/outputs/*"

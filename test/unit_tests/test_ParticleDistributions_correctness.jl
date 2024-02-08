@@ -197,17 +197,17 @@ dist = MonodispersePrimitiveParticleDistribution(1.0, 0.5)
 @test moment_source_helper(dist, 1.0, 0.0, 0.5) ≈ 0.0 rtol = rtol
 @test moment_source_helper(dist, 0.0, 1.0, 1.2) ≈ 0.5 rtol = rtol
 dist = ExponentialPrimitiveParticleDistribution(1.0, 0.5)
-@test moment_source_helper(dist, 0.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 2.642e-1 rtol = rtol
-@test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 4.015e-2 rtol = rtol
-@test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 4.748e-3 rtol = rtol
+@test moment_source_helper(dist, 0.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins_per_log_unit = 20) ≈ 2.642e-1 rtol = rtol
+@test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins_per_log_unit = 20) ≈ 4.015e-2 rtol = rtol
+@test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins_per_log_unit = 20) ≈ 4.748e-3 rtol = rtol
 dist = GammaPrimitiveParticleDistribution(1.0, 0.5, 2.0)
-@test moment_source_helper(dist, 0.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 1.899e-2 rtol = rtol
-@test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 3.662e-3 rtol = rtol
-@test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 5.940e-4 rtol = rtol
+@test moment_source_helper(dist, 0.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins_per_log_unit = 20) ≈ 1.899e-2 rtol = rtol
+@test moment_source_helper(dist, 1.0, 0.0, 0.5; x_lowerbound = 1e-5, n_bins_per_log_unit = 20) ≈ 3.662e-3 rtol = rtol
+@test moment_source_helper(dist, 1.0, 1.0, 0.5; x_lowerbound = 1e-5, n_bins_per_log_unit = 20) ≈ 5.940e-4 rtol = rtol
 dist = LognormalPrimitiveParticleDistribution(1.0, 0.5, 2.0)
-@test moment_source_helper(dist, 0.0, 0.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 2.831e-1 rtol = rtol
-@test moment_source_helper(dist, 1.0, 0.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 1.725e-1 rtol = rtol
-@test moment_source_helper(dist, 1.0, 1.0, 2.5; x_lowerbound = 1e-5, n_bins = 100) ≈ 8.115e-2 rtol = rtol
+@test moment_source_helper(dist, 0.0, 0.0, 2.5; x_lowerbound = 1e-5) ≈ 2.831e-1 rtol = rtol
+@test moment_source_helper(dist, 1.0, 0.0, 2.5; x_lowerbound = 1e-5) ≈ 1.725e-1 rtol = rtol
+@test moment_source_helper(dist, 1.0, 1.0, 2.5; x_lowerbound = 1e-5) ≈ 8.115e-2 rtol = rtol
 
 # Moment consitency checks
 m = [1.1, 2.1]

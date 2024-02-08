@@ -503,12 +503,13 @@ function moment_source_helper(
     p2::FT,
     x_threshold::FT;
     x_lowerbound = 1e-5,
-    n_bins = 50,
+    n_bins_per_log_unit = 15,
 ) where {FT <: Real}
     n, θ = get_params(dist)[2]
 
     f(x) = x^p1 * exp(-x / θ) * gamma_inc(p2 + 1, (x_threshold - x) / θ)[1] * gamma(p2 + 1)
 
+    n_bins = floor(Int, n_bins_per_log_unit * log10(x_threshold / x_lowerbound))
     logx = range(log(x_lowerbound), log(x_threshold), n_bins + 1)
     x = exp.(logx)
     y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
@@ -522,12 +523,13 @@ function moment_source_helper(
     p2::FT,
     x_threshold::FT;
     x_lowerbound = 1e-5,
-    n_bins = 50,
+    n_bins_per_log_unit = 15,
 ) where {FT <: Real}
     n, θ, k = get_params(dist)[2]
 
     f(x) = x^(p1 + k - 1) * exp(-x / θ) * gamma_inc(p2 + k, (x_threshold - x) / θ)[1] * gamma(p2 + k)
 
+    n_bins = floor(Int, n_bins_per_log_unit * log10(x_threshold / x_lowerbound))
     logx = range(log(x_lowerbound), log(x_threshold), n_bins + 1)
     x = exp.(logx)
     y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
@@ -541,7 +543,6 @@ function moment_source_helper(
     p2::FT,
     x_threshold::FT;
     x_lowerbound = 1e-5,
-    n_bins = 50,
 ) where {FT <: Real}
 
     g(x, y) = x .^ (p1) .* y .^ (p2) .* density_func(dist).(x) .* density_func(dist).(y)
