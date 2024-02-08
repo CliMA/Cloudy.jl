@@ -12,7 +12,7 @@ moment_init = ArrayPartition([100.0, 10.0, 2], [1e-6, 1e-5, 2e-4])
 # 100/cm^3
 dist_init = [
     GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),    # 100/cm^3; 10^5 µm^3; k=1
-    GammaPrimitiveParticleDistribution(FT(1e-6), FT(1), FT(1)),   # 0/cm^3; 10^6 µm^3; k=1
+    GammaPrimitiveParticleDistribution(FT(1e-6), FT(10), FT(1)),   # 0/cm^3; 10^7 µm^3; k=1
 ]
 
 # Solver
