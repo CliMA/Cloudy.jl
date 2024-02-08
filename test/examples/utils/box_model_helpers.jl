@@ -30,6 +30,13 @@ function rhs_coal!(coal_type::AnalyticalCoalStyle, ddist_moments, dist_moments, 
     ddist_moments .= p[:coal_data].coal_ints
 end
 
+function rhs_condensation!(ddist_moments, dist_moments, p, s)
+    for (i, dist) in enumerate(p.pdists)
+        update_dist_from_moments!(dist, dist_moments.x[i])
+    end
+    ddist_moments .= get_cond_evap(s, p)
+end
+
 function rhs_coal!(coal_type::NumericalCoalStyle, ddist_moments, dist_moments, p)
     for i in 1:(p.Ndist)
         update_dist_from_moments!(p.pdists[i], dist_moments[i, :])
