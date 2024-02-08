@@ -56,6 +56,14 @@ steps:
         command: "julia --color=yes --project=test test/examples/Analytical/box_gamma_mixture_long.jl"
         artifact_paths: "test/outputs/*"
 
+      - label: ":crystal_ball: Examples: analytical, box, single gamma, condensation"
+        command: "julia --color=yes --project=test test/examples/Analytical/condensation_single_gamma.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: analytical, box, exp-gamma mixture, condensation"
+        command: "julia --color=yes --project=test test/examples/Analytical/condensation_exp_gamma.jl"
+        artifact_paths: "test/outputs/*"
+
       - label: ":crystal_ball: Examples: analytical, rainshaft, single gamma"
         command: "julia --color=yes --project=test test/examples/Analytical/rainshaft_single_gamma.jl"
         artifact_paths: "test/outputs/*"
