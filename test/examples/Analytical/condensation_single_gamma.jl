@@ -17,7 +17,7 @@ s = 0.05
 tspan = (FT(0), FT(120))
 NProgMoms = [nparams(dist) for dist in dist_init]
 rhs!(dm, m, par, t) = rhs_condensation!(dm, m, par, s)
-ODE_parameters = (; ξ=ξ, pdists = dist_init, dt = FT(10))
+ODE_parameters = (; ξ = ξ, pdists = dist_init, dt = FT(10))
 prob = ODEProblem(rhs!, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
