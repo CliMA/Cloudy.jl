@@ -61,7 +61,7 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
                 coal_source[i, :] = zeros(1, nmom)
             else
                 update_coal_ints!(coal_type, p.pdists, p.coal_data)
-                coal_source[i, :] = p.coal_data.coal_ints
+                coal_source[i, :] = vcat(p.coal_data.coal_ints...)
             end
 
             sedi_flux[i, :] = get_sedimentation_flux(p)

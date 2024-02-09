@@ -12,7 +12,7 @@ Plots the moment time series results
 """
 function plot_moments!(sol, p; file_name = "test_moments.png")
     time = sol.t
-    moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
+    moments = vcat([vcat(ui...) for ui in sol.u]'...)
 
     Ndist = length(p.pdists)
     n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
@@ -91,7 +91,7 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 
         @show r
     end
 
-    moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
+    moments = vcat([vcat(ui...) for ui in sol.u]'...)
     Ndist = length(p.pdists)
     n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
 
@@ -147,7 +147,7 @@ Plots the evolution of particle distribution parameters in time.
 """
 function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     time = sol.t
-    moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
+    moments = vcat([vcat(ui...) for ui in sol.u]'...)
     params = similar(moments)
 
     n_dist = length(p.pdists)
@@ -197,7 +197,7 @@ Prints the evolution of moments in time, plus the distribution parameters at a f
 """
 function print_box_results!(sol, p)
     time = sol.t
-    moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
+    moments = vcat([vcat(ui...) for ui in sol.u]'...)
 
     Ndist = length(p.pdists)
     n_params = [nparams(p.pdists[i]) for i in 1:Ndist]

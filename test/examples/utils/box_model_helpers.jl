@@ -22,19 +22,11 @@ function make_box_model_rhs(coal_type::CoalescenceStyle)
     rhs!(dm, m, par, t) = rhs_coal!(coal_type, dm, m, par)
 end
 
-function rhs_coal!(coal_type::AnalyticalCoalStyle, ddist_moments, dist_moments, p)
+function rhs_coal!(coal_type::CoalescenceStyle, ddist_moments, dist_moments, p)
     for (i, dist) in enumerate(p.pdists)
-        update_dist_from_moments!(dist, dist_moments.x[i])
+        update_dist_from_moments!(dist, dist_moments[i])
     end
     update_coal_ints!(coal_type, p.pdists, p.coal_data)
-    ddist_moments .= p[:coal_data].coal_ints
-end
-
-function rhs_coal!(coal_type::NumericalCoalStyle, ddist_moments, dist_moments, p)
-    for i in 1:(p.Ndist)
-        update_dist_from_moments!(p.pdists[i], dist_moments[i, :])
-    end
-    update_coal_ints!(coal_type, p.Nmom, p.kernel_func, p.pdists, p.coal_data)
     ddist_moments .= p.coal_data.coal_ints
 end
 

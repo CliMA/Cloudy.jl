@@ -8,7 +8,7 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
-moment_init = ArrayPartition([10.0, 1.0, 0.2], [0.1, 0.1, 0.2])
+moment_init = VectorOfArray([[10.0, 1.0, 0.2], [0.1, 0.1, 0.2]])
 dist_init = [
     GammaPrimitiveParticleDistribution(FT(10), FT(0.1), FT(1)),
     GammaPrimitiveParticleDistribution(FT(0.1), FT(1), FT(1)),
