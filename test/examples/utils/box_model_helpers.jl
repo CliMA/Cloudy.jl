@@ -1,6 +1,5 @@
 using LinearAlgebra
 using SpecialFunctions
-using RecursiveArrayTools
 
 using Cloudy
 using Cloudy.KernelFunctions
@@ -22,12 +21,13 @@ function make_box_model_rhs(coal_type::CoalescenceStyle)
     rhs!(dm, m, par, t) = rhs_coal!(coal_type, dm, m, par)
 end
 
-function rhs_coal!(coal_type::CoalescenceStyle, ddist_moments, dist_moments, p)
+function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
     for (i, dist) in enumerate(p.pdists)
-        update_dist_from_moments!(dist, dist_moments[i])
+        ind_rng = get_dist_moments_ind_range(coal_data.NProgMoms, i)
+        update_dist_from_moments!(dist, mom[ind_rng])
     end
     update_coal_ints!(coal_type, p.pdists, p.coal_data)
-    ddist_moments .= p.coal_data.coal_ints
+    dmom .= p.coal_data.coal_ints
 end
 
 """

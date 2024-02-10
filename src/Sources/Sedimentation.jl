@@ -5,7 +5,6 @@
 """
 module Sedimentation
 
-using RecursiveArrayTools
 using Cloudy.ParticleDistributions
 
 export get_sedimentation_flux

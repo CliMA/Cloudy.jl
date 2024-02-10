@@ -21,7 +21,7 @@ mass_scale = [0.1, 1.0]
 pdists = map(1:Ndist) do i
     LognormalPrimitiveParticleDistribution(particle_number[i], log(mass_scale[i]), log(2.0))
 end
-dist_moments = VectorOfArray([get_moments(dist) for dist in pdists])
+dist_moments = vcat([get_moments(dist) for dist in pdists]...)
 
 # Set up ODE information
 tspan = (0.0, T_end)

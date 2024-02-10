@@ -8,7 +8,7 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
-moment_init = VectorOfArray([[10.0, 1.0, 0.2], [0.1, 0.1, 0.2]])
+moment_init = [10.0, 1.0, 0.2, 0.1, 0.1, 0.2]
 dist_init = [
     GammaPrimitiveParticleDistribution(FT(10), FT(0.1), FT(1)),
     GammaPrimitiveParticleDistribution(FT(0.1), FT(1), FT(1)),
@@ -28,6 +28,6 @@ ODE_parameters = (; pdists = dist_init, coal_data = coal_data, dt = FT(1.0))
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
-plot_params!(sol, (; pdists = dist_init); file_name = "box_gamma_mix_long_params.pdf")
-plot_moments!(sol, (; pdists = dist_init); file_name = "box_gamma_mix_long_moments.pdf")
-plot_spectra!(sol, (; pdists = dist_init); file_name = "box_gamma_mix_long_spectra.pdf", logxrange = (-2, 5))
+plot_params!(sol, ODE_parameters; file_name = "box_gamma_mix_long_params.pdf")
+plot_moments!(sol, ODE_parameters; file_name = "box_gamma_mix_long_moments.pdf")
+plot_spectra!(sol, ODE_parameters; file_name = "box_gamma_mix_long_spectra.pdf", logxrange = (-2, 5))

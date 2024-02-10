@@ -8,12 +8,12 @@
 """
 module Coalescence
 
+using Cloudy
 using Cloudy.ParticleDistributions
 using Cloudy.KernelTensors
 using Cloudy.KernelFunctions
 using Cloudy.EquationTypes
 using QuadGK
-using RecursiveArrayTools
 using LinearAlgebra
 
 
@@ -44,11 +44,12 @@ function update_coal_ints!(
             if m > nparams(pdist)
                 continue
             end
-            coal_data.coal_ints[k][m] += sum(@views coal_data.Q[:, k])
-            coal_data.coal_ints[k][m] -= sum(@views coal_data.R[:, k])
-            coal_data.coal_ints[k][m] += coal_data.S[k, 1]
+            ind = get_dist_moment_ind(coal_data.NProgMoms, k, m)
+            coal_data.coal_ints[ind] += sum(@views coal_data.Q[:, k])
+            coal_data.coal_ints[ind] -= sum(@views coal_data.R[:, k])
+            coal_data.coal_ints[ind] += coal_data.S[k, 1]
             if k > 1
-                coal_data.coal_ints[k][m] += coal_data.S[k - 1, 2]
+                coal_data.coal_ints[ind] += coal_data.S[k - 1, 2]
             end
         end
     end
@@ -92,7 +93,7 @@ function initialize_coalescence_data(
     N_2d_ints = diag(kernels_order) .+ [i < Ndist ? max(NProgMoms[i], NProgMoms[i + 1]) : NProgMoms[i] for i in 1:Ndist]
     finite_2d_ints = [zeros(FT, N_2d_ints[i], N_2d_ints[i]) for i in 1:Ndist]
 
-    coal_ints = VectorOfArray([zeros(FT, NProgMoms[i]) for i in 1:Ndist])
+    coal_ints = zeros(FT, sum(NProgMoms))
 
     dist_thresholds = dist_thresholds == nothing ? ones(FT, Ndist) * Inf : dist_thresholds
     @assert length(dist_thresholds) == Ndist
@@ -282,7 +283,7 @@ function update_coal_ints!(
     pdists::Array{<:AbstractParticleDistribution{FT}},
     coal_data::NamedTuple,
 ) where {FT <: Real}
-    
+
     coal_data.coal_ints .= 0
     for m in 1:maximum(coal_data.NProgMoms)
         get_coalescence_integral_moment_qrs!(cs, FT(m - 1), pdists, coal_data)
@@ -290,11 +291,12 @@ function update_coal_ints!(
             if m > nparams(pdist)
                 continue
             end
-            coal_data.coal_ints[k][m] += sum(@views coal_data.Q[:, k])
-            coal_data.coal_ints[k][m] -= sum(@views coal_data.R[:, k])
-            coal_data.coal_ints[k][m] += coal_data.S[k, 1]
+            ind = get_dist_moment_ind(coal_data.NProgMoms, k, m)
+            coal_data.coal_ints[ind] += sum(@views coal_data.Q[:, k])
+            coal_data.coal_ints[ind] -= sum(@views coal_data.R[:, k])
+            coal_data.coal_ints[ind] += coal_data.S[k, 1]
             if k > 1
-                coal_data.coal_ints[k][m] += coal_data.S[k - 1, 2]
+                coal_data.coal_ints[ind] += coal_data.S[k - 1, 2]
             end
         end
     end
@@ -308,27 +310,24 @@ Initializes the collision-coalescence integral matrices as zeros.
 coal_ints contains all three matrices (Q, R, S) and the overall coal_int summation term
 """
 function initialize_coalescence_data(
-    ::NumericalCoalStyle, 
-    kernel_func::CoalescenceKernelFunction{FT}, 
-    NProgMoms::Array{Int}
+    ::NumericalCoalStyle,
+    kernel_func::CoalescenceKernelFunction{FT},
+    NProgMoms::Array{Int},
 ) where {FT <: Real}
     Ndist = length(NProgMoms)
     Q = zeros(FT, Ndist, Ndist)
     R = zeros(FT, Ndist, Ndist)
     S = zeros(FT, Ndist, 2)
-    coal_ints = ArrayPartition([zeros(FT, NProgMoms[i]) for i in 1:Ndist]...)
-    # coal_ints = VectorOfArray([zeros(FT, NProgMoms[i]) for i in 1:Ndist])
-    return (
-        Q = Q, 
-        R = R, 
-        S = S, 
-        coal_ints = coal_ints, 
-        NProgMoms = NProgMoms,
-        kernel_func = kernel_func
-    )
+    coal_ints = zeros(FT, sum(NProgMoms))
+    return (Q = Q, R = R, S = S, coal_ints = coal_ints, NProgMoms = NProgMoms, kernel_func = kernel_func)
 end
 
-function get_coalescence_integral_moment_qrs!(cs::NumericalCoalStyle, moment_order::FT, pdists, coal_data) where {FT<:Real}
+function get_coalescence_integral_moment_qrs!(
+    cs::NumericalCoalStyle,
+    moment_order::FT,
+    pdists,
+    coal_data,
+) where {FT <: Real}
     update_Q_coalescence_matrix!(cs, moment_order, pdists, coal_data.kernel_func, coal_data.NProgMoms, coal_data.Q)
     update_R_coalescence_matrix!(cs, moment_order, pdists, coal_data.kernel_func, coal_data.NProgMoms, coal_data.R)
     update_S_coalescence_matrix!(cs, moment_order, pdists, coal_data.kernel_func, coal_data.NProgMoms, coal_data.S)

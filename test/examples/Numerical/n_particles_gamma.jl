@@ -22,7 +22,7 @@ k0 = 1.0
 pdists = map(1:Ndist) do i
     GammaPrimitiveParticleDistribution(particle_number[i], mass_scale[i], k0)
 end
-dist_moments = VectorOfArray([get_moments(dist) for dist in pdists])
+dist_moments = vcat([get_moments(dist) for dist in pdists]...)
 
 # Set up ODE information
 tspan = (0.0, T_end)

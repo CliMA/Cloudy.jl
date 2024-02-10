@@ -67,9 +67,30 @@ for pdists in ([dist1a], [dist1a, dist2a])
     _NProgMoms = [nparams(dist) for dist in pdists]
     cd = initialize_coalescence_data(NumericalCoalStyle(), kernel, _NProgMoms)
 
-    @test_opt update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.NProgMoms, cd.Q)
-    @test_opt update_R_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.NProgMoms, cd.R)
-    @test_opt update_S_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.NProgMoms, cd.S)
+    @test_opt update_Q_coalescence_matrix!(
+        NumericalCoalStyle(),
+        moment_order,
+        pdists,
+        cd.kernel_func,
+        cd.NProgMoms,
+        cd.Q,
+    )
+    @test_opt update_R_coalescence_matrix!(
+        NumericalCoalStyle(),
+        moment_order,
+        pdists,
+        cd.kernel_func,
+        cd.NProgMoms,
+        cd.R,
+    )
+    @test_opt update_S_coalescence_matrix!(
+        NumericalCoalStyle(),
+        moment_order,
+        pdists,
+        cd.kernel_func,
+        cd.NProgMoms,
+        cd.S,
+    )
     @test_opt get_coalescence_integral_moment_qrs!(NumericalCoalStyle(), moment_order, pdists, cd)
     @test_opt update_coal_ints!(NumericalCoalStyle(), pdists, cd)
 end
@@ -78,9 +99,30 @@ for pdists in ([dist1b], [dist1b, dist2b])
     _NProgMoms = [nparams(dist) for dist in pdists]
     cd = initialize_coalescence_data(NumericalCoalStyle(), kernel, _NProgMoms)
 
-    @test_opt update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.NProgMoms, cd.Q)
-    @test_opt update_R_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.NProgMoms, cd.R)
-    @test_opt update_S_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.NProgMoms, cd.S)
+    @test_opt update_Q_coalescence_matrix!(
+        NumericalCoalStyle(),
+        moment_order,
+        pdists,
+        cd.kernel_func,
+        cd.NProgMoms,
+        cd.Q,
+    )
+    @test_opt update_R_coalescence_matrix!(
+        NumericalCoalStyle(),
+        moment_order,
+        pdists,
+        cd.kernel_func,
+        cd.NProgMoms,
+        cd.R,
+    )
+    @test_opt update_S_coalescence_matrix!(
+        NumericalCoalStyle(),
+        moment_order,
+        pdists,
+        cd.kernel_func,
+        cd.NProgMoms,
+        cd.S,
+    )
     @test_opt get_coalescence_integral_moment_qrs!(NumericalCoalStyle(), moment_order, pdists, cd)
     @test_opt update_coal_ints!(NumericalCoalStyle(), pdists, cd)
 end

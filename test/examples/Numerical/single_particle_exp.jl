@@ -22,7 +22,7 @@ mass_scale = [100.0]
 pdists = map(1:Ndist) do i
     ExponentialPrimitiveParticleDistribution(particle_number[i], mass_scale[i])
 end
-dist_moments = VectorOfArray([get_moments(dist) for dist in pdists])
+dist_moments = vcat([get_moments(dist) for dist in pdists]...)
 
 # Set up ODE
 tspan = (0.0, T_end)
