@@ -7,6 +7,7 @@ using Cloudy.KernelFunctions
 using Cloudy.KernelTensors
 using Cloudy.ParticleDistributions
 using Cloudy.Coalescence
+using Cloudy.Condensation
 using Cloudy.EquationTypes
 
 const CPD = Cloudy.ParticleDistributions
