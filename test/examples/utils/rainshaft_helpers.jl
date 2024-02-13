@@ -1,5 +1,4 @@
 using LinearAlgebra
-using RecursiveArrayTools
 
 using Cloudy.KernelTensors
 using Cloudy.ParticleDistributions
@@ -51,17 +50,17 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
         coal_source = similar(m)
         sedi_flux = similar(m)
         for i in 1:nz
-            m_z = ArrayPartition([zeros(nparams(d)) for d in p.pdists]...)
-            m_z[:] = m[i, :]
+            m_z = m[i, :]
             for (j, dist) in enumerate(p.pdists)
-                update_dist_from_moments!(dist, m_z.x[j])
+                ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
+                update_dist_from_moments!(dist, m_z[ind_rng])
             end
 
             if all(m_z .< eps(Float64))
                 coal_source[i, :] = zeros(1, nmom)
             else
                 update_coal_ints!(coal_type, p.pdists, p.coal_data)
-                coal_source[i, :] = p.coal_data.coal_ints
+                coal_source[i, :] = vcat(p.coal_data.coal_ints...)
             end
 
             sedi_flux[i, :] = get_sedimentation_flux(p)

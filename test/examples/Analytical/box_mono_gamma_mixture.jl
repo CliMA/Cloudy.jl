@@ -8,7 +8,7 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
-moments_init = ArrayPartition([10.0, 1.0], [0.1, 0.1, 0.2])
+moments_init = [10.0, 1.0, 0.1, 0.1, 0.2]
 dist_init = [
     MonodispersePrimitiveParticleDistribution(FT(10), FT(0.1)),
     GammaPrimitiveParticleDistribution(FT(0.1), FT(1), FT(1)),
@@ -21,10 +21,10 @@ tspan = (FT(0), FT(1000))
 NProgMoms = [nparams(dist) for dist in dist_init]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, dist_thresholds = [FT(0.5), Inf])
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters = (; pdists = dist_init, coal_data = coal_data, dt = FT(1))
+ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, dt = FT(1))
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
-plot_params!(sol, (; pdists = dist_init); file_name = "box_mono_gamma_mixture_params.pdf")
-plot_moments!(sol, (; pdists = dist_init); file_name = "box_mono_gamma_mixture_moments.pdf")
-plot_spectra!(sol, (; pdists = dist_init); file_name = "box_mono_gamma_mixture_spectra.pdf", logxrange = (-2, 8))
+plot_params!(sol, ODE_parameters; file_name = "box_mono_gamma_mixture_params.pdf")
+plot_moments!(sol, ODE_parameters; file_name = "box_mono_gamma_mixture_moments.pdf")
+plot_spectra!(sol, ODE_parameters; file_name = "box_mono_gamma_mixture_spectra.pdf", logxrange = (-2, 8))
