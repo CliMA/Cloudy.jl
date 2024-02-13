@@ -52,7 +52,7 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
         for i in 1:nz
             m_z = m[i, :]
             for (j, dist) in enumerate(p.pdists)
-                ind_rng = get_dist_moments_ind_range(p.coal_data.NProgMoms, j)
+                ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
                 update_dist_from_moments!(dist, m_z[ind_rng])
             end
 

@@ -27,7 +27,7 @@ function plot_moments!(sol, p; file_name = "test_moments.png")
 
     for i in 1:Ndist
         for j in 1:n_params[i]
-            ind = get_dist_moment_ind(p.coal_data.NProgMoms, i, j)
+            ind = get_dist_moment_ind(p.NProgMoms, i, j)
             plt[j] = plot(
                 plt[j],
                 time,
@@ -101,7 +101,7 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 
     for i in 1:3
         plt[i] = plot()
         for j in 1:Ndist
-            ind_rng = get_dist_moments_ind_range(p.coal_data.NProgMoms, j)
+            ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
             update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind_rng])
             plot!(
                 r,
@@ -152,7 +152,7 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     plt = Array{Plots.Plot}(undef, n_dist)
     n_params = [nparams(p.pdists[i]) for i in 1:n_dist]
     for i in 1:n_dist
-        ind_rng = get_dist_moments_ind_range(p.coal_data.NProgMoms, i)
+        ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         for j in 1:size(params)[1]
             CPD.update_dist_from_moments!(p.pdists[i], moments[j, ind_rng])
             params[j, ind_rng] = vcat(CPD.get_params(p.pdists[i])[2]...)
@@ -202,7 +202,7 @@ function print_box_results!(sol, p)
 
     for i in 1:Ndist
         for j in 1:Nmom_min
-            ind = get_dist_moment_ind(p.coal_data.NProgMoms, i, j)
+            ind = get_dist_moment_ind(p.NProgMoms, i, j)
             moments_sum[:, j] += moments[:, ind]
             @show moments[:, ind]
         end
@@ -217,7 +217,7 @@ function print_box_results!(sol, p)
     params = zeros(length(t_ind), Ndist, n_params[1])
     for i in 1:3
         for j in 1:Ndist
-            ind_rng = get_dist_moments_ind_range(p.coal_data.NProgMoms, j)
+            ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
             update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind_rng])
             params[i, j, :] = vcat(CPD.get_params(p.pdists[j])[2]...)
         end
@@ -274,7 +274,7 @@ function plot_rainshaft_results(
         for (k, t_ind) in enumerate(plot_time_inds)
             t = t_ind * p.dt
             for i in 1:n_dist
-                ind_rng = get_dist_moments_ind_range(p.coal_data.NProgMoms, j)
+                ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
                 sdm_anl = analytical_sol(p.pdists[i], ic[:, ind_rng], p.vel, z, t)
                 for j in 1:nm[i]
                     plot!(plt[(i - 1) * nm_max + j], sdm_anl[:, j], z / 1000, lw = 1, ls = :dash, c = k, label = false)

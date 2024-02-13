@@ -215,18 +215,18 @@ for k in 1:3
     end
 end
 
-_NProgMoms = [3, 3, 3]
-(Q, R, S, coal_ints, NProgMoms, kernel_func) = initialize_coalescence_data(NumericalCoalStyle(), kernel, _NProgMoms)
+NProgMoms = [3, 3, 3]
+(Q, R, S, coal_ints, kernel_func) = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
 
 moment_order = 1
 
-update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, kernel_func, NProgMoms, Q)
+update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, kernel_func, Q)
 @test maximum(Q[end, :]) == 0.0
 @test minimum(Q[1, 2:end]) > 0.0
-update_R_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, kernel_func, NProgMoms, R)
+update_R_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, kernel_func, R)
 @test minimum(R) > 0.0
 
-update_S_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, kernel_func, NProgMoms, S)
+update_S_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, kernel_func, S)
 @test S[end, 2] == 0.0
 @test maximum(S) > 0.0
 

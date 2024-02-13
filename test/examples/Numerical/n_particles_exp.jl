@@ -34,7 +34,7 @@ kernel = LinearKernelFunction(coalescence_coeff)
 NProgMoms = [nparams(dist) for dist in pdists]
 coal_data = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
 rhs = make_box_model_rhs(NumericalCoalStyle())
-ODE_parameters = (pdists = pdists, coal_data = coal_data, dt = dt)
+ODE_parameters = (pdists = pdists, coal_data = coal_data, NProgMoms = NProgMoms, dt = dt)
 prob = ODEProblem(rhs, dist_moments, tspan, ODE_parameters; progress = true)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 plot_params!(sol, ODE_parameters; file_name = "n_particle_exp_params.png")

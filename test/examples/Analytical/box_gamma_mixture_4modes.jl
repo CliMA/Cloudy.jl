@@ -28,7 +28,7 @@ coal_data = initialize_coalescence_data(
     dist_thresholds = [FT(1.0), FT(1e2), FT(1e4), Inf],
 )
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters = (; pdists = dist_init, coal_data = coal_data, dt = FT(1))
+ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, dt = FT(1))
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 

@@ -23,7 +23,7 @@ end
 
 function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
     for (i, dist) in enumerate(p.pdists)
-        ind_rng = get_dist_moments_ind_range(coal_data.NProgMoms, i)
+        ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         update_dist_from_moments!(dist, mom[ind_rng])
     end
     update_coal_ints!(coal_type, p.pdists, p.coal_data)

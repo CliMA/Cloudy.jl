@@ -37,14 +37,15 @@ function update_coal_ints!(
     update_moments!(pdists, coal_data.moments)
     update_finite_2d_integrals!(pdists, coal_data.dist_thresholds, coal_data.moments, coal_data.finite_2d_ints)
 
+    NProgMoms = [nparams(dist) for dist in pdists]
     coal_data.coal_ints .= 0
-    for m in 1:maximum(coal_data.NProgMoms)
-        get_coalescence_integral_moment_qrs!(cs, m - 1, coal_data)
+    for m in 1:maximum(NProgMoms)
+        get_coalescence_integral_moment_qrs!(cs, m - 1, NProgMoms, coal_data)
         for (k, pdist) in enumerate(pdists)
-            if m > nparams(pdist)
+            if m > NProgMoms[k]
                 continue
             end
-            ind = get_dist_moment_ind(coal_data.NProgMoms, k, m)
+            ind = get_dist_moment_ind(NProgMoms, k, m)
             coal_data.coal_ints[ind] += sum(@views coal_data.Q[:, k])
             coal_data.coal_ints[ind] -= sum(@views coal_data.R[:, k])
             coal_data.coal_ints[ind] += coal_data.S[k, 1]
@@ -105,7 +106,6 @@ function initialize_coalescence_data(
         moments = moments,
         finite_2d_ints = finite_2d_ints,
         coal_ints = coal_ints,
-        NProgMoms = NProgMoms,
         matrix_of_kernels = matrix_of_kernels,
         dist_thresholds = dist_thresholds,
     )
@@ -148,13 +148,18 @@ function update_finite_2d_integrals!(
     end
 end
 
-function get_coalescence_integral_moment_qrs!(cs::AnalyticalCoalStyle, moment_order::Int, coal_data)
+function get_coalescence_integral_moment_qrs!(
+    cs::AnalyticalCoalStyle,
+    moment_order::Int,
+    NProgMoms::Vector{Int},
+    coal_data,
+)
     update_Q_coalescence_matrix!(
         cs,
         moment_order,
         coal_data.moments,
         coal_data.matrix_of_kernels,
-        coal_data.NProgMoms,
+        NProgMoms,
         coal_data.Q,
     )
     update_R_coalescence_matrix!(
@@ -162,7 +167,7 @@ function get_coalescence_integral_moment_qrs!(cs::AnalyticalCoalStyle, moment_or
         moment_order,
         coal_data.moments,
         coal_data.matrix_of_kernels,
-        coal_data.NProgMoms,
+        NProgMoms,
         coal_data.R,
     )
     update_S_coalescence_matrix!(
@@ -171,7 +176,7 @@ function get_coalescence_integral_moment_qrs!(cs::AnalyticalCoalStyle, moment_or
         coal_data.moments,
         coal_data.finite_2d_ints,
         coal_data.matrix_of_kernels,
-        coal_data.NProgMoms,
+        NProgMoms,
         coal_data.S,
     )
 end
@@ -284,14 +289,15 @@ function update_coal_ints!(
     coal_data::NamedTuple,
 ) where {FT <: Real}
 
+    NProgMoms = [nparams(dist) for dist in pdists]
     coal_data.coal_ints .= 0
-    for m in 1:maximum(coal_data.NProgMoms)
+    for m in 1:maximum(NProgMoms)
         get_coalescence_integral_moment_qrs!(cs, FT(m - 1), pdists, coal_data)
         for (k, pdist) in enumerate(pdists)
             if m > nparams(pdist)
                 continue
             end
-            ind = get_dist_moment_ind(coal_data.NProgMoms, k, m)
+            ind = get_dist_moment_ind(NProgMoms, k, m)
             coal_data.coal_ints[ind] += sum(@views coal_data.Q[:, k])
             coal_data.coal_ints[ind] -= sum(@views coal_data.R[:, k])
             coal_data.coal_ints[ind] += coal_data.S[k, 1]
@@ -319,7 +325,7 @@ function initialize_coalescence_data(
     R = zeros(FT, Ndist, Ndist)
     S = zeros(FT, Ndist, 2)
     coal_ints = zeros(FT, sum(NProgMoms))
-    return (Q = Q, R = R, S = S, coal_ints = coal_ints, NProgMoms = NProgMoms, kernel_func = kernel_func)
+    return (Q = Q, R = R, S = S, coal_ints = coal_ints, kernel_func = kernel_func)
 end
 
 function get_coalescence_integral_moment_qrs!(
@@ -328,17 +334,17 @@ function get_coalescence_integral_moment_qrs!(
     pdists,
     coal_data,
 ) where {FT <: Real}
-    update_Q_coalescence_matrix!(cs, moment_order, pdists, coal_data.kernel_func, coal_data.NProgMoms, coal_data.Q)
-    update_R_coalescence_matrix!(cs, moment_order, pdists, coal_data.kernel_func, coal_data.NProgMoms, coal_data.R)
-    update_S_coalescence_matrix!(cs, moment_order, pdists, coal_data.kernel_func, coal_data.NProgMoms, coal_data.S)
+    update_Q_coalescence_matrix!(cs, moment_order, pdists, coal_data.kernel_func, coal_data.Q)
+    update_R_coalescence_matrix!(cs, moment_order, pdists, coal_data.kernel_func, coal_data.R)
+    update_S_coalescence_matrix!(cs, moment_order, pdists, coal_data.kernel_func, coal_data.S)
 end
 
-function update_Q_coalescence_matrix!(::NumericalCoalStyle, moment_order, pdists, kernel, NProgMoms, Q)
+function update_Q_coalescence_matrix!(::NumericalCoalStyle, moment_order, pdists, kernel, Q)
     Ndist = length(pdists)
     for j in 1:Ndist
         for k in (j + 1):Ndist
             Q[j, k] = 0.0
-            if NProgMoms[k] <= moment_order
+            if nparams(pdists[k]) <= moment_order
                 continue
             end
             Q[j, k] = quadgk(
@@ -352,12 +358,12 @@ function update_Q_coalescence_matrix!(::NumericalCoalStyle, moment_order, pdists
     end
 end
 
-function update_R_coalescence_matrix!(::NumericalCoalStyle, moment_order, pdists, kernel, NProgMoms, R)
+function update_R_coalescence_matrix!(::NumericalCoalStyle, moment_order, pdists, kernel, R)
     Ndist = length(pdists)
     for j in 1:Ndist
         for k in 1:Ndist
             R[j, k] = 0.0
-            if NProgMoms[k] <= moment_order
+            if nparams(pdists[k]) <= moment_order
                 continue
             end
             R[j, k] = quadgk(
@@ -371,17 +377,17 @@ function update_R_coalescence_matrix!(::NumericalCoalStyle, moment_order, pdists
     end
 end
 
-function update_S_coalescence_matrix!(::NumericalCoalStyle, moment_order, pdists, kernel, NProgMoms, S)
+function update_S_coalescence_matrix!(::NumericalCoalStyle, moment_order, pdists, kernel, S)
     Ndist = length(pdists)
     for j in 1:Ndist
         S[j, 1] = 0.0
         S[j, 2] = 0.0
         if j < Ndist
-            if (NProgMoms[j] <= moment_order) & (NProgMoms[j + 1] <= moment_order)
+            if (nparams(pdists[j]) <= moment_order) & (nparams(pdists[j + 1]) <= moment_order)
                 continue
             end
         else
-            if NProgMoms[j] <= moment_order
+            if nparams(pdists[j]) <= moment_order
                 continue
             end
         end
