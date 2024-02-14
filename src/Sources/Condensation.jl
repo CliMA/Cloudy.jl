@@ -27,7 +27,7 @@ function get_cond_evap(s::FT, par::NamedTuple) where {FT <: Real}
     # build diagnostic moments
     mom = [zeros(n, 1) for n in n_params]
     for i in 1:n_dist
-        for j in 1:n_params[i]
+        for j in 2:n_params[i]
             mom[i][j, 1] = moment(par.pdists[i], FT(j - 1 - 2 / 3))
         end
     end
@@ -35,7 +35,7 @@ function get_cond_evap(s::FT, par::NamedTuple) where {FT <: Real}
     # calculate condensation/evaporation flux for prognostic moments
     cond_evap_int = [zeros(ns) for ns in n_params]
     for i in 1:n_dist
-        for j in 1:n_params[i]
+        for j in 2:n_params[i]
             cond_evap_int[i][j] = 3 * FT(ξ) * s * (j - 1) * mom[i][j, 1]
         end
     end
