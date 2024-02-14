@@ -60,27 +60,31 @@ end
 
 # overall Q R S fill matrices 
 # n = 1
-@test_opt initialize_coalescence_data(3, 3)
+kernel = LinearKernelFunction(1.0)
+NProgMoms = [3, 3, 3]
+@test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
 moment_order = 0.0
 
 for pdists in ([dist1a], [dist1a, dist2a])
-    cd = initialize_coalescence_data(length(pdists), 3)
+    NProgMoms = [nparams(dist) for dist in pdists]
+    cd = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
 
-    @test_opt update_Q_coalescence_matrix!(moment_order, kernel, pdists, cd.Q)
-    @test_opt update_R_coalescence_matrix!(moment_order, kernel, pdists, cd.R)
-    @test_opt update_S_coalescence_matrix!(moment_order, kernel, pdists, cd.S)
-    @test_opt get_coalescence_integral_moment_qrs!(moment_order, kernel, pdists, cd.Q, cd.R, cd.S)
-    @test_opt update_coal_ints!(NumericalCoalStyle(), 3, kernel, pdists, cd)
+    @test_opt update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.Q)
+    @test_opt update_R_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.R)
+    @test_opt update_S_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.S)
+    @test_opt get_coalescence_integral_moment_qrs!(NumericalCoalStyle(), moment_order, pdists, cd)
+    @test_opt update_coal_ints!(NumericalCoalStyle(), pdists, cd)
 end
 
 for pdists in ([dist1b], [dist1b, dist2b])
-    cd = initialize_coalescence_data(length(pdists), 2)
+    NProgMoms = [nparams(dist) for dist in pdists]
+    cd = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
 
-    @test_opt update_Q_coalescence_matrix!(moment_order, kernel, pdists, cd.Q)
-    @test_opt update_R_coalescence_matrix!(moment_order, kernel, pdists, cd.R)
-    @test_opt update_S_coalescence_matrix!(moment_order, kernel, pdists, cd.S)
-    @test_opt get_coalescence_integral_moment_qrs!(moment_order, kernel, pdists, cd.Q, cd.R, cd.S)
-    @test_opt update_coal_ints!(NumericalCoalStyle(), 2, kernel, pdists, cd)
+    @test_opt update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.Q)
+    @test_opt update_R_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.R)
+    @test_opt update_S_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.S)
+    @test_opt get_coalescence_integral_moment_qrs!(NumericalCoalStyle(), moment_order, pdists, cd)
+    @test_opt update_coal_ints!(NumericalCoalStyle(), pdists, cd)
 end
 
 ## Sedimentation.jl

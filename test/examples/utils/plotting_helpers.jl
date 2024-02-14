@@ -12,7 +12,7 @@ Plots the moment time series results
 """
 function plot_moments!(sol, p; file_name = "test_moments.png")
     time = sol.t
-    moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
+    moments = vcat(sol.u'...)
 
     Ndist = length(p.pdists)
     n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
@@ -25,24 +25,23 @@ function plot_moments!(sol, p; file_name = "test_moments.png")
         plt[i] = plot()
     end
 
-    ind = 1
     for i in 1:Ndist
         for j in 1:n_params[i]
+            ind = get_dist_moment_ind(p.NProgMoms, i, j)
             plt[j] = plot(
                 plt[j],
                 time,
-                moments[:, j + ind - 1],
+                moments[:, ind],
                 linewidth = 2,
                 xaxis = "time [s]",
                 yaxis = "M" * string(j - 1),
                 label = "M_{" * string(j - 1) * "," * string(i) * "}",
-                ylims = (-0.1 * maximum(moments[:, j + ind - 1]), 1.1 * maximum(moments[:, j + ind - 1])),
+                ylims = (-0.1 * maximum(moments[:, ind]), 1.1 * maximum(moments[:, ind])),
             )
             if j <= Nmom_min
-                moments_sum[:, j] += moments[:, j + ind - 1]
+                moments_sum[:, j] += moments[:, ind]
             end
         end
-        ind += n_params[i]
     end
     for i in 1:Nmom_min
         plt[i] = plot(
@@ -91,7 +90,7 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 
         @show r
     end
 
-    moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
+    moments = vcat(sol.u'...)
     Ndist = length(p.pdists)
     n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
 
@@ -100,10 +99,10 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 
     sp_sum = zeros(length(r), 3)
 
     for i in 1:3
-        ind = 1
         plt[i] = plot()
         for j in 1:Ndist
-            update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind:(ind + n_params[j] - 1)])
+            ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
+            update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind_rng])
             plot!(
                 r,
                 3 * x .^ 2 .* p.pdists[j].(x),
@@ -115,7 +114,6 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 
                 title = "time = " * string(round(sol.t[t_ind[i]], sigdigits = 4)),
             )
             sp_sum[:, i] += 3 * x .^ 2 .* p.pdists[j].(x)
-            ind += n_params[j]
 
             if print
                 @show 3 * x .^ 2 .* p.pdists[j].(x)
@@ -147,27 +145,24 @@ Plots the evolution of particle distribution parameters in time.
 """
 function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     time = sol.t
-    moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
+    moments = vcat(sol.u'...)
     params = similar(moments)
 
     n_dist = length(p.pdists)
     plt = Array{Plots.Plot}(undef, n_dist)
     n_params = [nparams(p.pdists[i]) for i in 1:n_dist]
-    ind = 1
     for i in 1:n_dist
-        rng = ind:(ind + n_params[i] - 1)
+        ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         for j in 1:size(params)[1]
-            CPD.update_dist_from_moments!(p.pdists[i], moments[j, rng])
-            params[j, rng] = vcat(CPD.get_params(p.pdists[i])[2]...)
+            CPD.update_dist_from_moments!(p.pdists[i], moments[j, ind_rng])
+            params[j, ind_rng] = vcat(CPD.get_params(p.pdists[i])[2]...)
         end
 
         plot()
-        for j in rng
-            plot!(time, params[:, j], linewidth = 2, label = "p_" * string(j - ind + 1), yscale = yscale)
+        for j in ind_rng
+            plot!(time, params[:, j], linewidth = 2, label = "p_" * string(j - ind_rng[1] + 1), yscale = yscale)
         end
         plt[i] = plot!(xaxis = "time", yaxis = "parameters (mode " * string(i) * ")")
-
-        ind += n_params[i]
     end
     nrow = floor(Int, sqrt(n_dist))
     ncol = ceil(Int, sqrt(n_dist))
@@ -197,7 +192,7 @@ Prints the evolution of moments in time, plus the distribution parameters at a f
 """
 function print_box_results!(sol, p)
     time = sol.t
-    moments = vcat(reshape.(sol.u', 1, size(sol.u[1]')[1] * size(sol.u[1]')[2])...)
+    moments = vcat(sol.u'...)
 
     Ndist = length(p.pdists)
     n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
@@ -205,13 +200,12 @@ function print_box_results!(sol, p)
     Nmom_max = maximum(n_params)
     moments_sum = zeros(length(time), Nmom_min)
 
-    ind = 1
     for i in 1:Ndist
         for j in 1:Nmom_min
-            moments_sum[:, j] += moments[:, j + ind - 1]
-            @show moments[:, j + ind - 1]
+            ind = get_dist_moment_ind(p.NProgMoms, i, j)
+            moments_sum[:, j] += moments[:, ind]
+            @show moments[:, ind]
         end
-        ind += n_params[i]
     end
     @show time
     for j in 1:Nmom_min
@@ -219,13 +213,13 @@ function print_box_results!(sol, p)
     end
 
     t_ind = [1, ceil(Int, length(sol.t) / 2), length(sol.t)]
-    params = zeros(length(t_ind), Ndist, Nmom_max)
-    for i in 1:3 #t index
-        ind = 1
+    n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
+    params = zeros(length(t_ind), Ndist, n_params[1])
+    for i in 1:3
         for j in 1:Ndist
-            update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind:(ind + n_params[j] - 1)])
-            params[i, j, 1:n_params[j]] = vcat(CPD.get_params(p.pdists[j])[2]...)
-            ind += n_params[j]
+            ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
+            update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind_rng])
+            params[i, j, :] = vcat(CPD.get_params(p.pdists[j])[2]...)
         end
     end
     @show t_ind
@@ -279,13 +273,12 @@ function plot_rainshaft_results(
     if plot_analytical_sedimentation
         for (k, t_ind) in enumerate(plot_time_inds)
             t = t_ind * p.dt
-            ind = 1
             for i in 1:n_dist
-                sdm_anl = analytical_sol(p.pdists[i], ic[:, ind:(ind - 1 + nm[i])], p.vel, z, t)
+                ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
+                sdm_anl = analytical_sol(p.pdists[i], ic[:, ind_rng], p.vel, z, t)
                 for j in 1:nm[i]
                     plot!(plt[(i - 1) * nm_max + j], sdm_anl[:, j], z / 1000, lw = 1, ls = :dash, c = k, label = false)
                 end
-                ind += nm[i]
             end
         end
         plot!(plt[1], NaN .* z, z / 1000, lw = 3, ls = :solid, c = :black, label = "numerical solution")
