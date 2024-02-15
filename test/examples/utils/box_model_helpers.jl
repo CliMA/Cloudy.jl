@@ -33,7 +33,7 @@ end
 
 function rhs_condensation!(dmom, dist_moments, p, s)
     for (i, dist) in enumerate(p.pdists)
-        update_dist_from_moments!(dist, dist_moments.x[i])
+        update_dist_from_moments!(dist, dist_moments[i])
     end
     dmom .= get_cond_evap(s, p)
 end
