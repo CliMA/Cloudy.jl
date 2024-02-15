@@ -195,9 +195,8 @@ function print_box_results!(sol, p)
     moments = vcat(sol.u'...)
 
     Ndist = length(p.pdists)
-    n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
-    Nmom_min = minimum(n_params)
-    Nmom_max = maximum(n_params)
+    Nmom_min = minimum(p.NProgMoms)
+    Nmom_max = maximum(p.NProgMoms)
     moments_sum = zeros(length(time), Nmom_min)
 
     for i in 1:Ndist
@@ -213,13 +212,12 @@ function print_box_results!(sol, p)
     end
 
     t_ind = [1, ceil(Int, length(sol.t) / 2), length(sol.t)]
-    n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
-    params = zeros(length(t_ind), Ndist, n_params[1])
+    params = zeros(length(t_ind), Ndist, Nmom_max)
     for i in 1:3
         for j in 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
             update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind_rng])
-            params[i, j, :] = vcat(CPD.get_params(p.pdists[j])[2]...)
+            params[i, j, 1:p.NProgMoms[j]] = vcat(CPD.get_params(p.pdists[j])[2]...)
         end
     end
     @show t_ind

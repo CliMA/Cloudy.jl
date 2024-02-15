@@ -21,7 +21,7 @@ ODE_parameters = (; ξ = ξ, pdists = dist_init, NProgMoms = NProgMoms, dt = FT(
 prob = ODEProblem(rhs!, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
-plot_params!(sol, (; pdists = dist_init); file_name = "condensation_single_gamma_params.pdf")
-plot_moments!(sol, (; pdists = dist_init); file_name = "condensation_single_gamma_moments.pdf")
-plot_spectra!(sol, (; pdists = dist_init); file_name = "condensation_single_gamma_spectra.pdf", logxrange = (-3, 6))
-print_box_results!(sol, (; pdists = dist_init))
+plot_params!(sol, ODE_parameters; file_name = "condensation_single_gamma_params.pdf")
+plot_moments!(sol, ODE_parameters; file_name = "condensation_single_gamma_moments.pdf")
+plot_spectra!(sol, ODE_parameters; file_name = "condensation_single_gamma_spectra.pdf", logxrange = (-3, 6))
+print_box_results!(sol, ODE_parameters)
