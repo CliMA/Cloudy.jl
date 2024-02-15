@@ -15,8 +15,9 @@ dist_init = [GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1))]
 s = 0.05
 ξ = 1e-2
 tspan = (FT(0), FT(120))
+NProgMoms = [nparams(dist) for dist in dist_init]
 rhs!(dm, m, par, t) = rhs_condensation!(dm, m, par, s)
-ODE_parameters = (; ξ = ξ, pdists = dist_init, dt = FT(10))
+ODE_parameters = (; ξ = ξ, pdists = dist_init, NProgMoms = NProgMoms, dt = FT(10))
 prob = ODEProblem(rhs!, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 

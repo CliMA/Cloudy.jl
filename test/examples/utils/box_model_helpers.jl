@@ -31,9 +31,10 @@ function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
     dmom .= p.coal_data.coal_ints
 end
 
-function rhs_condensation!(dmom, dist_moments, p, s)
+function rhs_condensation!(dmom, mom, p, s)
     for (i, dist) in enumerate(p.pdists)
-        update_dist_from_moments!(dist, dist_moments.x[i])
+        ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
+        update_dist_from_moments!(dist, mom[ind_rng])
     end
     dmom .= get_cond_evap(s, p)
 end
