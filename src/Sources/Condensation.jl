@@ -5,7 +5,7 @@
 """
 module Condensation
 
-using RecursiveArrayTools
+using Cloudy
 using Cloudy.ParticleDistributions
 
 export get_cond_evap
@@ -22,25 +22,27 @@ based on the equation dg(x) / dt = -3ξs d/dx(x^{1/3} g(x))
 function get_cond_evap(s::FT, par::NamedTuple) where {FT <: Real}
     ξ = par.ξ
     n_dist = length(par.pdists)
-    n_params = [nparams(dist) for dist in par.pdists]
+    NProgMoms = [nparams(dist) for dist in par.pdists]
 
     # build diagnostic moments
-    mom = [zeros(n, 1) for n in n_params]
+    mom = zeros(FT, sum(NProgMoms))
     for i in 1:n_dist
-        for j in 2:n_params[i]
-            mom[i][j, 1] = moment(par.pdists[i], FT(j - 1 - 2 / 3))
+        for j in 2:NProgMoms[i]
+            ind = get_dist_moment_ind(NProgMoms, i, j)
+            mom[ind] = moment(par.pdists[i], FT(j - 1 - 2 / 3))
         end
     end
 
     # calculate condensation/evaporation flux for prognostic moments
-    cond_evap_int = [zeros(ns) for ns in n_params]
+    cond_evap_int = zeros(FT, sum(NProgMoms))
     for i in 1:n_dist
-        for j in 2:n_params[i]
-            cond_evap_int[i][j] = 3 * FT(ξ) * s * (j - 1) * mom[i][j, 1]
+        for j in 2:NProgMoms[i]
+            ind = get_dist_moment_ind(NProgMoms, i, j)
+            cond_evap_int[ind] = 3 * FT(ξ) * s * (j - 1) * mom[ind]
         end
     end
 
-    return vcat(cond_evap_int...)
+    return cond_evap_int
 end
 
 end #module Condensation.jl
