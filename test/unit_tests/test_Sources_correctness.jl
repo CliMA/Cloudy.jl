@@ -19,6 +19,7 @@ using Cloudy.Coalescence:
     initialize_coalescence_data,
     update_coal_ints!
 using Cloudy.Sedimentation
+using Cloudy.Condensation
 using Cloudy.KernelTensors
 using Cloudy.KernelFunctions
 using SpecialFunctions: gamma, gamma_inc
@@ -254,5 +255,21 @@ end
 ## Sedimentation.jl
 # Sedimentation moment flux tests
 par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], vel = [(1.0, 0.0), (-1.0, 1.0 / 6)])
-mom = [1.0, 1.0]
 @test get_sedimentation_flux(par) ≈ [-1.0 + gamma(1.0 + 1.0 / 6), -1.0 + gamma(2.0 + 1.0 / 6)] rtol = rtol
+
+## Condensation.jl
+# Condensation moment tests
+par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], ξ = 1e-6)
+@test get_cond_evap(0.01, par) ≈ [0.0, 3 * 1e-6 * 0.01 * moment(par.pdists[1], 1 - 2 / 3)] rtol = rtol
+
+par = (;
+    pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0)],
+    ξ = 1e-6,
+)
+@test get_cond_evap(0.01, par) ≈ [
+    0.0,
+    3 * 1e-6 * 0.01 * moment(par.pdists[1], 1 - 2 / 3),
+    0.0,
+    3 * 1e-6 * 0.01 * moment(par.pdists[2], 1 - 2 / 3),
+    3 * 2 * 1e-6 * 0.01 * moment(par.pdists[2], 2 - 2 / 3),
+] rtol = rtol

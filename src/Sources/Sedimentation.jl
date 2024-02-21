@@ -11,10 +11,9 @@ export get_sedimentation_flux
 
 
 """
-  get_sedimentation_flux(mom_p::Array{Real}, par::Dict)
+  get_sedimentation_flux(par::NamedTuple)
 
-  `mom_p` - prognostic moments
-  `par` - ODE parameters, a NamedTuple containing a list of ParticleDistributions and terminal celocity coefficients.
+  `par` - ODE parameters, a NamedTuple containing a list of ParticleDistributions and terminal velocity coefficients.
 Returns sedimentation flux of all prognostic moments, which is the integral of terminal velocity times prognostic moments. The
 terminal velocity of particles is assumed to be expressed as: ∑ vel[i][1] * x^(vel[i][2]) where vel is a vector of tuples.
 """

@@ -6,6 +6,7 @@ using Cloudy.KernelFunctions
 using Cloudy.KernelTensors
 using Cloudy.ParticleDistributions
 using Cloudy.Coalescence
+using Cloudy.Condensation
 using Cloudy.EquationTypes
 
 const CPD = Cloudy.ParticleDistributions
@@ -28,6 +29,14 @@ function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
     end
     update_coal_ints!(coal_type, p.pdists, p.coal_data)
     dmom .= p.coal_data.coal_ints
+end
+
+function rhs_condensation!(dmom, mom, p, s)
+    for (i, dist) in enumerate(p.pdists)
+        ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
+        update_dist_from_moments!(dist, mom[ind_rng])
+    end
+    dmom .= get_cond_evap(s, p)
 end
 
 """
