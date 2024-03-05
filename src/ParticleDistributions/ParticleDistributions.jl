@@ -168,7 +168,7 @@ end
 Returns the particle mass density evaluated at `x`.
 """
 function (pdist::AbstractParticleDistribution{FT})(x::FT) where {FT <: Real}
-    return density(pdist, x)
+    return FT(density(pdist, x))
 end
 
 """
@@ -553,15 +553,16 @@ function moment_source_helper(
 end
 
 """
-  get_standard_N_q(pdists::Array{AbstractParticleDistribution}; size_cutoff::FT)
+  get_standard_N_q(pdists; size_cutoff, rtol)
 
-  `pdists` - vector of particle size distributions
+  `pdists` - tuple of particle size distributions
   `size_cutoff` - size distinguishing between cloud and rain
   `rtol` - numerical integration tolerance
 Returns a named tuple (N_liq, N_rai, M_liq, M_rai) of the number and mass densities of liquid (cloud) and rain computed
 from the current pdists given a size cutoff
 """
-function get_standard_N_q(pdists::Array{<:PrimitiveParticleDistribution{FT}}; size_cutoff::FT = FT(1), rtol::FT=1e-8) where {FT <: Real}
+function get_standard_N_q(pdists; size_cutoff=1, rtol=1e-8)
+    FT = typeof(pdists[1].n)
     N_liq = FT(0)
     N_rai = FT(0)
     M_liq = FT(0)
@@ -569,10 +570,10 @@ function get_standard_N_q(pdists::Array{<:PrimitiveParticleDistribution{FT}}; si
 
     Ndist = length(pdists)
     for j in 1:Ndist
-        N_liq = N_liq + quadgk(x -> pdists[j](x), 0.0, size_cutoff; rtol=rtol)[1]
-        M_liq = M_liq + quadgk(x -> x * pdists[j](x), 0.0, size_cutoff; rtol=rtol)[1]
-        N_rai = N_rai + quadgk(x -> pdists[j](x), size_cutoff, Inf; rtol=rtol)[1]
-        M_rai = M_rai + quadgk(x -> x * pdists[j](x), size_cutoff, Inf; rtol=rtol)[1]
+        N_liq = N_liq + quadgk(x -> pdists[1](x), FT(0.0), FT(size_cutoff); rtol=FT(rtol))[1]
+        M_liq = M_liq + quadgk(x -> x * pdists[j](x), FT(0.0), FT(size_cutoff); rtol=FT(rtol))[1]
+        N_rai = N_rai + quadgk(x -> pdists[j](x), FT(size_cutoff), Inf; rtol=FT(rtol))[1]
+        M_rai = M_rai + quadgk(x -> x * pdists[j](x), FT(size_cutoff), Inf; rtol=FT(rtol))[1]
     end
 
     return (; N_liq, N_rai, M_liq, M_rai)

@@ -76,7 +76,7 @@ for pdists in ([dist1a], [dist1a, dist2a])
     @test_opt update_coal_ints!(NumericalCoalStyle(), pdists, cd)
 end
 
-for pdists in ([dist1b], [dist1b, dist2b])
+for pdists in ([dist1b], [dist1b, dist2b], [dist1a, dist1b])
     NProgMoms = [nparams(dist) for dist in pdists]
     cd = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
 
