@@ -31,6 +31,7 @@ export normed_density
 export nparams
 export update_dist_from_moments!
 export moment_source_helper
+export get_standard_N_q
 
 # setters and getters
 export get_params
@@ -549,6 +550,32 @@ function moment_source_helper(
     f(y) = quadgk(xx -> g(xx, y), x_lowerbound, x_threshold - y)[1]
 
     return quadgk(f, x_lowerbound, x_threshold)[1]
+end
+
+"""
+  get_standard_N_q(pdists; size_cutoff, rtol)
+  `pdists` - tuple of particle size distributions
+  `size_cutoff` - size distinguishing between cloud and rain
+  `rtol` - numerical integration tolerance
+Returns a named tuple (N_liq, N_rai, M_liq, M_rai) of the number and mass densities of liquid (cloud) and rain computed
+from the current pdists given a size cutoff
+"""
+function get_standard_N_q(pdists; size_cutoff = 1, rtol = 1e-8)
+    FT = typeof(pdists[1].n)
+    N_liq = FT(0)
+    N_rai = FT(0)
+    M_liq = FT(0)
+    M_rai = FT(0)
+
+    Ndist = length(pdists)
+    for j in 1:Ndist
+        N_liq = N_liq + quadgk(x -> pdists[j](x), FT(0.0), FT(size_cutoff); rtol = FT(rtol))[1]
+        M_liq = M_liq + quadgk(x -> x * pdists[j](x), FT(0.0), FT(size_cutoff); rtol = FT(rtol))[1]
+        N_rai = N_rai + quadgk(x -> pdists[j](x), FT(size_cutoff), Inf; rtol = FT(rtol))[1]
+        M_rai = M_rai + quadgk(x -> x * pdists[j](x), FT(size_cutoff), Inf; rtol = FT(rtol))[1]
+    end
+
+    return (; N_liq, N_rai, M_liq, M_rai)
 end
 
 end #module ParticleDistributions.jl

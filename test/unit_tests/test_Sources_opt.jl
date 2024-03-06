@@ -1,4 +1,5 @@
 using Cloudy.ParticleDistributions
+using Cloudy.EquationTypes
 using Cloudy.KernelFunctions
 using Cloudy.Coalescence:
     weighting_fn,
