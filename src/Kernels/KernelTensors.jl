@@ -14,6 +14,7 @@ using Optim
 # kernel tensors available for microphysics
 export KernelTensor
 export CoalescenceTensor
+export get_normalized_kernel_tensor
 
 
 """
@@ -152,6 +153,17 @@ function check_symmetry(func)
         end
     end
     nothing
+end
+
+"""
+  get_normalized_kernel_tensor(kernel::CoalescenceTensor{FT}, norms::Vector{FT})
+  `kernel` - Coalescence kernel tensor
+  `norms` - vector containing scale of number and mass/volume of particles
+Returns normalized kernel tensor by using the number and mass/volume scales
+"""
+function get_normalized_kernel_tensor(kernel::CoalescenceTensor{FT}, norms::Vector{FT}) where {FT <: Real}
+    kernel_norm = [1 / (norms[1] * norms[2]^(i + j)) for i in 0:(kernel.r) for j in 0:(kernel.r)]
+    return CoalescenceTensor(kernel.c ./ reshape(kernel_norm, kernel.r + 1, kernel.r + 1))
 end
 
 end

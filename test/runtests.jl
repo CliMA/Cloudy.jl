@@ -4,6 +4,7 @@ include("./unit_tests/run_unit_tests.jl")
 # Examples
 include("./examples/Analytical/box_single_gamma.jl")
 include("./examples/Analytical/box_single_lognorm.jl")
+include("./examples/Analytical/box_single_gamma_hydro.jl")
 include("./examples/Analytical/box_gamma_mixture.jl")
 include("./examples/Analytical/box_gamma_mixture_3modes.jl")
 include("./examples/Analytical/box_gamma_mixture_4modes.jl")

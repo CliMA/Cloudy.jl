@@ -23,20 +23,24 @@ function make_box_model_rhs(coal_type::CoalescenceStyle)
 end
 
 function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
+    mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
+    mom_normalized = mom ./ mom_norms
     for (i, dist) in enumerate(p.pdists)
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
-        update_dist_from_moments!(dist, mom[ind_rng])
+        update_dist_from_moments!(dist, mom_normalized[ind_rng])
     end
     update_coal_ints!(coal_type, p.pdists, p.coal_data)
-    dmom .= p.coal_data.coal_ints
+    dmom .= p.coal_data.coal_ints .* mom_norms
 end
 
 function rhs_condensation!(dmom, mom, p, s)
+    mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
+    mom_normalized = mom ./ mom_norms
     for (i, dist) in enumerate(p.pdists)
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
-        update_dist_from_moments!(dist, mom[ind_rng])
+        update_dist_from_moments!(dist, mom_normalized[ind_rng])
     end
-    dmom .= get_cond_evap(s, p)
+    dmom .= get_cond_evap(s, p) .* mom_norms
 end
 
 """

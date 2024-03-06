@@ -46,24 +46,26 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
         nz = size(m)[1]
         nmom = size(m)[2]
 
+        mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
         m[findall(x -> x < 0, m)] .= 0
         coal_source = similar(m)
         sedi_flux = similar(m)
         for i in 1:nz
-            m_z = m[i, :]
+            m_z_normalized = m[i, :] ./ mom_norms
             for (j, dist) in enumerate(p.pdists)
                 ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
-                update_dist_from_moments!(dist, m_z[ind_rng])
+                update_dist_from_moments!(dist, m_z_normalized[ind_rng])
             end
 
-            if all(m_z .< eps(Float64))
+            if all(m_z_normalized .< eps(Float64))
                 coal_source[i, :] = zeros(1, nmom)
             else
                 update_coal_ints!(coal_type, p.pdists, p.coal_data)
-                coal_source[i, :] = vcat(p.coal_data.coal_ints...)
+                coal_source[i, :] = vcat(p.coal_data.coal_ints...) .* mom_norms
             end
 
-            sedi_flux[i, :] = get_sedimentation_flux(p)
+            vel_normalized = [(v[1] * norms[2]^v[2], v[2]) for v in p.vel]
+            sedi_flux[i, :] = get_sedimentation_flux(p.pdists, vel_normalized) .* mom_norms
         end
 
         sedi_flux_top = zeros(1, nmom)

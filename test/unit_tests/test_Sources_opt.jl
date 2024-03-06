@@ -90,7 +90,7 @@ end
 ## Sedimentation.jl
 # Sedimentation moment flux tests
 par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], vel = [(1.0, 0.0), (-1.0, 1.0 / 6)])
-@test_opt get_sedimentation_flux(par)
+@test_opt get_sedimentation_flux(par.pdists, par.vel)
 
 ## Condensation.jl
 # Condensation moment tests

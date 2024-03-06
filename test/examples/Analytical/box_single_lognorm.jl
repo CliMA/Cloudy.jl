@@ -8,20 +8,21 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
-moments_init = [1.0, 2.0, 6.0]
-dist_init = [LognormalPrimitiveParticleDistribution(FT(1), 0.213, 0.42)]
+moments_init = [1e6, 2e-3, 6e-12]
+dist_init = [LognormalPrimitiveParticleDistribution(FT(1), -20.233, 0.637)]
 
 # Solver
-kernel_func = (x, y) -> 5e-3 * (x + y)
-kernel = CoalescenceTensor(kernel_func, 1, FT(500))
+kernel_func = (x, y) -> 5 * (x + y)
+kernel = CoalescenceTensor(kernel_func, 1, FT(1e-6))
 tspan = (FT(0), FT(1000))
 NProgMoms = [nparams(dist) for dist in dist_init]
-coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
+norms = [1e6, 1e-9]
+coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = norms)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, dt = FT(10))
+ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(10))
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
-plot_params!(sol, ODE_parameters; file_name = "box_single_lognorm_params.pdf")
+plot_params!(sol, ODE_parameters; file_name = "box_single_lognorm_params.pdf", yscale = :identity)
 plot_moments!(sol, ODE_parameters; file_name = "box_single_lognorm_moments.pdf")
-plot_spectra!(sol, ODE_parameters; file_name = "box_single_lognorm_spectra.pdf", logxrange = (-2, 10))
+plot_spectra!(sol, ODE_parameters; file_name = "box_single_lognorm_spectra.pdf", logxrange = (-11, 1))

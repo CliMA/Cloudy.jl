@@ -73,14 +73,17 @@ function initialize_coalescence_data(
     kernel::Union{CoalescenceTensor{FT}, Matrix{CoalescenceTensor{FT}}},
     NProgMoms::Array{Int};
     dist_thresholds = nothing,
+    norms = ones(FT, 2),
 ) where {FT <: Real}
     Ndist = length(NProgMoms)
     matrix_of_kernels = Array{CoalescenceTensor{FT}}(undef, Ndist, Ndist)
     if kernel isa CoalescenceTensor
-        matrix_of_kernels .= kernel
+        matrix_of_kernels .= get_normalized_kernel_tensor(kernel, norms)
     else
         @assert size(kernel) == (Ndist, Ndist)
-        matrix_of_kernels = kernel
+        for (k, ker) in enumerate(kernel)
+            matrix_of_kernels[k] = get_normalized_kernel_tensor(ker, norms)
+        end
     end
 
     Q = zeros(FT, Ndist, Ndist)
@@ -96,7 +99,7 @@ function initialize_coalescence_data(
 
     coal_ints = zeros(FT, sum(NProgMoms))
 
-    dist_thresholds = dist_thresholds == nothing ? ones(FT, Ndist) * Inf : dist_thresholds
+    dist_thresholds = dist_thresholds == nothing ? ones(FT, Ndist) * Inf : dist_thresholds ./ norms[2]
     @assert length(dist_thresholds) == Ndist
 
     return (
@@ -318,14 +321,16 @@ coal_ints contains all three matrices (Q, R, S) and the overall coal_int summati
 function initialize_coalescence_data(
     ::NumericalCoalStyle,
     kernel_func::CoalescenceKernelFunction{FT},
-    NProgMoms::Array{Int},
+    NProgMoms::Array{Int};
+    norms = ones(FT, 2),
 ) where {FT <: Real}
     Ndist = length(NProgMoms)
     Q = zeros(FT, Ndist, Ndist)
     R = zeros(FT, Ndist, Ndist)
     S = zeros(FT, Ndist, 2)
     coal_ints = zeros(FT, sum(NProgMoms))
-    return (Q = Q, R = R, S = S, coal_ints = coal_ints, kernel_func = kernel_func)
+    kernel = get_normalized_kernel_func(kernel_func, norms)
+    return (Q = Q, R = R, S = S, coal_ints = coal_ints, kernel_func = kernel)
 end
 
 function get_coalescence_integral_moment_qrs!(
