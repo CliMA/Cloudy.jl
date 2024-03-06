@@ -1,6 +1,7 @@
 using Cloudy.ParticleDistributions
 using Cloudy.EquationTypes
 using Cloudy.KernelFunctions
+using Cloudy.KernelTensors
 using Cloudy.Coalescence:
     weighting_fn,
     q_integrand_inner,
@@ -66,18 +67,7 @@ NProgMoms = [3, 3, 3]
 @test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
 moment_order = 0.0
 
-for pdists in ([dist1a], [dist1a, dist2a])
-    NProgMoms = [nparams(dist) for dist in pdists]
-    cd = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
-
-    @test_opt update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.Q)
-    @test_opt update_R_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.R)
-    @test_opt update_S_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.S)
-    @test_opt get_coalescence_integral_moment_qrs!(NumericalCoalStyle(), moment_order, pdists, cd)
-    @test_opt update_coal_ints!(NumericalCoalStyle(), pdists, cd)
-end
-
-for pdists in ([dist1b], [dist1b, dist2b])
+for pdists in ([dist1a], [dist1a, dist2a], [dist1b], [dist1b, dist2b])
     NProgMoms = [nparams(dist) for dist in pdists]
     cd = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
 
