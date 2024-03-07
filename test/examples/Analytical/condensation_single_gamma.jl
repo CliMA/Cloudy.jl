@@ -8,15 +8,16 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
+# M0: 1/m^3 - M1: kg/m^3 - M2: kg^2/m^3
 moments_init = [1e8, 1e-2, 2e-12]
-dist_init = [GammaPrimitiveParticleDistribution(FT(1e8), FT(1e-10), FT(1))]
+dist_init = [GammaPrimitiveParticleDistribution(FT(1e8), FT(1e-10), FT(1))] # 1e8/m^3; 1e-10 kg; k = 1
 
 # Solver
 s = 0.05
 ξ = 1e-2
 tspan = (FT(0), FT(120))
 NProgMoms = [nparams(dist) for dist in dist_init]
-norms = [1e6, 1e-9]
+norms = [1e6, 1e-9] # 1e6/m^3; 1e-9 kg
 rhs!(dm, m, par, t) = rhs_condensation!(dm, m, par, s)
 ODE_parameters = (; ξ = ξ, pdists = dist_init, NProgMoms = NProgMoms, norms = norms, dt = FT(10))
 prob = ODEProblem(rhs!, moments_init, tspan, ODE_parameters)

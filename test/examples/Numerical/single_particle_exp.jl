@@ -10,13 +10,13 @@ FT = Float64
 
 # Dynamical info
 T_end = 1.0
-coalescence_coeff = 1.0
+coalescence_coeff = 1.0 # m^3/kg/s
 dt = FT(0.1)
 
 # Initial condition 
 Ndist = 1
-particle_number = [1e8]
-mass_scale = [1e-7]
+particle_number = [1e8] # 1/m^3
+mass_scale = [1e-7] # kg
 
 # Initialize ODE info
 pdists = map(1:Ndist) do i
@@ -28,7 +28,7 @@ dist_moments = vcat([get_moments(dist) for dist in pdists]...)
 tspan = (0.0, T_end)
 kernel = LinearKernelFunction(coalescence_coeff)
 NProgMoms = [nparams(dist) for dist in pdists]
-norms = [1e6, 1e-9]
+norms = [1e6, 1e-9] # 1e6/m^3; 1e-9 kg
 coal_data = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms, norms = norms)
 rhs = make_box_model_rhs(NumericalCoalStyle())
 ODE_parameters = (pdists = pdists, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = dt)

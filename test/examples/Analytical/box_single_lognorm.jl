@@ -8,15 +8,16 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
+# M0: 1/m^3 - M1: kg/m^3 - M2: kg^2/m^3
 moments_init = [1e6, 2e-3, 6e-12]
-dist_init = [LognormalPrimitiveParticleDistribution(FT(1), -20.233, 0.637)]
+dist_init = [LognormalPrimitiveParticleDistribution(FT(1e6), -20.233, 0.637)] # 1e6/m^3; μ = -20.233; σ = 0.637
 
 # Solver
-kernel_func = (x, y) -> 5 * (x + y)
+kernel_func = (x, y) -> 5 * (x + y) # 5 m^3/kg/s; x, y in kg
 kernel = CoalescenceTensor(kernel_func, 1, FT(1e-6))
 tspan = (FT(0), FT(1000))
 NProgMoms = [nparams(dist) for dist in dist_init]
-norms = [1e6, 1e-9]
+norms = [1e6, 1e-9] # 1e6/m^3; 1e-9 kg
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = norms)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
 ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(10))

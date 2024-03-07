@@ -8,20 +8,21 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
+# M0: 1/m^3 - M1: kg/m^3 - M2: kg^2/m^3
 moment_init = [1e7, 1e-3, 2e-13, 1e5, 1e-4, 2e-13]
 dist_init = [
-    GammaPrimitiveParticleDistribution(FT(1e7), FT(1e-10), FT(1)),
-    GammaPrimitiveParticleDistribution(FT(1e5), FT(1e-9), FT(1)),
+    GammaPrimitiveParticleDistribution(FT(1e7), FT(1e-10), FT(1)), # 1e7/m^3; 1e-10 kg; k = 1
+    GammaPrimitiveParticleDistribution(FT(1e5), FT(1e-9), FT(1)), # 1e5/m^3; 1e-9 kg; k = 1
 ]
 
 # Solver
-kernel_func = LongKernelFunction(5.236e-10, 9.44e9, 5.78)
+kernel_func = LongKernelFunction(5.236e-10, 9.44e9, 5.78) # 5.236e-10 kg; 9.44e9 m^3/kg^2/s; 5.78 m^3/kg/s
 matrix_of_kernels = Array{CoalescenceTensor{FT}}(undef, 2, 2)
 matrix_of_kernels .= CoalescenceTensor(kernel_func, 1, FT(1e-6), lower_limit = FT(5e-10))
 matrix_of_kernels[1, 1] = CoalescenceTensor(kernel_func, 2, FT(5e-10))
 tspan = (FT(0), FT(120))
 NProgMoms = [nparams(dist) for dist in dist_init]
-norms = [1e6, 1e-9]
+norms = [1e6, 1e-9] # 1e6/m^3; 1e-9 kg
 coal_data = initialize_coalescence_data(
     AnalyticalCoalStyle(),
     matrix_of_kernels,
