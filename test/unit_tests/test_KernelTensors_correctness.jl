@@ -33,9 +33,16 @@ f = (x, y) -> x - y
 @test_throws Exception check_symmetry(f)
 
 # test polynomial fitting routines
-c = (x, y) -> 0.1 + 0.2 * x * y
-@test polyfit(c, 1, 10.0) ≈ [0.1 0.0; 0.0 0.2] rtol = rtol
-c = (x, y) -> 0.1 - 0.23 * x - 0.23 * y + 0.2 * x * y
-@test polyfit(c, 1, 10.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
-@test polyfit(c, 1, 100.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
-@test polyfit(c, 1, 1000.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
+f = (x, y) -> 0.1 + 0.2 * x * y
+@test polyfit(f, 1, 10.0) ≈ [0.1 0.0; 0.0 0.2] rtol = rtol
+f = (x, y) -> 0.1 - 0.23 * x - 0.23 * y + 0.2 * x * y
+@test polyfit(f, 1, 10.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
+@test polyfit(f, 1, 100.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
+@test polyfit(f, 1, 1000.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
+
+# test get_normalized_kernel_tensor
+c = [1.0 2.0; 2.0 3.0]
+ker = CoalescenceTensor(c)
+ker_n = get_normalized_kernel_tensor(ker, [10, 0.2])
+@test ker_n.r == 1
+@test ker_n.c ≈ [10.0 4.0; 4.0 1.2] atol = 1e-12

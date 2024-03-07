@@ -8,23 +8,26 @@ include("../utils/plotting_helpers.jl")
 FT = Float64
 
 # Initial condition
-moments_init = [10.0, 1.0, 0.1, 0.1, 0.2]
+# M0: 1/m^3 - M1: kg/m^3 - M2: kg^2/m^3
+moments_init = [1e7, 1e-3, 1e5, 1e-4, 2e-13]
 dist_init = [
-    MonodispersePrimitiveParticleDistribution(FT(10), FT(0.1)),
-    GammaPrimitiveParticleDistribution(FT(0.1), FT(1), FT(1)),
+    MonodispersePrimitiveParticleDistribution(FT(1e7), FT(1e-10)),# 1e7/m^3; 1e-10 kg
+    GammaPrimitiveParticleDistribution(FT(1e5), FT(1e-9), FT(1)),# 1e5/m^3; 1e-9 kg; k = 1
 ]
 
 # Solver
-kernel_func = (x, y) -> 5e-3 * (x + y)
-kernel = CoalescenceTensor(kernel_func, 1, FT(500))
+kernel_func = (x, y) -> 5 * (x + y) # 5 m^3/kg/s; x, y in kg
+kernel = CoalescenceTensor(kernel_func, 1, FT(1e-6))
 tspan = (FT(0), FT(1000))
 NProgMoms = [nparams(dist) for dist in dist_init]
-coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, dist_thresholds = [FT(0.5), Inf])
+norms = [1e6, 1e-9] # 1e6/m^3; 1e-9 kg
+coal_data =
+    initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = norms, dist_thresholds = [5e-10, Inf])
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, dt = FT(1))
+ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(1))
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
 plot_params!(sol, ODE_parameters; file_name = "box_mono_gamma_mixture_params.pdf")
 plot_moments!(sol, ODE_parameters; file_name = "box_mono_gamma_mixture_moments.pdf")
-plot_spectra!(sol, ODE_parameters; file_name = "box_mono_gamma_mixture_spectra.pdf", logxrange = (-2, 8))
+plot_spectra!(sol, ODE_parameters; file_name = "box_mono_gamma_mixture_spectra.pdf", logxrange = (-11, -1))

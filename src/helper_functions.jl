@@ -1,5 +1,6 @@
 export get_dist_moment_ind
 export get_dist_moments_ind_range
+export get_moments_normalizing_factors
 
 """
   get_dist_moment_ind(NProgMoms::Vector{Int}, i::Int, m::Int)
@@ -24,4 +25,22 @@ Returns range of indecies of the i'th distribution's moments in the long vector 
 function get_dist_moments_ind_range(NProgMoms::Vector{Int}, i::Int)
     last_ind = sum(NProgMoms[1:(i - 1)])
     return (last_ind + 1):(last_ind + NProgMoms[i])
+end
+
+"""
+  get_moments_normalizing_factors(NProgMoms::Vector{Int}, n::FT, θ::FT)
+  `NProgMoms` - vector containing number of prognostic moments for each distribution
+  `norms` - vector containing scale of number and mass/volume of particles
+Returns normalizing factors of the vector of moments based on given scales of number and mass/volume of particles
+"""
+function get_moments_normalizing_factors(NProgMoms::Vector{Int}, norms::Vector{FT}) where {FT <: Real}
+    @assert all(norms .> FT(0))
+    norm = zeros(FT, sum(NProgMoms))
+    n_dist = length(NProgMoms)
+    for (i, n_mom) in enumerate(NProgMoms)
+        for j in 1:n_mom
+            norm[get_dist_moment_ind(NProgMoms, i, j)] = norms[1] * norms[2]^(j - 1)
+        end
+    end
+    return norm
 end

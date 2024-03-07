@@ -26,6 +26,7 @@ FT = Float64
     @testset "Type stability" begin
         @testset "Kernels" begin
             include("test_KernelFunctions_opt.jl")
+            include("test_KernelTensors_opt.jl")
         end
 
         @testset "ParticleDistributions" begin

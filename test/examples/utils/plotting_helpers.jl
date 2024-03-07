@@ -81,9 +81,9 @@ end
   `p` - additional ODE parameters carried in the solver
 Plots the spectra
 """
-function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 9), print = false)
+function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15, -3), print = false)
     x = 10 .^ (collect(range(logxrange[1], logxrange[2], 100)))
-    r = (x * 3 / 4 / π) .^ (1 / 3) * 1e2 # plot in µm
+    r = (x / 1000 * 3 / 4 / π) .^ (1 / 3) * 1e6 # plot in µm
 
     if print
         @show x
@@ -108,7 +108,7 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-2, 
                 3 * x .^ 2 .* p.pdists[j].(x),
                 linewidth = 2,
                 xaxis = :log,
-                yaxis = "dV / d(ln r)",
+                yaxis = "dm / d(ln r)",
                 xlabel = "r",
                 label = "Pdist " * string(j),
                 title = "time = " * string(round(sol.t[t_ind[i]], sigdigits = 4)),
@@ -141,11 +141,12 @@ end
 
   `sol` - ODE solution
   `p` - additional ODE parameters carried in the solver
-Plots the evolution of particle distribution parameters in time.
+Plots the evolution of particle distribution parameters in time (for normalized moments).
 """
 function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     time = sol.t
-    moments = vcat(sol.u'...)
+    mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
+    moments = vcat(sol.u'...) ./ mom_norms'
     params = similar(moments)
 
     n_dist = length(p.pdists)
