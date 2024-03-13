@@ -8,8 +8,9 @@ env:
 
 agents:
   config: cpu
-  queue: central
+  queue: new-central
   slurm_ntasks: 1
+  modules: climacommon/2024_02_20
 
 steps:
   - label: "Init environment :computer:"
