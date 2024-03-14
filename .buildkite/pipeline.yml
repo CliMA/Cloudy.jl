@@ -1,13 +1,7 @@
 env:
-  JULIA_VERSION: "1.8.1"
-  OPENMPI_VERSION: "4.0.4"
-  CUDA_VERSION: "11.2"
   OPENBLAS_NUM_THREADS: 1
-  BUILDKITE_COMMIT: "${BUILDKITE_COMMIT}"
-  BUILDKITE_BRANCH: "${BUILDKITE_BRANCH}"
 
 agents:
-  config: cpu
   queue: new-central
   slurm_ntasks: 1
   modules: climacommon/2024_02_20
