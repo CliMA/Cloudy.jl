@@ -13,7 +13,8 @@ using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
 using QuadGK
 
-import NumericalIntegration as NI
+#import NumericalIntegration as NI
+include("../helper_functions.jl")
 
 # particle mass distributions available for microphysics
 export AbstractParticleDistribution
@@ -515,7 +516,7 @@ function moment_source_helper(
     x = exp.(logx)
     y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
 
-    return n^2 * θ^(p2 - 1) * NI.integrate(logx, y, NI.SimpsonEvenFast())
+    return n^2 * θ^(p2 - 1) * integrate_SimpsonEvenFast(eval.(logx), y)
 end
 
 function moment_source_helper(
@@ -535,7 +536,7 @@ function moment_source_helper(
     x = exp.(logx)
     y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
 
-    return n^2 * θ^(p2 - k) / gamma(k)^2 * NI.integrate(logx, y, NI.SimpsonEvenFast())
+    return n^2 * θ^(p2 - k) / gamma(k)^2 * integrate_SimpsonEvenFast(eval.(logx), y)
 end
 
 function moment_source_helper(
