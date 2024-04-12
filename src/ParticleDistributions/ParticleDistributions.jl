@@ -13,9 +13,6 @@ using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
 using QuadGK
 
-#import NumericalIntegration as NI
-include("../helper_functions.jl")
-
 # particle mass distributions available for microphysics
 export AbstractParticleDistribution
 export PrimitiveParticleDistribution
@@ -576,6 +573,28 @@ function get_standard_N_q(pdists; size_cutoff = 1, rtol = 1e-8)
     end
 
     return (; N_liq, N_rai, M_liq, M_rai)
+end
+
+"""
+  integrate_SimpsonEvenFast(x::AbstractVector, y::AbstractVector)
+
+  `x` - evenly spaced domain x
+  `y` - desired function evaluated at the domain points x
+Returns the numerical integral, assuming evenly spaced points x. 
+This is a reimplementation from NumericalIntegration.jl which has outdated dependencies.
+"""
+function integrate_SimpsonEvenFast(x::Vector{FT}, y::Vector{FT}) where {FT <: Real}
+    length(x) == length(y) || error("x and y vectors must be of the same length!")
+    length(x) ≥ 4 || error("vectors must contain at least 4 elements")
+    dx = x[2:end] - x[1:(end - 1)]
+    minimum(dx) ≈ maximum(dx) || error("x must be evenly spaced")
+
+    @inbounds retval =
+        (17 * (y[1] + y[end]) + 59 * (y[2] + y[end - 1]) + 43 * (y[3] + y[end - 2]) + 49 * (y[4] + y[end - 3])) / 48
+    @fastmath @inbounds for i in 5:(length(y) - 4)
+        retval += y[i]
+    end
+    @inbounds return (x[2] - x[1]) * retval
 end
 
 end #module ParticleDistributions.jl

@@ -16,7 +16,3 @@ NProgMoms = [2, 2, 3]
 
 norm_factors = get_moments_normalizing_factors(NProgMoms, [10.0, 0.1])
 @test norm_factors ≈ [10.0, 1.0, 10.0, 1.0, 10.0, 1.0, 0.1] atol = 1e-12
-
-x = eval.(range(1.0, 10.0, 100))
-y = x .^ 2
-@test integrate_SimpsonEvenFast(x, y) ≈ 333.0 atol = 1e-6
