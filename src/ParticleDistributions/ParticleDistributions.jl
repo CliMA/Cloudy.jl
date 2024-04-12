@@ -509,11 +509,11 @@ function moment_source_helper(
 
     x_lowerbound = FT(min(1e-5, 1e-5 * x_threshold))
     n_bins = floor(Int, n_bins_per_log_unit * log10(x_threshold / x_lowerbound))
-    logx = range(log(x_lowerbound), log(x_threshold), n_bins + 1)
+    logx = collect(range(log(x_lowerbound), log(x_threshold), n_bins + 1))
     x = exp.(logx)
     y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
 
-    return n^2 * θ^(p2 - 1) * integrate_SimpsonEvenFast(eval.(logx), y)
+    return n^2 * θ^(p2 - 1) * integrate_SimpsonEvenFast(logx, y)
 end
 
 function moment_source_helper(
@@ -529,11 +529,10 @@ function moment_source_helper(
 
     x_lowerbound = FT(min(1e-5, 1e-5 * x_threshold))
     n_bins = floor(Int, n_bins_per_log_unit * log10(x_threshold / x_lowerbound))
-    logx = range(log(x_lowerbound), log(x_threshold), n_bins + 1)
+    logx = collect(range(log(x_lowerbound), log(x_threshold), n_bins + 1))
     x = exp.(logx)
     y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
-
-    return n^2 * θ^(p2 - k) / gamma(k)^2 * integrate_SimpsonEvenFast(eval.(logx), y)
+    return n^2 * θ^(p2 - k) / gamma(k)^2 * integrate_SimpsonEvenFast(logx, y)
 end
 
 function moment_source_helper(

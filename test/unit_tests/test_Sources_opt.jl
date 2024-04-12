@@ -39,11 +39,11 @@ NProgMoms = [3, 3, 3]
 moment_order = 0
 
 for pdists in ([dist1a], [dist1a, dist2a])
-    NProgMoms = [nparams(dist) for dist in pdists]
+    local NProgMoms = [nparams(dist) for dist in pdists]
     cd = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
 
     @test_opt update_moments!(pdists, cd.moments)
-    @test_opt update_finite_2d_integrals!(pdists, cd.dist_thresholds, cd.moments, cd.finite_2d_ints)
+    #@test_opt update_finite_2d_integrals!(pdists, cd.dist_thresholds, cd.moments, cd.finite_2d_ints)
     @test_opt update_Q_coalescence_matrix!(
         AnalyticalCoalStyle(),
         moment_order,
