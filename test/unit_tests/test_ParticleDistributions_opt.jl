@@ -1,4 +1,4 @@
-using Cloudy.ParticleDistributions
+using Cloudy.ParticleDistributions: integrate_SimpsonEvenFast
 using JET: @test_opt
 
 rtol = 1e-3
@@ -29,3 +29,8 @@ moments3 = [10.0, 50.0, 300.0]
 # compute Nq 
 pdists = (dist1, dist2, dist3)
 @test_opt get_standard_N_q(pdists)
+
+# integrate_SimpsonEvenFast
+x = eval.(range(1.0, 10.0, 100))
+y = x .^ 2
+@test_opt integrate_SimpsonEvenFast(x, y) ≈ 333.0 atol = 1e-6
