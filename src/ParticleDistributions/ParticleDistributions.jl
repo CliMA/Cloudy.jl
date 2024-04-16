@@ -425,10 +425,7 @@ function update_dist_from_moments(
 ) where {FT <: Real}
     @assert length(moments) == 3
     if moments[1] > eps(FT) && moments[2] > eps(FT) && moments[3] > eps(FT)
-        μ = max(
-            param_range.μ[1],
-            min(param_range.μ[2], log(moments[2]^2 / moments[1]^(3 / 2) / moments[3]^(1 / 2))),
-        )
+        μ = max(param_range.μ[1], min(param_range.μ[2], log(moments[2]^2 / moments[1]^(3 / 2) / moments[3]^(1 / 2))))
         σ = max(param_range.σ[1], min(param_range.σ[2], sqrt(log(moments[1] * moments[3] / moments[2]^2))))
         n = moments[2] / exp(μ + 1 / 2 * σ^2)
         return LognormalPrimitiveParticleDistribution(n, μ, σ)
