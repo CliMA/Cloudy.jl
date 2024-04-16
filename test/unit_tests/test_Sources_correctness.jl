@@ -48,7 +48,7 @@ function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
 
     # Euler steps
     for i in 1:n_steps
-        dist = update_dist_from_moments(dist[1], mom[1:2])
+        dist[1] = update_dist_from_moments(dist[1], mom[1:2])
         update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
         dmom = coal_data.coal_ints
         mom += δt * dmom
