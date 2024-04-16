@@ -460,7 +460,7 @@ Returns a new monodisperse distribution given the first two moments
 function update_dist_from_moments(
     pdist::MonodispersePrimitiveParticleDistribution{FT},
     moments::Array{FT};
-    param_range = (; :θ => (eps(FT), Inf)),
+    param_range::NamedTuple = (; :θ => (eps(FT), Inf)),
 ) where {FT <: Real}
     @assert length(moments) == 2
     if moments[1] > eps(FT) && moments[2] > eps(FT)
