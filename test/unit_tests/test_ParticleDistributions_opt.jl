@@ -40,8 +40,10 @@ x = collect(range(1.0, 10.0, 100))
 y = x .^ 2
 @test_opt integrate_SimpsonEvenFast(x, y)
 
-# TODO: Move this to perf tests once we have enough to group
-@test 32 >= @allocated update_dist_from_moments(dist1, moments1)
-@test 32 >= @allocated update_dist_from_moments(dist2, moments2)
-@test 32 >= @allocated update_dist_from_moments(dist3, moments3)
-
+# TODO: move these once we make a performance testset
+update_dist_from_moments(dist1, moments1)
+@test 32 == @allocated update_dist_from_moments(dist1, moments1)
+update_dist_from_moments(dist2, moments2)
+@test 32 == @allocated update_dist_from_moments(dist2, moments2)
+update_dist_from_moments(dist3, moments3)
+@test 32 == @allocated update_dist_from_moments(dist3, moments3)
