@@ -54,7 +54,7 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
             m_z_normalized = m[i, :] ./ mom_norms
             for (j, dist) in enumerate(p.pdists)
                 ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
-                update_dist_from_moments!(dist, m_z_normalized[ind_rng])
+                dist = update_dist_from_moments(dist, m_z_normalized[ind_rng])
             end
 
             if all(m_z_normalized .< eps(Float64))
