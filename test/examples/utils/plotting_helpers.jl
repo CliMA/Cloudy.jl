@@ -102,7 +102,7 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
         plt[i] = plot()
         for j in 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
-            update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind_rng])
+            update_dist_from_moments(p.pdists[j], moments[t_ind[i], ind_rng])
             plot!(
                 r,
                 3 * x .^ 2 .* p.pdists[j].(x),
@@ -155,7 +155,7 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     for i in 1:n_dist
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         for j in 1:size(params)[1]
-            CPD.update_dist_from_moments!(p.pdists[i], moments[j, ind_rng])
+            p.pdists[i] = CPD.update_dist_from_moments(p.pdists[i], moments[j, ind_rng])
             params[j, ind_rng] = vcat(CPD.get_params(p.pdists[i])[2]...)
         end
 
@@ -217,7 +217,7 @@ function print_box_results!(sol, p)
     for i in 1:3
         for j in 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
-            update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind_rng])
+            p.pdists[j] = update_dist_from_moments(p.pdists[j], moments[t_ind[i], ind_rng])
             params[i, j, 1:p.NProgMoms[j]] = vcat(CPD.get_params(p.pdists[j])[2]...)
         end
     end
