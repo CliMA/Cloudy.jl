@@ -31,6 +31,9 @@ pdists = (dist1, dist2, dist3)
 @test_opt get_standard_N_q(pdists)
 
 # TODO: move these once we make a performance testset
+update_dist_from_moments(dist1, moments1)
 @test 32 == @allocated update_dist_from_moments(dist1, moments1)
+update_dist_from_moments(dist2, moments2)
 @test 32 == @allocated update_dist_from_moments(dist2, moments2)
+update_dist_from_moments(dist3, moments3)
 @test 32 == @allocated update_dist_from_moments(dist3, moments3)
