@@ -1,5 +1,6 @@
 env:
   OPENBLAS_NUM_THREADS: 1
+  JULIA_DEPOT_PATH: "${BUILDKITE_BUILD_PATH}/${BUILDKITE_PIPELINE_SLUG}/depot/default"
 
 agents:
   queue: new-central
