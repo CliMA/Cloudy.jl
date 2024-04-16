@@ -29,3 +29,7 @@ moments3 = [10.0, 50.0, 300.0]
 # compute Nq 
 pdists = (dist1, dist2, dist3)
 @test_opt get_standard_N_q(pdists)
+
+@test 32 >= @allocated update_dist_from_moments(dist1, moments1)
+@test 32 >= @allocated update_dist_from_moments(dist2, moments2)
+@test 32 >= @allocated update_dist_from_moments(dist3, moments3)
