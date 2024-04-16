@@ -395,15 +395,15 @@ Returns a new gamma distribution given the first three moments
 function update_dist_from_moments(
     pdist::GammaPrimitiveParticleDistribution{FT},
     moments::Array{FT};
-    param_range = Dict("θ" => (eps(FT), Inf), "k" => (eps(FT), Inf)),
+    param_range = (; :θ => (eps(FT), Inf), :k => (eps(FT), Inf)),
 ) where {FT <: Real}
     @assert length(moments) == 3
     if moments[1] > eps(FT) && moments[2] > eps(FT) && moments[3] > eps(FT)
         k = max(
-            param_range["k"][1],
-            min(param_range["k"][2], (moments[2] / moments[1]) / (moments[3] / moments[2] - moments[2] / moments[1])),
+            param_range.k[1],
+            min(param_range.k[2], (moments[2] / moments[1]) / (moments[3] / moments[2] - moments[2] / moments[1])),
         )
-        θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[3] / moments[2] - moments[2] / moments[1]))
+        θ = max(param_range.θ[1], min(param_range.θ[2], moments[3] / moments[2] - moments[2] / moments[1]))
         n = moments[2] / (k * θ)
         return GammaPrimitiveParticleDistribution(n, θ, k)
     else #don't change θ and k
@@ -419,15 +419,15 @@ Returns a new lognormal distribution given the first three moments
 function update_dist_from_moments(
     pdist::LognormalPrimitiveParticleDistribution{FT},
     moments::Array{FT};
-    param_range = Dict("μ" => (-Inf, Inf), "σ" => (eps(FT), Inf)),
+    param_range = (; :μ => (-Inf, Inf), :σ => (eps(FT), Inf)),
 ) where {FT <: Real}
     @assert length(moments) == 3
     if moments[1] > eps(FT) && moments[2] > eps(FT) && moments[3] > eps(FT)
         μ = max(
-            param_range["μ"][1],
-            min(param_range["μ"][2], log(moments[2]^2 / moments[1]^(3 / 2) / moments[3]^(1 / 2))),
+            param_range.μ[1],
+            min(param_range.μ[2], log(moments[2]^2 / moments[1]^(3 / 2) / moments[3]^(1 / 2))),
         )
-        σ = max(param_range["σ"][1], min(param_range["σ"][2], sqrt(log(moments[1] * moments[3] / moments[2]^2))))
+        σ = max(param_range.σ[1], min(param_range.σ[2], sqrt(log(moments[1] * moments[3] / moments[2]^2))))
         n = moments[2] / exp(μ + 1 / 2 * σ^2)
         return LognormalPrimitiveParticleDistribution(n, μ, σ)
     else #don't change μ and σ
@@ -443,11 +443,11 @@ Returns a new exponential distribution given the first two moments
 function update_dist_from_moments(
     pdist::ExponentialPrimitiveParticleDistribution{FT},
     moments::Array{FT};
-    param_range = Dict("θ" => (eps(FT), Inf)),
+    param_range = (; :θ => (eps(FT), Inf)),
 ) where {FT <: Real}
     @assert length(moments) == 2
     if moments[1] > eps(FT) && moments[2] > eps(FT)
-        θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[2] / moments[1]))
+        θ = max(param_range.θ[1], min(param_range.θ[2], moments[2] / moments[1]))
         n = moments[2] / θ
         return ExponentialPrimitiveParticleDistribution(n, θ)
     else #don't change θ
@@ -463,11 +463,11 @@ Returns a new monodisperse distribution given the first two moments
 function update_dist_from_moments(
     pdist::MonodispersePrimitiveParticleDistribution{FT},
     moments::Array{FT};
-    param_range = Dict("θ" => (eps(FT), Inf)),
+    param_range = (; :θ => (eps(FT), Inf)),
 ) where {FT <: Real}
     @assert length(moments) == 2
     if moments[1] > eps(FT) && moments[2] > eps(FT)
-        θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[2] / moments[1]))
+        θ = max(param_range.θ[1], min(param_range.θ[2], moments[2] / moments[1]))
         n = moments[2] / θ
         return MonodispersePrimitiveParticleDistribution(n, θ)
     else #don't change θ

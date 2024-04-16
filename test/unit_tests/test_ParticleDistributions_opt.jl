@@ -39,3 +39,8 @@ pdists = (dist1, dist2, dist3)
 x = collect(range(1.0, 10.0, 100))
 y = x .^ 2
 @test_opt integrate_SimpsonEvenFast(x, y)
+
+# Move this to perf tests once we have enough to group
+@test 32 >= @allocated update_dist_from_moments(dist1, moments1)
+@test 32 >= @allocated update_dist_from_moments(dist2, moments2)
+@test 32 >= @allocated update_dist_from_moments(dist3, moments3)
