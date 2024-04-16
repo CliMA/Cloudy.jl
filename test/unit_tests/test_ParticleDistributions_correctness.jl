@@ -42,13 +42,13 @@ dist = MonodispersePrimitiveParticleDistribution(1.0, 2.0)
 @test density(dist, 3.1) == 0.0
 
 ## Update params from moments
-dist = dist = update_dist_from_moments(dist, [1.0, 1.0]; param_range = Dict("θ" => (0.1, 0.5)))
+dist = update_dist_from_moments(dist, [1.0, 1.0]; param_range = Dict("θ" => (0.1, 0.5)))
 @test moment(dist, 0.0) ≈ 2.0 rtol = rtol
 @test moment(dist, 1.0) ≈ 1.0 rtol = rtol
-dist = dist = update_dist_from_moments(dist, [1.1, 2.0])
+dist = update_dist_from_moments(dist, [1.1, 2.0])
 @test moment(dist, 0.0) ≈ 1.1 rtol = rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol = rtol
-dist = dist = update_dist_from_moments(dist, [1.1, 0.0])
+dist = update_dist_from_moments(dist, [1.1, 0.0])
 @test moment(dist, 0.0) ≈ 0.0 rtol = rtol
 @test moment(dist, 1.0) ≈ 0.0 rtol = rtol
 
