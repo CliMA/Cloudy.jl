@@ -4,7 +4,13 @@ using SpecialFunctions: gamma, gamma_inc
 using Cloudy.ParticleDistributions
 
 import Cloudy.ParticleDistributions:
-    get_params, check_moment_consistency, moment_func, density_func, density, get_standard_N_q
+    get_params,
+    check_moment_consistency,
+    moment_func,
+    density_func,
+    density,
+    get_standard_N_q,
+    integrate_SimpsonEvenFast
 rtol = 1e-3
 
 # Monodisperse distribution
@@ -236,3 +242,8 @@ Nq2 = get_standard_N_q(pdists; size_cutoff = 0.5)
 @test Nq2.M_liq + Nq2.M_rai ≈ 110.0 rtol = rtol
 @test Nq1.N_liq > Nq2.N_liq
 @test Nq1.M_liq > Nq2.M_liq
+
+# integrate_SimpsonEvenFast
+x = collect(range(1.0, 10.0, 100))
+y = x .^ 2
+@test integrate_SimpsonEvenFast(x, y) ≈ 333.0 atol = 1e-6
