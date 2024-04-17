@@ -10,7 +10,7 @@ include("./rainshaft_helpers.jl")
   - `dist` - is a particle mass distribution
 Returns the names and values of settable parameters for a dist.
 """
-function get_params(dist::CPD.PrimitiveParticleDistribution{FT <: Real})
+function get_params(dist::CPD.PrimitiveParticleDistribution{FT} where {FT <: Real})
     params = Array{Symbol, 1}(collect(propertynames(dist)))
     values = Array{FT, 1}([getproperty(dist, p) for p in params])
     return params, values

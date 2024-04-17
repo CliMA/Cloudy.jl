@@ -106,7 +106,7 @@ dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 @test moment(dist, 1.0) == 2.0
 @test moment(dist, 2.0) == 6.0
 @test get_moments(dist) == [1.0, 2.0, 6.0]
-@test moment_func(dist)([0.0, 1.0, 2.0]) == [1.0, 2.0, 6.0]
+@test moment_func(dist).([0.0, 1.0, 2.0]) == [1.0, 2.0, 6.0]
 @test moment(dist, 2 / 3) ≈ gamma(2 + 2 / 3) / gamma(2)
 @test density_func(dist)(0.0) == 0.0
 @test density_func(dist)(3.0) == 3 / gamma(2) * exp(-3)
