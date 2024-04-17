@@ -31,10 +31,6 @@ export update_dist_from_moments
 export moment_source_helper
 export get_standard_N_q
 
-# setters and getters
-export get_params
-
-
 """
   AbstractParticleDistribution{FT}
 
@@ -52,6 +48,7 @@ axis and analytic expressions for moments and partial moments.
 """
 abstract type PrimitiveParticleDistribution{FT} <: AbstractParticleDistribution{FT} end
 
+eltype(::PrimitiveParticleDistribution{FT}) where {FT} = FT
 
 """
   ExponentialPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
@@ -178,7 +175,7 @@ Returns a function that computes the moments of `dist`.
 function moment_func(dist::ExponentialPrimitiveParticleDistribution{FT}) where {FT <: Real}
     # moment_of_dist = n * θ^q * Γ(q+1)
     function f(q)
-        dist.n .* dist.θ .^ q .* gamma.(q .+ FT(1))
+        dist.n * dist.θ ^ q * gamma(q + FT(1))
     end
     return f
 end
@@ -186,7 +183,7 @@ end
 function moment_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT <: Real}
     # moment_of_dist = n * θ^q * Γ(q+k) / Γ(k)
     function f(q)
-        dist.n .* dist.θ .^ q .* gamma.(q .+ dist.k) / gamma.(dist.k)
+        dist.n * dist.θ ^ q * gamma(q + dist.k) / gamma(dist.k)
     end
     return f
 end
@@ -194,7 +191,7 @@ end
 function moment_func(dist::MonodispersePrimitiveParticleDistribution{FT}) where {FT <: Real}
     # moment_of_dist = n * θ^(q)
     function f(q)
-        dist.n .* dist.θ .^ q
+        dist.n * dist.θ ^ q
     end
     return f
 end
@@ -202,7 +199,7 @@ end
 function moment_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT <: Real}
     # moment_of_dist = n * exp(q * μ + 1/2 * q^2 * σ^2)
     function f(q)
-        dist.n .* exp.(q .* dist.μ + q .^ 2 .* dist.σ .^ 2 ./ 2)
+        dist.n * exp(q * dist.μ + q ^ 2 * dist.σ ^ 2 / 2)
     end
     return f
 end
@@ -223,6 +220,7 @@ end
 Returns the first P (0, 1, 2) moments of the distribution where P is the innate
 numer of prognostic moments
 """
+# TODO: Move to examples
 function get_moments(pdist::GammaPrimitiveParticleDistribution{FT}) where {FT <: Real}
     return [pdist.n, pdist.n * pdist.k * pdist.θ, pdist.n * pdist.k * (pdist.k + 1) * pdist.θ^2]
 end
@@ -346,18 +344,6 @@ function nparams(dist::PrimitiveParticleDistribution{FT}) where {FT <: Real}
 end
 
 """
-  get_params(dist)
-
-  - `dist` - is a particle mass distribution
-Returns the names and values of settable parameters for a dist.
-"""
-function get_params(dist::PrimitiveParticleDistribution{FT}) where {FT <: Real}
-    params = Array{Symbol, 1}(collect(propertynames(dist)))
-    values = Array{FT, 1}([getproperty(dist, p) for p in params])
-    return params, values
-end
-
-"""
   check_moment_consistency(m::Array{FT})
 
   - `m` - is an array of moments
@@ -384,7 +370,6 @@ function check_moment_consistency(m::Array{FT}) where {FT <: Real}
         end
     end
 
-    nothing
 end
 
 """
@@ -492,8 +477,8 @@ function moment_source_helper(
     p2::FT,
     x_threshold::FT,
 ) where {FT <: Real}
-    n, θ = get_params(dist)[2]
-    source = (θ < x_threshold / 2) ? n^2 * θ^(p1 + p2) : 0
+    (; n, θ) = dist
+    source = (θ < x_threshold / 2) ? n^2 * θ^(p1 + p2) : FT(0)
     return source
 end
 
@@ -504,7 +489,7 @@ function moment_source_helper(
     x_threshold::FT;
     n_bins_per_log_unit = 15,
 ) where {FT <: Real}
-    n, θ = get_params(dist)[2]
+    (; n, θ) = dist
 
     f(x) = x^p1 * exp(-x / θ) * gamma_inc(p2 + 1, (x_threshold - x) / θ)[1] * gamma(p2 + 1)
 
@@ -524,7 +509,7 @@ function moment_source_helper(
     x_threshold::FT;
     n_bins_per_log_unit = 15,
 ) where {FT <: Real}
-    n, θ, k = get_params(dist)[2]
+    (; n, θ, k) = dist
 
     f(x) = x^(p1 + k - 1) * exp(-x / θ) * gamma_inc(p2 + k, (x_threshold - x) / θ)[1] * gamma(p2 + k)
 

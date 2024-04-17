@@ -4,13 +4,7 @@ using SpecialFunctions: gamma, gamma_inc
 using Cloudy.ParticleDistributions
 
 import Cloudy.ParticleDistributions:
-    get_params,
-    check_moment_consistency,
-    moment_func,
-    density_func,
-    density,
-    get_standard_N_q,
-    integrate_SimpsonEvenFast
+    check_moment_consistency, moment_func, density_func, density, get_standard_N_q
 rtol = 1e-3
 
 # Monodisperse distribution
@@ -22,9 +16,7 @@ dist = MonodispersePrimitiveParticleDistribution(1.0, 1.0)
 
 # Getters and setters
 @test nparams(dist) == 2
-@test get_params(dist) == ([:n, :θ], [1.0, 1.0])
 dist = MonodispersePrimitiveParticleDistribution(1.0, 2.0)
-@test get_params(dist) == ([:n, :θ], [1.0, 2.0])
 @test_throws Exception update_params(dist, [-0.2, 1.1])
 @test_throws Exception update_params(dist, [0.2, -1.1])
 
@@ -62,9 +54,7 @@ dist = ExponentialPrimitiveParticleDistribution(1.0, 1.0)
 
 # Getters and setters
 @test nparams(dist) == 2
-@test get_params(dist) == ([:n, :θ], [1.0, 1.0])
 dist = ExponentialPrimitiveParticleDistribution(1.0, 2.0)
-@test get_params(dist) == ([:n, :θ], [1.0, 2.0])
 @test_throws Exception update_params(dist, [-0.2, 1.1])
 @test_throws Exception update_params(dist, [0.2, -1.1])
 
@@ -107,9 +97,7 @@ dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 
 # Getters and settes
 @test nparams(dist) == 3
-@test get_params(dist) == ([:n, :θ, :k], [1.0, 1.0, 2.0])
 dist = GammaPrimitiveParticleDistribution(1.0, 2.0, 1.0)
-@test get_params(dist) == ([:n, :θ, :k], [1.0, 2.0, 1.0])
 
 # Moments, moments, density
 dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
@@ -152,9 +140,7 @@ dist = LognormalPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 
 # Getters and settes
 @test nparams(dist) == 3
-@test get_params(dist) == ([:n, :μ, :σ], [1.0, 1.0, 2.0])
 dist = LognormalPrimitiveParticleDistribution(1.0, 2.0, 1.0)
-@test get_params(dist) == ([:n, :μ, :σ], [1.0, 2.0, 1.0])
 
 # Moments, moments, density
 dist = LognormalPrimitiveParticleDistribution(1.0, 1.0, 2.0)
@@ -163,7 +149,6 @@ dist = LognormalPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 @test moment(dist, 1.0) == exp(3.0)
 @test moment(dist, 2.0) == exp(10.0)
 @test get_moments(dist) == [1.0, exp(3.0), exp(10.0)]
-@test moment_func(dist)([0.0, 1.0, 2.0]) == [1.0, exp(3.0), exp(10.0)]
 @test moment(dist, 0.5) ≈ exp(1.0)
 @test density_func(dist)(exp(1.0)) == 1 / 2.0 / sqrt(2 * π) / exp(1.0)
 @test isnan(density_func(dist)(0.0))

@@ -3,6 +3,19 @@ using Plots
 include("./box_model_helpers.jl")
 include("./rainshaft_helpers.jl")
 
+
+"""
+  get_params(dist)
+
+  - `dist` - is a particle mass distribution
+Returns the names and values of settable parameters for a dist.
+"""
+function get_params(dist::CPD.PrimitiveParticleDistribution{FT <: Real})
+    params = Array{Symbol, 1}(collect(propertynames(dist)))
+    values = Array{FT, 1}([getproperty(dist, p) for p in params])
+    return params, values
+end
+
 """
   plot_moments(sol, p; file_name = "test_moments.png")
 
@@ -156,7 +169,7 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         for j in 1:size(params)[1]
             p.pdists[i] = CPD.update_dist_from_moments(p.pdists[i], moments[j, ind_rng])
-            params[j, ind_rng] = vcat(CPD.get_params(p.pdists[i])[2]...)
+            params[j, ind_rng] = vcat(get_params(p.pdists[i])[2]...)
         end
 
         plot()
@@ -218,7 +231,7 @@ function print_box_results!(sol, p)
         for j in 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
             p.pdists[j] = update_dist_from_moments(p.pdists[j], moments[t_ind[i], ind_rng])
-            params[i, j, 1:p.NProgMoms[j]] = vcat(CPD.get_params(p.pdists[j])[2]...)
+            params[i, j, 1:p.NProgMoms[j]] = vcat(get_params(p.pdists[j])[2]...)
         end
     end
     @show t_ind
