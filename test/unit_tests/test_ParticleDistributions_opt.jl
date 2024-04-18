@@ -18,13 +18,13 @@ dist3 = LognormalPrimitiveParticleDistribution(1.0, 2.0, 3.0)
 
 # moments <-> params
 @test_opt get_moments(dist1)
-moments1 = [10.0, 50.0, 300.0]
+moments1 = (10.0, 50.0, 300.0)
 @test_opt update_dist_from_moments(dist1, moments1)
 @test_opt get_moments(dist2)
-moments2 = [10.0, 50.0]
+moments2 = (10.0, 50.0)
 @test_opt update_dist_from_moments(dist2, moments2)
 @test_opt get_moments(dist3)
-moments3 = [10.0, 50.0, 300.0]
+moments3 = (10.0, 50.0, 300.0)
 @test_opt update_dist_from_moments(dist3, moments3)
 
 # moment source helper
@@ -41,9 +41,17 @@ y = x .^ 2
 @test_opt integrate_SimpsonEvenFast(x, y)
 
 # TODO: move these once we make a performance testset
-update_dist_from_moments(dist1, moments1)
-@test 32 == @allocated update_dist_from_moments(dist1, moments1)
-update_dist_from_moments(dist2, moments2)
-@test 32 == @allocated update_dist_from_moments(dist2, moments2)
-update_dist_from_moments(dist3, moments3)
-@test 32 == @allocated update_dist_from_moments(dist3, moments3)
+
+pdists = [
+    ExponentialPrimitiveParticleDistribution(10.0, 1.0),
+    GammaPrimitiveParticleDistribution(5.0, 10.0, 2.0),
+    MonodispersePrimitiveParticleDistribution(1.0, 0.5),
+    LognormalPrimitiveParticleDistribution(1.0, 1.0, 2.0),
+]
+
+moments = [(1.1, 2.0), (1.1, 2.0, 4.1), (1.0, 1.0), (1.1, 2.0, 4.1)]
+
+for (dist, mom) in zip(pdists, moments)
+    update_dist_from_moments(dist, mom)
+    @test 32 == @allocated update_dist_from_moments(dist, mom)
+end
