@@ -5,6 +5,7 @@
 """
 module Sedimentation
 
+using Cloudy
 using Cloudy.ParticleDistributions
 
 export get_sedimentation_flux
@@ -18,36 +19,21 @@ export get_sedimentation_flux
 Returns sedimentation flux of all prognostic moments, which is the integral of terminal velocity times prognostic moments. The
 terminal velocity of particles is assumed to be expressed as: ∑ vel[i][1] * x^(vel[i][2]) where vel is a vector of tuples.
 """
-function get_sedimentation_flux(pdists, vel)
+function get_sedimentation_flux(
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
+    vel::NTuple{M, Tuple{FT, FT}},
+) where {N, M, FT <: Real}
 
-    n_dist = length(pdists)
-    n_params = [nparams(dist) for dist in pdists]
-    n_vel = length(vel)
-    FT = eltype(get_params(pdists[1])[2])
-
-    # Need to build diagnostic moments
-    mom = [zeros(n, n_vel) for n in n_params]
-    for i in 1:n_dist
-        for j in 1:n_params[i]
-            for k in 1:n_vel
-                mom[i][j, k] = moment(pdists[i], FT(j - 1 + vel[k][2]))
-            end
+    # build diagnostic moments and compute sedimentation flux for prognostic moments
+    sedi_int = map(pdists) do pdist
+        ntuple(nparams(pdist)) do j
+            sum(ntuple(length(vel)) do k
+                -vel[k][1] * moment(pdist, FT(j - 1 + vel[k][2]))
+            end)
         end
     end
 
-    # only calculate sedimentation flux for prognostic moments
-    sedi_int = [zeros(ns) for ns in n_params]
-    for i in 1:n_dist
-        for j in 1:n_params[i]
-            tmp = 0.0
-            for k in 1:n_vel
-                tmp -= vel[k][1] * mom[i][j, k]
-            end
-            sedi_int[i][j] = tmp
-        end
-    end
-
-    return vcat(sedi_int...)
+    return rflatten(sedi_int)
 end
 
 end #module Sedimentation.jl

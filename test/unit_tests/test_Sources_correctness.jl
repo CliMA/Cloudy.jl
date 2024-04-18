@@ -254,9 +254,9 @@ end
 
 ## Sedimentation.jl
 # Sedimentation moment flux tests
-par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], vel = [(1.0, 0.0), (-1.0, 1.0 / 6)])
-@test get_sedimentation_flux(par.pdists, par.vel) ≈ [-1.0 + gamma(1.0 + 1.0 / 6), -1.0 + gamma(2.0 + 1.0 / 6)] rtol =
-    rtol
+pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
+vel = ((1.0, 0.0), (-1.0, 1.0 / 6))
+@test all(get_sedimentation_flux(pdists, vel) .≈ (-1.0 + gamma(1.0 + 1.0 / 6), -1.0 + gamma(2.0 + 1.0 / 6)))
 
 ## Condensation.jl
 # Condensation moment tests

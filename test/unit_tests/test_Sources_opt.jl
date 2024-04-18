@@ -74,7 +74,7 @@ for pdists in ([dist1a], [dist1a, dist2a])
 end
 
 for pdists in ([dist1b], [dist1b, dist2b])
-    NProgMoms = [nparams(dist) for dist in pdists]
+    local NProgMoms = [nparams(dist) for dist in pdists]
     cd = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
 
     @test_opt update_moments!(pdists, cd.moments)
@@ -145,7 +145,7 @@ NProgMoms = [3, 3, 3]
 moment_order = 0.0
 
 for pdists in ([dist1a], [dist1a, dist2a], [dist1b], [dist1b, dist2b])
-    NProgMoms = [nparams(dist) for dist in pdists]
+    local NProgMoms = [nparams(dist) for dist in pdists]
     cd = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
 
     @test_opt update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.Q)
@@ -157,8 +157,13 @@ end
 
 ## Sedimentation.jl
 # Sedimentation moment flux tests
-par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], vel = [(1.0, 0.0), (-1.0, 1.0 / 6)])
-@test_opt get_sedimentation_flux(par.pdists, par.vel)
+pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
+vel = ((1.0, 0.0), (-1.0, 1.0 / 6))
+@test_opt get_sedimentation_flux(pdists, vel)
+@test 64 >= @allocated get_sedimentation_flux(pdists, vel)
+pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0))
+@test_opt get_sedimentation_flux(pdists, vel)
+@test 64 >= @allocated get_sedimentation_flux(pdists, vel)
 
 ## Condensation.jl
 # Condensation moment tests
