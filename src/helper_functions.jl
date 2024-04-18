@@ -1,8 +1,6 @@
 export get_dist_moment_ind
 export get_dist_moments_ind_range
 export get_moments_normalizing_factors
-export integrate_SimpsonEvenFast
-export rflatten
 
 """
   get_dist_moment_ind(NProgMoms::Vector{Int}, i::Int, m::Int)
@@ -46,8 +44,3 @@ function get_moments_normalizing_factors(NProgMoms::Vector{Int}, norms::Vector{F
     end
     return norm
 end
-
-rflatten(tup::Tuple) = (rflatten(Base.first(tup))..., rflatten(Base.tail(tup))...)
-rflatten(tup::Tuple{<:Tuple}) = rflatten(Base.first(tup))
-rflatten(arg) = arg
-rflatten(tup::Tuple{}) = ()

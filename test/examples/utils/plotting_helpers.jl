@@ -102,10 +102,10 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
         plt[i] = plot()
         for j in 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
-            update_dist_from_moments(p.pdists[j], moments[t_ind[i], ind_rng])
+            pdist_tmp = update_dist_from_moments(p.pdists[j], moments[t_ind[i], ind_rng])
             plot!(
                 r,
-                3 * x .^ 2 .* p.pdists[j].(x),
+                3 * x .^ 2 .* pdist_tmp.(x),
                 linewidth = 2,
                 xaxis = :log,
                 yaxis = "dm / d(ln r)",
