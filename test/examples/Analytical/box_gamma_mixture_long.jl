@@ -10,10 +10,10 @@ FT = Float64
 # Initial condition
 # M0: 1/m^3 - M1: kg/m^3 - M2: kg^2/m^3
 moment_init = [1e7, 1e-3, 2e-13, 1e5, 1e-4, 2e-13]
-dist_init = [
+dist_init = (
     GammaPrimitiveParticleDistribution(FT(1e7), FT(1e-10), FT(1)), # 1e7/m^3; 1e-10 kg; k = 1
     GammaPrimitiveParticleDistribution(FT(1e5), FT(1e-9), FT(1)), # 1e5/m^3; 1e-9 kg; k = 1
-]
+)
 
 # Solver
 kernel_func = LongKernelFunction(5.236e-10, 9.44e9, 5.78) # 5.236e-10 kg; 9.44e9 m^3/kg^2/s; 5.78 m^3/kg/s

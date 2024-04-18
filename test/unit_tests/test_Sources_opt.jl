@@ -38,7 +38,7 @@ NProgMoms = [3, 3, 3]
 @test_opt initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = [10.0, 0.1])
 moment_order = 0
 
-for pdists in ([dist1a], [dist1a, dist2a])
+for pdists in ((dist1a,), (dist1a, dist2a))
     local NProgMoms = [nparams(dist) for dist in pdists]
     cd = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
 
@@ -73,7 +73,7 @@ for pdists in ([dist1a], [dist1a, dist2a])
     @test_opt update_coal_ints!(AnalyticalCoalStyle(), pdists, cd)
 end
 
-for pdists in ([dist1b], [dist1b, dist2b])
+for pdists in ((dist1b,), (dist1b, dist2b))
     local NProgMoms = [nparams(dist) for dist in pdists]
     cd = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
 

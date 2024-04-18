@@ -43,12 +43,14 @@ function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
 
     # Initial condition
     mom = [1.0, 2.0]
-    dist = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)]
+    dist = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
     coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), ker, [nparams(dist[1])])
 
     # Euler steps
     for i in 1:n_steps
-        dist[1] = update_dist_from_moments(dist[1], mom[1:2])
+        dist = map(dist) do d
+            update_dist_from_moments(d, mom[1:2])
+        end
         update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
         dmom = coal_data.coal_ints
         mom += δt * dmom
@@ -75,10 +77,10 @@ end
 # Test Exponential + Gamma
 # setup
 mom_p = [100.0, 10.0, 2.0, 1.0, 1]
-dist = [
+dist = (
     GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),
     ExponentialPrimitiveParticleDistribution(FT(1), FT(1)),
-]
+)
 kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), 1, FT(10))
 NProgMoms = [nparams(d) for d in dist]
 r = kernel.r #maximum([ker.r for ker in kernel])
@@ -111,7 +113,7 @@ end
 
 coal_int = similar(mom_p)
 for i in 1:2
-    j = (i == 1) ? 2 : 1
+    local j = (i == 1) ? 2 : 1
     for k in 0:(NProgMoms[i] - 1)
         temp = 0.0
 
