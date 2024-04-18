@@ -1,6 +1,6 @@
 "Box model with a single gamma mode"
 
-import Cloudy 
+import Cloudy
 using DifferentialEquations
 
 include(joinpath(pkgdir(Cloudy), "test", "examples", "utils", "box_model_helpers.jl"))

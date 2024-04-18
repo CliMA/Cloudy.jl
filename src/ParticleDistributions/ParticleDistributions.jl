@@ -215,12 +215,12 @@ function moment(dist::AbstractParticleDistribution{FT}, q::FT) where {FT <: Real
     moment_func(dist)(q)
 end
 
+# TODO: Move to examples
 """
     get_moments(pdist::GammaParticleDistribution{FT})
 Returns the first P (0, 1, 2) moments of the distribution where P is the innate
 numer of prognostic moments
 """
-# TODO: Move to examples
 function get_moments(pdist::GammaPrimitiveParticleDistribution{FT}) where {FT <: Real}
     return [pdist.n, pdist.n * pdist.k * pdist.θ, pdist.n * pdist.k * (pdist.k + 1) * pdist.θ^2]
 end
