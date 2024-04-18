@@ -163,6 +163,7 @@ vel = ((1.0, 0.0), (-1.0, 1.0 / 6))
 @test 64 >= @allocated get_sedimentation_flux(pdists, vel)
 pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0))
 @test_opt get_sedimentation_flux(pdists, vel)
+get_sedimentation_flux(pdists, vel) # TODO allocates on the first run!
 @test 64 >= @allocated get_sedimentation_flux(pdists, vel)
 
 ## Condensation.jl
