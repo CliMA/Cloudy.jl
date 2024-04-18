@@ -30,9 +30,9 @@ Updates the collision-coalescence integrals.
 """
 function update_coal_ints!(
     cs::AnalyticalCoalStyle,
-    pdists::Array{<:AbstractParticleDistribution{FT}},
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     coal_data::NamedTuple,
-) where {FT <: Real}
+) where {N, FT <: Real}
 
     update_moments!(pdists, coal_data.moments)
     update_finite_2d_integrals!(pdists, coal_data.dist_thresholds, coal_data.moments, coal_data.finite_2d_ints)
@@ -114,7 +114,7 @@ function initialize_coalescence_data(
     )
 end
 
-function update_moments!(pdists::Vector{<:PrimitiveParticleDistribution{FT}}, moments) where {FT <: Real}
+function update_moments!(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, moments) where {N, FT <: Real}
     Ndist, Nmom = size(moments)
     for i in 1:Ndist
         for j in 1:Nmom
@@ -124,11 +124,11 @@ function update_moments!(pdists::Vector{<:PrimitiveParticleDistribution{FT}}, mo
 end
 
 function update_finite_2d_integrals!(
-    pdists::Vector{<:PrimitiveParticleDistribution{FT}},
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     thresholds,
     moments,
     finite_2d_ints,
-) where {FT <: Real}
+) where {N, FT <: Real}
     Ndist = size(moments)[1]
     for i in 1:Ndist
         N_2d_ints = size(finite_2d_ints[i])[1]
