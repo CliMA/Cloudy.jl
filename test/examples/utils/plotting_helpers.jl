@@ -3,6 +3,19 @@ using Plots
 include("./box_model_helpers.jl")
 include("./rainshaft_helpers.jl")
 
+
+"""
+  get_params(dist)
+
+  - `dist` - is a particle mass distribution
+Returns the names and values of settable parameters for a dist.
+"""
+function get_params(dist::CPD.PrimitiveParticleDistribution{FT} where {FT <: Real})
+    params = Array{Symbol, 1}(collect(propertynames(dist)))
+    values = Array{FT, 1}([getproperty(dist, p) for p in params])
+    return params, values
+end
+
 """
   plot_moments(sol, p; file_name = "test_moments.png")
 
@@ -148,7 +161,6 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
     moments = vcat(sol.u'...) ./ mom_norms'
     params = similar(moments)
-
     n_dist = length(p.pdists)
     plt = Array{Plots.Plot}(undef, n_dist)
     n_params = [nparams(p.pdists[i]) for i in 1:n_dist]

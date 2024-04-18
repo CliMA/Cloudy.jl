@@ -23,7 +23,7 @@ function get_sedimentation_flux(pdists, vel)
     n_dist = length(pdists)
     n_params = [nparams(dist) for dist in pdists]
     n_vel = length(vel)
-    FT = eltype(get_params(pdists[1])[2])
+    FT = typeof(pdists[1].n)
 
     # Need to build diagnostic moments
     mom = [zeros(n, n_vel) for n in n_params]

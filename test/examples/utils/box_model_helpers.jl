@@ -24,7 +24,7 @@ end
 
 function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
-    mom_normalized = mom ./ mom_norms
+    mom_normalized = tuple(mom ./ mom_norms...)
     for (i, dist) in enumerate(p.pdists)
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         dist = update_dist_from_moments(dist, mom_normalized[ind_rng])
@@ -35,7 +35,7 @@ end
 
 function rhs_condensation!(dmom, mom, p, s)
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
-    mom_normalized = mom ./ mom_norms
+    mom_normalized = tuple(mom ./ mom_norms...)
     for (i, dist) in enumerate(p.pdists)
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         dist = update_dist_from_moments(dist, mom_normalized[ind_rng])
