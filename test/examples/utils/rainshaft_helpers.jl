@@ -64,7 +64,9 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
                 coal_source[i, :] = vcat(p.coal_data.coal_ints...) .* mom_norms
             end
 
-            vel_normalized = [(v[1] * norms[2]^v[2], v[2]) for v in p.vel]
+            vel_normalized = map(p.vel) do v
+                (v[1] * norms[2]^v[2], v[2])
+            end
             sedi_flux[i, :] = get_sedimentation_flux(p.pdists, vel_normalized) .* mom_norms
         end
 
