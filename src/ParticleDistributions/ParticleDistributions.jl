@@ -27,13 +27,9 @@ export get_moments
 export density
 export normed_density
 export nparams
-export update_dist_from_moments!
+export update_dist_from_moments
 export moment_source_helper
 export get_standard_N_q
-
-# setters and getters
-export get_params
-
 
 """
   AbstractParticleDistribution{FT}
@@ -52,6 +48,7 @@ axis and analytic expressions for moments and partial moments.
 """
 abstract type PrimitiveParticleDistribution{FT} <: AbstractParticleDistribution{FT} end
 
+eltype(::PrimitiveParticleDistribution{FT}) where {FT} = FT
 
 """
   ExponentialPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
@@ -64,7 +61,7 @@ Represents particle mass distribution function of exponential shape.
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-mutable struct ExponentialPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+struct ExponentialPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
     "normalization constant (e.g., droplet number concentration)"
     n::FT
     "scale parameter"
@@ -91,7 +88,7 @@ Represents particle mass distribution function of gamma shape.
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-mutable struct GammaPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+struct GammaPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
     "normalization constant (e.g., droplet number concentration)"
     n::FT
     "scale parameter"
@@ -118,7 +115,7 @@ Represents monodisperse particle size distribution function.
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-mutable struct MonodispersePrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+struct MonodispersePrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
     "normalization constant (e.g., droplet number concentration)"
     n::FT
     "particle diameter"
@@ -143,7 +140,7 @@ Represents lognormal particle size distribution function.
 # Fields
 $(DocStringExtensions.FIELDS)
 """
-mutable struct LognormalPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
+struct LognormalPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
     "normalization constant (e.g., droplet number concentration)"
     n::FT
     "logarithmic mean size"
@@ -178,7 +175,7 @@ Returns a function that computes the moments of `dist`.
 function moment_func(dist::ExponentialPrimitiveParticleDistribution{FT}) where {FT <: Real}
     # moment_of_dist = n * θ^q * Γ(q+1)
     function f(q)
-        dist.n .* dist.θ .^ q .* gamma.(q .+ FT(1))
+        dist.n * dist.θ^q * gamma(q + FT(1))
     end
     return f
 end
@@ -186,7 +183,7 @@ end
 function moment_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT <: Real}
     # moment_of_dist = n * θ^q * Γ(q+k) / Γ(k)
     function f(q)
-        dist.n .* dist.θ .^ q .* gamma.(q .+ dist.k) / gamma.(dist.k)
+        dist.n * dist.θ^q * gamma(q + dist.k) / gamma(dist.k)
     end
     return f
 end
@@ -194,7 +191,7 @@ end
 function moment_func(dist::MonodispersePrimitiveParticleDistribution{FT}) where {FT <: Real}
     # moment_of_dist = n * θ^(q)
     function f(q)
-        dist.n .* dist.θ .^ q
+        dist.n * dist.θ^q
     end
     return f
 end
@@ -202,7 +199,7 @@ end
 function moment_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT <: Real}
     # moment_of_dist = n * exp(q * μ + 1/2 * q^2 * σ^2)
     function f(q)
-        dist.n .* exp.(q .* dist.μ + q .^ 2 .* dist.σ .^ 2 ./ 2)
+        dist.n * exp(q * dist.μ + q^2 * dist.σ^2 / 2)
     end
     return f
 end
@@ -218,6 +215,7 @@ function moment(dist::AbstractParticleDistribution{FT}, q::FT) where {FT <: Real
     moment_func(dist)(q)
 end
 
+# TODO: Move to examples
 """
     get_moments(pdist::GammaParticleDistribution{FT})
 Returns the first P (0, 1, 2) moments of the distribution where P is the innate
@@ -346,128 +344,105 @@ function nparams(dist::PrimitiveParticleDistribution{FT}) where {FT <: Real}
 end
 
 """
-  get_params(dist)
-
-  - `dist` - is a particle mass distribution
-Returns the names and values of settable parameters for a dist.
-"""
-function get_params(dist::PrimitiveParticleDistribution{FT}) where {FT <: Real}
-    params = Array{Symbol, 1}(collect(propertynames(dist)))
-    values = Array{FT, 1}([getproperty(dist, p) for p in params])
-    return params, values
-end
-
-"""
-  check_moment_consistency(m::Array{FT})
+  check_moment_consistency(m::NTuple{N, T})
 
   - `m` - is an array of moments
 
 Checks if moments are nonnegative and whether even-ordered central moments implied
 by moments vector are all positive.
 """
-function check_moment_consistency(m::Array{FT}) where {FT <: Real}
-    n_mom = length(m)
+function check_moment_consistency(m::NTuple{N, FT}) where {N, FT <: Real}
     # check if  moments are nonnegative
-    if any(m .< 0.0)
-        error("all moments need to be nonnegative.")
-    end
+    any(m .< 0.0) && error("all moments need to be nonnegative.")
 
     # check if even-ordered central moments are positive (e.g., variance, etc.)
     # non-positivity  would be inconsistent with a well-defined distribution.
-    for order in 2:2:(n_mom - 1)
-        cm = 0.0
-        for i in 0:order
-            cm += binomial(order, i) * (-1)^i * (m[2] / m[1])^i * (m[order - i + 1] / m[1])
+    for order in 2:2:(length(m) - 1)
+        cm = mapreduce(+, 0:order) do i
+            binomial(order, i) * (-1)^i * (m[2] / m[1])^i * (m[order - i + 1] / m[1])
         end
-        if cm < 0.0
-            error("order-$order central moment needs to be nonnegative.")
-        end
+        cm < 0.0 && error("order central moment needs to be nonnegative.")
     end
-
-    nothing
 end
 
 """
-    update_dist_from_moments!(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Array{FT})
+    update_dist_from_moments(pdist::GammaPrimitiveParticleDistribution{FT}, moments::Tuple{FT, FT, FT})
 
-Updates parameters of the gamma distribution given the first three moments
+Returns a new gamma distribution given the first three moments
 """
-function update_dist_from_moments!(
+function update_dist_from_moments(
     pdist::GammaPrimitiveParticleDistribution{FT},
-    moments::Array{FT};
-    param_range = Dict("θ" => (eps(FT), Inf), "k" => (eps(FT), Inf)),
+    moments::Tuple{FT, FT, FT};
+    param_range = (; :θ => (eps(FT), Inf), :k => (eps(FT), Inf)),
 ) where {FT <: Real}
-    @assert length(moments) == 3
     if moments[1] > eps(FT) && moments[2] > eps(FT) && moments[3] > eps(FT)
-        pdist.k = max(
-            param_range["k"][1],
-            min(param_range["k"][2], (moments[2] / moments[1]) / (moments[3] / moments[2] - moments[2] / moments[1])),
+        k = max(
+            param_range.k[1],
+            min(param_range.k[2], (moments[2] / moments[1]) / (moments[3] / moments[2] - moments[2] / moments[1])),
         )
-        pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[3] / moments[2] - moments[2] / moments[1]))
-        pdist.n = moments[2] / (pdist.k * pdist.θ)
+        θ = max(param_range.θ[1], min(param_range.θ[2], moments[3] / moments[2] - moments[2] / moments[1]))
+        n = moments[2] / (k * θ)
+        return GammaPrimitiveParticleDistribution(n, θ, k)
     else #don't change θ and k
-        pdist.n = FT(0)
+        GammaPrimitiveParticleDistribution(FT(0), pdist.θ, pdist.k)
     end
 end
 
 """
-    update_dist_from_moments!(pdist::LognormalPrimitiveParticleDistribution{FT}, moments::Array{FT})
+    update_dist_from_moments(pdist::LognormalPrimitiveParticleDistribution{FT}, moments::Tuple{FT, FT})
 
-Updates parameters of the lognormal distribution given the first three moments
+Returns a new lognormal distribution given the first three moments
 """
-function update_dist_from_moments!(
+function update_dist_from_moments(
     pdist::LognormalPrimitiveParticleDistribution{FT},
-    moments::Array{FT};
-    param_range = Dict("μ" => (-Inf, Inf), "σ" => (eps(FT), Inf)),
+    moments::Tuple{FT, FT, FT};
+    param_range = (; :μ => (-Inf, Inf), :σ => (eps(FT), Inf)),
 ) where {FT <: Real}
-    @assert length(moments) == 3
     if moments[1] > eps(FT) && moments[2] > eps(FT) && moments[3] > eps(FT)
-        pdist.μ = max(
-            param_range["μ"][1],
-            min(param_range["μ"][2], log(moments[2]^2 / moments[1]^(3 / 2) / moments[3]^(1 / 2))),
-        )
-        pdist.σ = max(param_range["σ"][1], min(param_range["σ"][2], sqrt(log(moments[1] * moments[3] / moments[2]^2))))
-        pdist.n = moments[2] / exp(pdist.μ + 1 / 2 * pdist.σ^2)
+        μ = max(param_range.μ[1], min(param_range.μ[2], log(moments[2]^2 / moments[1]^(3 / 2) / moments[3]^(1 / 2))))
+        σ = max(param_range.σ[1], min(param_range.σ[2], sqrt(log(moments[1] * moments[3] / moments[2]^2))))
+        n = moments[2] / exp(μ + 1 / 2 * σ^2)
+        return LognormalPrimitiveParticleDistribution(n, μ, σ)
     else #don't change μ and σ
-        pdist.n = FT(0)
+        return LognormalPrimitiveParticleDistribution(FT(0), pdist.μ, pdist.σ)
     end
 end
 
 """
-    update_dist_from_moments!(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Array{FT})
+    update_dist_from_moments(pdist::ExponentialPrimitiveParticleDistribution{FT}, moments::Tuple{FT, FT})
 
-Updates parameters of the exponential distribution given the first two moments
+Returns a new exponential distribution given the first two moments
 """
-function update_dist_from_moments!(
+function update_dist_from_moments(
     pdist::ExponentialPrimitiveParticleDistribution{FT},
-    moments::Array{FT};
-    param_range = Dict("θ" => (eps(FT), Inf)),
+    moments::Tuple{FT, FT};
+    param_range = (; :θ => (eps(FT), Inf)),
 ) where {FT <: Real}
-    @assert length(moments) == 2
     if moments[1] > eps(FT) && moments[2] > eps(FT)
-        pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[2] / moments[1]))
-        pdist.n = moments[2] / pdist.θ
+        θ = max(param_range.θ[1], min(param_range.θ[2], moments[2] / moments[1]))
+        n = moments[2] / θ
+        return ExponentialPrimitiveParticleDistribution(n, θ)
     else #don't change θ
-        pdist.n = FT(0)
+        return ExponentialPrimitiveParticleDistribution(FT(0), pdist.θ)
     end
 end
 
 """
-    update_dist_from_moments!(pdist::MonodispersePrimitiveParticleDistribution{FT}, moments::Array{FT})
+    update_dist_from_moments(pdist::MonodispersePrimitiveParticleDistribution{FT}, moments::Tuple{FT, FT})
 
-Updates parameters of the monodisperse distribution given the first two moments
+Returns a new monodisperse distribution given the first two moments
 """
-function update_dist_from_moments!(
+function update_dist_from_moments(
     pdist::MonodispersePrimitiveParticleDistribution{FT},
-    moments::Array{FT};
-    param_range = Dict("θ" => (eps(FT), Inf)),
+    moments::Tuple{FT, FT};
+    param_range::NamedTuple = (; :θ => (eps(FT), Inf)),
 ) where {FT <: Real}
-    @assert length(moments) == 2
     if moments[1] > eps(FT) && moments[2] > eps(FT)
-        pdist.θ = max(param_range["θ"][1], min(param_range["θ"][2], moments[2] / moments[1]))
-        pdist.n = moments[2] / pdist.θ
+        θ = max(param_range.θ[1], min(param_range.θ[2], moments[2] / moments[1]))
+        n = moments[2] / θ
+        return MonodispersePrimitiveParticleDistribution(n, θ)
     else #don't change θ
-        pdist.n = FT(0)
+        return MonodispersePrimitiveParticleDistribution(FT(0), pdist.θ)
     end
 end
 
@@ -491,9 +466,7 @@ function moment_source_helper(
     p2::FT,
     x_threshold::FT,
 ) where {FT <: Real}
-    n, θ = get_params(dist)[2]
-    source = (θ < x_threshold / 2) ? n^2 * θ^(p1 + p2) : 0
-    return source
+    return (dist.θ < x_threshold / 2) ? dist.n^2 * dist.θ^(p1 + p2) : FT(0)
 end
 
 function moment_source_helper(
@@ -503,7 +476,7 @@ function moment_source_helper(
     x_threshold::FT;
     n_bins_per_log_unit = 15,
 ) where {FT <: Real}
-    n, θ = get_params(dist)[2]
+    (; n, θ) = dist
 
     f(x) = x^p1 * exp(-x / θ) * gamma_inc(p2 + 1, (x_threshold - x) / θ)[1] * gamma(p2 + 1)
 
@@ -523,7 +496,7 @@ function moment_source_helper(
     x_threshold::FT;
     n_bins_per_log_unit = 15,
 ) where {FT <: Real}
-    n, θ, k = get_params(dist)[2]
+    (; n, θ, k) = dist
 
     f(x) = x^(p1 + k - 1) * exp(-x / θ) * gamma_inc(p2 + k, (x_threshold - x) / θ)[1] * gamma(p2 + k)
 
@@ -556,20 +529,16 @@ end
 Returns a named tuple (N_liq, N_rai, M_liq, M_rai) of the number and mass densities of liquid (cloud) and rain computed
 from the current pdists given a size cutoff
 """
-function get_standard_N_q(pdists; size_cutoff = 1, rtol = 1e-8)
-    FT = typeof(pdists[1].n)
-    N_liq = FT(0)
-    N_rai = FT(0)
-    M_liq = FT(0)
-    M_rai = FT(0)
-
+function get_standard_N_q(
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}};
+    size_cutoff = 1,
+    rtol = 1e-8,
+) where {FT, N}
     Ndist = length(pdists)
-    for j in 1:Ndist
-        N_liq = N_liq + quadgk(x -> pdists[j](x), FT(0.0), FT(size_cutoff); rtol = FT(rtol))[1]
-        M_liq = M_liq + quadgk(x -> x * pdists[j](x), FT(0.0), FT(size_cutoff); rtol = FT(rtol))[1]
-        N_rai = N_rai + quadgk(x -> pdists[j](x), FT(size_cutoff), Inf; rtol = FT(rtol))[1]
-        M_rai = M_rai + quadgk(x -> x * pdists[j](x), FT(size_cutoff), Inf; rtol = FT(rtol))[1]
-    end
+    N_liq = mapreduce(j -> quadgk(x -> pdists[j](x), FT(0.0), FT(size_cutoff); rtol = FT(rtol))[1], +, 1:Ndist)
+    M_liq = mapreduce(j -> quadgk(x -> x * pdists[j](x), FT(0.0), FT(size_cutoff); rtol = FT(rtol))[1], +, 1:Ndist)
+    N_rai = mapreduce(j -> quadgk(x -> pdists[j](x), FT(size_cutoff), Inf; rtol = FT(rtol))[1], +, 1:Ndist)
+    M_rai = mapreduce(j -> quadgk(x -> x * pdists[j](x), FT(size_cutoff), Inf; rtol = FT(rtol))[1], +, 1:Ndist)
 
     return (; N_liq, N_rai, M_liq, M_rai)
 end

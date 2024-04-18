@@ -42,16 +42,16 @@ function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
     ker = (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) : CoalescenceTensor([1.0])
 
     # Initial condition
-    mom = [1.0, 2.0]
+    mom = (1.0, 2.0)
     dist = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)]
     coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), ker, [nparams(dist[1])])
 
     # Euler steps
     for i in 1:n_steps
-        update_dist_from_moments!(dist[1], mom[1:2])
+        dist[1] = update_dist_from_moments(dist[1], mom)
         update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
         dmom = coal_data.coal_ints
-        mom += δt * dmom
+        mom = tuple(δt * dmom .+ mom...)
     end
 
     return mom
@@ -68,8 +68,8 @@ rtol = 1e-3
 # Run tests
 for i in 0:n_steps
     t = δt * i
-    @test sm1916(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol = rtol
-    @test sm1916(n_steps, δt, is_kernel_function = false) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol = rtol
+    @test all(isapprox.(sm1916(n_steps, δt), (sm1916_ana(t, 1, 1), 2.0); rtol))
+    @test all(isapprox.(sm1916(n_steps, δt; is_kernel_function = false), (sm1916_ana(t, 1, 1), 2.0); rtol))
 end
 
 # Test Exponential + Gamma
