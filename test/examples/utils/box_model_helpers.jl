@@ -25,28 +25,22 @@ end
 function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
     mom_normalized = tuple(mom ./ mom_norms...)
-    ldists = ntuple(length(p.pdists)) do i
+    p = merge(p, (; pdists = ntuple(length(p.pdists)) do i
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
-        moms = mom_normalized[ind_rng]
-        update_dist_from_moments(p.pdists[i], ntuple(length(moms)) do i
-            moms[i]
-        end)
-    end
-    update_coal_ints!(coal_type, ldists, p.coal_data)
+        update_dist_from_moments(p.pdists[i], mom_normalized[ind_rng])
+    end))
+    update_coal_ints!(coal_type, p.pdists, p.coal_data)
     dmom .= p.coal_data.coal_ints .* mom_norms
 end
 
 function rhs_condensation!(dmom, mom, p, s)
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
     mom_normalized = tuple(mom ./ mom_norms...)
-    ldists = ntuple(length(p.pdists)) do i
+    p = merge(p, (; pdists = ntuple(length(p.pdists)) do i
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
-        moms = mom_normalized[ind_rng]
-        update_dist_from_moments(p.pdists[i], ntuple(length(moms)) do i
-            moms[i]
-        end)
-    end
-    dmom .= get_cond_evap(ldists, s, ξ) .* mom_norms
+        update_dist_from_moments(p.pdists[i], mom_normalized[ind_rng])
+    end))
+    dmom .= get_cond_evap(p.pdists, s, ξ) .* mom_norms
 end
 
 """

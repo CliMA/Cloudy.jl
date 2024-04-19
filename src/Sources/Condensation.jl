@@ -10,11 +10,6 @@ using Cloudy.ParticleDistributions
 
 export get_cond_evap
 
-rflatten(tup::Tuple) = (rflatten(Base.first(tup))..., rflatten(Base.tail(tup))...)
-rflatten(tup::Tuple{<:Tuple}) = rflatten(Base.first(tup))
-rflatten(arg) = arg
-rflatten(tup::Tuple{}) = ()
-
 """
     get_cond_evap(pdists, s::FT, ξ::FT)
 
@@ -32,7 +27,7 @@ function get_cond_evap(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, s::
         end
     end
 
-    return rflatten(cond_evap_int)
+    return Cloudy.rflatten(cond_evap_int)
 end
 
 end #module Condensation.jl

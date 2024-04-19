@@ -52,10 +52,10 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
         sedi_flux = similar(m)
         for i in 1:nz
             m_z_normalized = tuple(m[i, :] ./ mom_norms...)
-            for (j, dist) in enumerate(p.pdists)
+            p = merge(p, (; pdists = ntuple(length(p.pdists)) do j
                 ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
-                dist = update_dist_from_moments(dist, m_z_normalized[ind_rng])
-            end
+                update_dist_from_moments(p.pdists[j], m_z_normalized[ind_rng])
+            end))
 
             if all(m_z_normalized .< eps(Float64))
                 coal_source[i, :] = zeros(1, nmom)

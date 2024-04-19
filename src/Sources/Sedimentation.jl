@@ -33,7 +33,7 @@ function get_sedimentation_flux(
         end
     end
 
-    return rflatten(sedi_int)
+    return Cloudy.rflatten(sedi_int)
 end
 
 end #module Sedimentation.jl
