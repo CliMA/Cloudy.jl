@@ -438,7 +438,7 @@ function q_integrand_outer(x, j, k, kernel, pdists, moment_order)
         throw(AssertionError("q_integrand called on j==k, should call s instead"))
     end
     outer =
-        x ^ moment_order * 
+        x^moment_order *
         quadgk(yy -> q_integrand_inner(x, yy, j, k, kernel, pdists), 0.0, x; rtol = 1e-8, maxevals = 1000)[1]
     return outer
 end
@@ -450,7 +450,7 @@ end
 
 function r_integrand_outer(x, j, k, kernel, pdists, moment_order)
     outer =
-        x ^ moment_order *
+        x^moment_order *
         quadgk(yy -> r_integrand_inner(x, yy, j, k, kernel, pdists), 0.0, Inf; rtol = 1e-8, maxevals = 1000)[1]
     return outer
 end
