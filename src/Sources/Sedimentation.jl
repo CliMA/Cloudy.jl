@@ -5,8 +5,8 @@
 """
 module Sedimentation
 
-using Cloudy
-using Cloudy.ParticleDistributions
+using ..ParticleDistributions
+import ..rflatten
 
 export get_sedimentation_flux
 
@@ -33,7 +33,7 @@ function get_sedimentation_flux(
         end
     end
 
-    return Cloudy.rflatten(sedi_int)
+    return rflatten(sedi_int)
 end
 
 end #module Sedimentation.jl

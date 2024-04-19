@@ -5,8 +5,8 @@
 """
 module Condensation
 
-using Cloudy
-using Cloudy.ParticleDistributions
+using ..ParticleDistributions
+import ..rflatten
 
 export get_cond_evap
 
@@ -27,7 +27,7 @@ function get_cond_evap(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, s::
         end
     end
 
-    return Cloudy.rflatten(cond_evap_int)
+    return rflatten(cond_evap_int)
 end
 
 end #module Condensation.jl
