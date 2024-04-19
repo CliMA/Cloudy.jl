@@ -266,7 +266,11 @@ pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
 s = 0.01
 @test all(get_cond_evap(pdists, s, ξ) .≈ (0.0, 3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3)))
 
-pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0), GammaPrimitiveParticleDistribution(0.1, 10.0, 3.0))
+pdists = (
+    ExponentialPrimitiveParticleDistribution(1.0, 1.0),
+    GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0),
+    GammaPrimitiveParticleDistribution(0.1, 10.0, 3.0),
+)
 @test all(
     get_cond_evap(pdists, s, ξ) .≈ (
         0.0,
