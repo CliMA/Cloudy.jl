@@ -35,7 +35,7 @@ ODE_parameters = (;
     coal_data = coal_data,
     NProgMoms = NProgMoms,
     norms = norms,
-    vel = [(50.0, 1.0 / 6)], # 50 m/s/kg^(1/6)
+    vel = ((50.0, 1.0 / 6),), # 50 m/s/kg^(1/6)
     dz = dz,
     dt = 1.0,
 )

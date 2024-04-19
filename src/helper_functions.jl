@@ -44,3 +44,8 @@ function get_moments_normalizing_factors(NProgMoms::Vector{Int}, norms::Vector{F
     end
     return norm
 end
+
+rflatten(tup::Tuple) = (rflatten(Base.first(tup))..., rflatten(Base.tail(tup))...)
+rflatten(tup::Tuple{<:Tuple}) = rflatten(Base.first(tup))
+rflatten(arg) = arg
+rflatten(tup::Tuple{}) = ()

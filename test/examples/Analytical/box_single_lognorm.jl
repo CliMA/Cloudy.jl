@@ -10,7 +10,7 @@ FT = Float64
 # Initial condition
 # M0: 1/m^3 - M1: kg/m^3 - M2: kg^2/m^3
 moments_init = [1e6, 2e-3, 6e-12]
-dist_init = [LognormalPrimitiveParticleDistribution(FT(1e6), -20.233, 0.637)] # 1e6/m^3; μ = -20.233; σ = 0.637
+dist_init = (LognormalPrimitiveParticleDistribution(FT(1e6), -20.233, 0.637),) # 1e6/m^3; μ = -20.233; σ = 0.637
 
 # Solver
 kernel_func = (x, y) -> 5 * (x + y) # 5 m^3/kg/s; x, y in kg

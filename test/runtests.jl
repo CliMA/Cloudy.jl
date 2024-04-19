@@ -1,7 +1,7 @@
 # Unit tests
 include("./unit_tests/run_unit_tests.jl")
 
-# Examples
+# Analytical examples
 include("./examples/Analytical/box_single_gamma.jl")
 include("./examples/Analytical/box_single_lognorm.jl")
 include("./examples/Analytical/box_single_gamma_hydro.jl")
@@ -16,6 +16,8 @@ include("./examples/Analytical/condensation_single_gamma.jl")
 include("./examples/Analytical/condensation_exp_gamma.jl")
 include("./examples/Analytical/rainshaft_single_gamma.jl")
 include("./examples/Analytical/rainshaft_gamma_mixture.jl")
+
+# Numerical examples
 include("./examples/Numerical/single_particle_exp.jl")
 include("./examples/Numerical/single_particle_gamma.jl")
 include("./examples/Numerical/n_particles_exp.jl")

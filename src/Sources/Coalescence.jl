@@ -8,11 +8,12 @@
 """
 module Coalescence
 
-using Cloudy
-using Cloudy.ParticleDistributions
-using Cloudy.KernelTensors
-using Cloudy.KernelFunctions
-using Cloudy.EquationTypes
+using ..ParticleDistributions
+using ..KernelTensors
+using ..KernelFunctions
+using ..EquationTypes
+import ..get_dist_moment_ind
+
 using QuadGK
 using LinearAlgebra
 

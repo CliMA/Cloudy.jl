@@ -112,7 +112,7 @@ end
 
 coal_int = similar(mom_p)
 for i in 1:2
-    j = (i == 1) ? 2 : 1
+    local j = (i == 1) ? 2 : 1
     for k in 0:(NProgMoms[i] - 1)
         temp = 0.0
 
@@ -255,9 +255,9 @@ end
 
 ## Sedimentation.jl
 # Sedimentation moment flux tests
-par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], vel = [(1.0, 0.0), (-1.0, 1.0 / 6)])
-@test get_sedimentation_flux(par.pdists, par.vel) ≈ [-1.0 + gamma(1.0 + 1.0 / 6), -1.0 + gamma(2.0 + 1.0 / 6)] rtol =
-    rtol
+pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
+vel = ((1.0, 0.0), (-1.0, 1.0 / 6))
+@test all(get_sedimentation_flux(pdists, vel) .≈ (-1.0 + gamma(1.0 + 1.0 / 6), -1.0 + gamma(2.0 + 1.0 / 6)))
 
 ## Condensation.jl
 # Condensation moment tests

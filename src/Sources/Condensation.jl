@@ -5,15 +5,10 @@
 """
 module Condensation
 
-using Cloudy
-using Cloudy.ParticleDistributions
+using ..ParticleDistributions
+import ..rflatten
 
 export get_cond_evap
-
-rflatten(tup::Tuple) = (rflatten(Base.first(tup))..., rflatten(Base.tail(tup))...)
-rflatten(tup::Tuple{<:Tuple}) = rflatten(Base.first(tup))
-rflatten(arg) = arg
-rflatten(tup::Tuple{}) = ()
 
 """
     get_cond_evap(pdists, s::FT, ξ::FT)
