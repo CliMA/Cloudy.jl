@@ -1,7 +1,6 @@
 export get_dist_moment_ind
 export get_dist_moments_ind_range
 export get_moments_normalizing_factors
-export integrate_SimpsonEvenFast
 
 """
   get_dist_moment_ind(NProgMoms::Vector{Int}, i::Int, m::Int)
