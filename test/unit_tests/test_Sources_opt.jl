@@ -167,7 +167,11 @@ pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
 ξ = 1e-6
 s = 0.01
 @test_opt get_cond_evap(pdists, s, ξ)
-@test 144 >= @allocated get_cond_evap(pdists, s, ξ)
-pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0))
+@test 32 >= @allocated get_cond_evap(pdists, s, ξ)
+pdists = (
+    ExponentialPrimitiveParticleDistribution(1.0, 1.0),
+    GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0),
+    GammaPrimitiveParticleDistribution(0.1, 10.0, 3.0),
+)
 @test_opt get_cond_evap(pdists, s, ξ)
-@test 368 >= @allocated get_cond_evap(pdists, s, ξ)
+@test 80 >= @allocated get_cond_evap(pdists, s, ξ)
