@@ -22,10 +22,10 @@ ic = initial_condition(z, mom_max)
 m = ic
 
 # Solver
-dist_init = [
+dist_init = (
     GammaPrimitiveParticleDistribution(FT(1e7), FT(1e-10), FT(1)), # 1e7/m^3; 1e-10 kg; k = 1
     GammaPrimitiveParticleDistribution(FT(1), FT(1e-9), FT(1)), # 1/m^3; 1e-9 kg; k = 1
-]
+)
 kernel_func = (x, y) -> 5 * (x + y) # 5 m^3/kg/s; x, y in kg
 kernel = CoalescenceTensor(kernel_func, 1, FT(1e-6))
 tspan = (FT(0), FT(1000))

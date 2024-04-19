@@ -288,9 +288,9 @@ coal_data: Dictionary carried by ODE solver that contains all dynamical paramete
 """
 function update_coal_ints!(
     cs::NumericalCoalStyle,
-    pdists::Array{<:AbstractParticleDistribution{FT}},
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     coal_data::NamedTuple,
-) where {FT <: Real}
+) where {N, FT <: Real}
 
     NProgMoms = [nparams(dist) for dist in pdists]
     coal_data.coal_ints .= 0

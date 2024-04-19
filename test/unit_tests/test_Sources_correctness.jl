@@ -172,7 +172,7 @@ pdists = [dist1, dist2]
 # q_integrands
 kernel = LinearKernelFunction(1.0)
 dist3 = GammaPrimitiveParticleDistribution(2.0, 500.0, 6.0)
-pdists = [dist1, dist2, dist3]
+pdists = (dist1, dist2, dist3)
 x = 50.0
 y = 20.0
 for j in 1:3
@@ -266,7 +266,7 @@ pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
 s = 0.01
 @test all(get_cond_evap(pdists, s, ξ) .≈ (0.0, 3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3)))
 
-pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0))
+pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0), GammaPrimitiveParticleDistribution(0.1, 10.0, 3.0))
 @test all(
     get_cond_evap(pdists, s, ξ) .≈ (
         0.0,
@@ -274,5 +274,8 @@ pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitivePart
         0.0,
         3 * 1e-6 * 0.01 * moment(pdists[2], 1 - 2 / 3),
         3 * 2 * 1e-6 * 0.01 * moment(pdists[2], 2 - 2 / 3),
+        0.0,
+        3 * 1e-6 * 0.01 * moment(pdists[3], 1 - 2 / 3),
+        3 * 2 * 1e-6 * 0.01 * moment(pdists[3], 2 - 2 / 3),
     ),
 )

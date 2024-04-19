@@ -167,7 +167,6 @@ pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
 s = 0.01
 @test_opt get_cond_evap(pdists, s, ξ)
 @test 144 >= @allocated get_cond_evap(pdists, s, ξ)
-# TODO allocation tests fail on the first run?
 pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0))
 @test_opt get_cond_evap(pdists, s, ξ)
 @test 368 >= @allocated get_cond_evap(pdists, s, ξ)
