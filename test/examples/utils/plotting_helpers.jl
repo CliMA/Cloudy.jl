@@ -3,6 +3,19 @@ using Plots
 include("./box_model_helpers.jl")
 include("./rainshaft_helpers.jl")
 
+
+"""
+  get_params(dist)
+
+  - `dist` - is a particle mass distribution
+Returns the names and values of settable parameters for a dist.
+"""
+function get_params(dist::CPD.PrimitiveParticleDistribution{FT} where {FT <: Real})
+    params = Array{Symbol, 1}(collect(propertynames(dist)))
+    values = Array{FT, 1}([getproperty(dist, p) for p in params])
+    return params, values
+end
+
 """
   plot_moments(sol, p; file_name = "test_moments.png")
 
@@ -102,10 +115,13 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
         plt[i] = plot()
         for j in 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
-            update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind_rng])
+            moms = moments[t_ind[i], ind_rng]
+            pdist_tmp = update_dist_from_moments(p.pdists[j], ntuple(length(moms)) do i
+                moms[i]
+            end)
             plot!(
                 r,
-                3 * x .^ 2 .* p.pdists[j].(x),
+                3 * x .^ 2 .* pdist_tmp.(x),
                 linewidth = 2,
                 xaxis = :log,
                 yaxis = "dm / d(ln r)",
@@ -148,15 +164,17 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
     moments = vcat(sol.u'...) ./ mom_norms'
     params = similar(moments)
-
     n_dist = length(p.pdists)
     plt = Array{Plots.Plot}(undef, n_dist)
     n_params = [nparams(p.pdists[i]) for i in 1:n_dist]
     for i in 1:n_dist
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         for j in 1:size(params)[1]
-            CPD.update_dist_from_moments!(p.pdists[i], moments[j, ind_rng])
-            params[j, ind_rng] = vcat(CPD.get_params(p.pdists[i])[2]...)
+            moms_tmp = moments[j, ind_rng]
+            pdist_tmp = CPD.update_dist_from_moments(p.pdists[i], ntuple(length(moms_tmp)) do i
+                moms_tmp[i]
+            end)
+            params[j, ind_rng] = vcat(get_params(pdist_tmp)[2]...)
         end
 
         plot()
@@ -217,8 +235,11 @@ function print_box_results!(sol, p)
     for i in 1:3
         for j in 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
-            update_dist_from_moments!(p.pdists[j], moments[t_ind[i], ind_rng])
-            params[i, j, 1:p.NProgMoms[j]] = vcat(CPD.get_params(p.pdists[j])[2]...)
+            moms = moments[t_ind[i], ind_rng]
+            pdist_tmp = update_dist_from_moments(p.pdists[j], ntuple(length(moms)) do i
+                moms[i]
+            end)
+            params[i, j, 1:p.NProgMoms[j]] = vcat(get_params(pdist_tmp)[2]...)
         end
     end
     @show t_ind

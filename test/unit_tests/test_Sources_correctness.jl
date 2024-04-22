@@ -42,16 +42,17 @@ function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
     ker = (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) : CoalescenceTensor([1.0])
 
     # Initial condition
-    mom = [1.0, 2.0]
-    dist = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)]
+    mom = (1.0, 2.0)
+    dist = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
     coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), ker, [nparams(dist[1])])
 
     # Euler steps
     for i in 1:n_steps
-        update_dist_from_moments!(dist[1], mom[1:2])
-        update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
+        ldist = (update_dist_from_moments(dist[1], mom),)
+        update_coal_ints!(AnalyticalCoalStyle(), ldist, coal_data)
         dmom = coal_data.coal_ints
-        mom += δt * dmom
+        mom = tuple(δt * dmom .+ mom...)
+        dist = ldist
     end
 
     return mom
@@ -68,17 +69,17 @@ rtol = 1e-3
 # Run tests
 for i in 0:n_steps
     t = δt * i
-    @test sm1916(n_steps, δt) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol = rtol
-    @test sm1916(n_steps, δt, is_kernel_function = false) ≈ Array{FT}([sm1916_ana(t, 1, 1), 2.0]) rtol = rtol
+    @test all(isapprox.(sm1916(n_steps, δt), (sm1916_ana(t, 1, 1), 2.0); rtol))
+    @test all(isapprox.(sm1916(n_steps, δt; is_kernel_function = false), (sm1916_ana(t, 1, 1), 2.0); rtol))
 end
 
 # Test Exponential + Gamma
 # setup
 mom_p = [100.0, 10.0, 2.0, 1.0, 1]
-dist = [
+dist = (
     GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),
     ExponentialPrimitiveParticleDistribution(FT(1), FT(1)),
-]
+)
 kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), 1, FT(10))
 NProgMoms = [nparams(d) for d in dist]
 r = kernel.r #maximum([ker.r for ker in kernel])
@@ -111,7 +112,7 @@ end
 
 coal_int = similar(mom_p)
 for i in 1:2
-    j = (i == 1) ? 2 : 1
+    local j = (i == 1) ? 2 : 1
     for k in 0:(NProgMoms[i] - 1)
         temp = 0.0
 
@@ -171,7 +172,7 @@ pdists = [dist1, dist2]
 # q_integrands
 kernel = LinearKernelFunction(1.0)
 dist3 = GammaPrimitiveParticleDistribution(2.0, 500.0, 6.0)
-pdists = [dist1, dist2, dist3]
+pdists = (dist1, dist2, dist3)
 x = 50.0
 y = 20.0
 for j in 1:3
@@ -254,23 +255,31 @@ end
 
 ## Sedimentation.jl
 # Sedimentation moment flux tests
-par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], vel = [(1.0, 0.0), (-1.0, 1.0 / 6)])
-@test get_sedimentation_flux(par.pdists, par.vel) ≈ [-1.0 + gamma(1.0 + 1.0 / 6), -1.0 + gamma(2.0 + 1.0 / 6)] rtol =
-    rtol
+pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
+vel = ((1.0, 0.0), (-1.0, 1.0 / 6))
+@test all(get_sedimentation_flux(pdists, vel) .≈ (-1.0 + gamma(1.0 + 1.0 / 6), -1.0 + gamma(2.0 + 1.0 / 6)))
 
 ## Condensation.jl
 # Condensation moment tests
-par = (; pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0)], ξ = 1e-6)
-@test get_cond_evap(0.01, par) ≈ [0.0, 3 * 1e-6 * 0.01 * moment(par.pdists[1], 1 - 2 / 3)] rtol = rtol
+pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
+ξ = 1e-6
+s = 0.01
+@test all(get_cond_evap(pdists, s, ξ) .≈ (0.0, 3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3)))
 
-par = (;
-    pdists = [ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0)],
-    ξ = 1e-6,
+pdists = (
+    ExponentialPrimitiveParticleDistribution(1.0, 1.0),
+    GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0),
+    GammaPrimitiveParticleDistribution(0.1, 10.0, 3.0),
 )
-@test get_cond_evap(0.01, par) ≈ [
-    0.0,
-    3 * 1e-6 * 0.01 * moment(par.pdists[1], 1 - 2 / 3),
-    0.0,
-    3 * 1e-6 * 0.01 * moment(par.pdists[2], 1 - 2 / 3),
-    3 * 2 * 1e-6 * 0.01 * moment(par.pdists[2], 2 - 2 / 3),
-] rtol = rtol
+@test all(
+    get_cond_evap(pdists, s, ξ) .≈ (
+        0.0,
+        3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3),
+        0.0,
+        3 * 1e-6 * 0.01 * moment(pdists[2], 1 - 2 / 3),
+        3 * 2 * 1e-6 * 0.01 * moment(pdists[2], 2 - 2 / 3),
+        0.0,
+        3 * 1e-6 * 0.01 * moment(pdists[3], 1 - 2 / 3),
+        3 * 2 * 1e-6 * 0.01 * moment(pdists[3], 2 - 2 / 3),
+    ),
+)

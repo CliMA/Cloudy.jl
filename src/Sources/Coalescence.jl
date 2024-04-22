@@ -8,11 +8,12 @@
 """
 module Coalescence
 
-using Cloudy
-using Cloudy.ParticleDistributions
-using Cloudy.KernelTensors
-using Cloudy.KernelFunctions
-using Cloudy.EquationTypes
+using ..ParticleDistributions
+using ..KernelTensors
+using ..KernelFunctions
+using ..EquationTypes
+import ..get_dist_moment_ind
+
 using QuadGK
 using LinearAlgebra
 
@@ -30,9 +31,9 @@ Updates the collision-coalescence integrals.
 """
 function update_coal_ints!(
     cs::AnalyticalCoalStyle,
-    pdists::Array{<:AbstractParticleDistribution{FT}},
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     coal_data::NamedTuple,
-) where {FT <: Real}
+) where {N, FT <: Real}
 
     update_moments!(pdists, coal_data.moments)
     update_finite_2d_integrals!(pdists, coal_data.dist_thresholds, coal_data.moments, coal_data.finite_2d_ints)
@@ -114,7 +115,7 @@ function initialize_coalescence_data(
     )
 end
 
-function update_moments!(pdists::Vector{<:PrimitiveParticleDistribution{FT}}, moments) where {FT <: Real}
+function update_moments!(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, moments) where {N, FT <: Real}
     Ndist, Nmom = size(moments)
     for i in 1:Ndist
         for j in 1:Nmom
@@ -124,11 +125,11 @@ function update_moments!(pdists::Vector{<:PrimitiveParticleDistribution{FT}}, mo
 end
 
 function update_finite_2d_integrals!(
-    pdists::Vector{<:PrimitiveParticleDistribution{FT}},
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     thresholds,
     moments,
     finite_2d_ints,
-) where {FT <: Real}
+) where {N, FT <: Real}
     Ndist = size(moments)[1]
     for i in 1:Ndist
         N_2d_ints = size(finite_2d_ints[i])[1]
@@ -288,9 +289,9 @@ coal_data: Dictionary carried by ODE solver that contains all dynamical paramete
 """
 function update_coal_ints!(
     cs::NumericalCoalStyle,
-    pdists::Array{<:AbstractParticleDistribution{FT}},
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     coal_data::NamedTuple,
-) where {FT <: Real}
+) where {N, FT <: Real}
 
     NProgMoms = [nparams(dist) for dist in pdists]
     coal_data.coal_ints .= 0
@@ -438,7 +439,7 @@ function q_integrand_outer(x, j, k, kernel, pdists, moment_order)
         throw(AssertionError("q_integrand called on j==k, should call s instead"))
     end
     outer =
-        x .^ moment_order *
+        x^moment_order *
         quadgk(yy -> q_integrand_inner(x, yy, j, k, kernel, pdists), 0.0, x; rtol = 1e-8, maxevals = 1000)[1]
     return outer
 end
@@ -450,7 +451,7 @@ end
 
 function r_integrand_outer(x, j, k, kernel, pdists, moment_order)
     outer =
-        x .^ moment_order *
+        x^moment_order *
         quadgk(yy -> r_integrand_inner(x, yy, j, k, kernel, pdists), 0.0, Inf; rtol = 1e-8, maxevals = 1000)[1]
     return outer
 end
