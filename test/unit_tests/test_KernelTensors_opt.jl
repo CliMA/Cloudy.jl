@@ -25,4 +25,4 @@ kernel_func = (x, y) -> 0.1 + 0.2 * x * y
 c = SA[1.0 2.0; 2.0 3.0]
 ker = CoalescenceTensor(c)
 get_normalized_kernel_tensor(ker, (10.0, 0.2))
-@test_opt get_normalized_kernel_tensor(ker, (10.0, 0.2))
+@test_opt get_normalized_kernel_tensor(ker, (10.0, 0.2)) # TODO: fails optimization (but only called once at initialization...)

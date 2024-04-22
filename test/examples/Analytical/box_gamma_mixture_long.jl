@@ -22,7 +22,7 @@ matrix_of_kernels .= CoalescenceTensor(kernel_func, 1, FT(1e-6), lower_limit = F
 matrix_of_kernels[1, 1] = CoalescenceTensor(kernel_func, 2, FT(5e-10))
 tspan = (FT(0), FT(120))
 NProgMoms = [nparams(dist) for dist in dist_init]
-norms = [1e6, 1e-9] # 1e6/m^3; 1e-9 kg
+norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
 coal_data = initialize_coalescence_data(
     AnalyticalCoalStyle(),
     matrix_of_kernels,

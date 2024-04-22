@@ -25,7 +25,7 @@ export get_normalized_kernel_tensor
 A kernel tensor approximation to a kernel function that can be used for
 different microphysical processes (e.g., coalescence, breakup, sedimentation).
 """
-abstract type KernelTensor{N, M, FT} end
+abstract type KernelTensor{FT} end
 
 
 """
@@ -40,15 +40,15 @@ Represents a Collision-Coalescence kernel.
 # Fields
 
 """
-struct CoalescenceTensor{N, M, FT} <: KernelTensor{N, M, FT}
+struct CoalescenceTensor{FT} <: KernelTensor{FT}
     "polynomial order of the tensor"
     r::Int
     "collision-coalesence rate matrix"
-    c::SMatrix{N, N, FT, M}
+    c::AbstractArray{FT}
 
     function CoalescenceTensor(c::SMatrix{N, N, FT, M}) where {N, M, FT <: Real}
         check_symmetry(c)
-        new{N, M, FT}(size(c)[1] - 1, c)
+        new{FT}(size(c)[1] - 1, c)
     end
 end
 
@@ -167,7 +167,7 @@ end
   `norms` - vector containing scale of number and mass/volume of particles
 Returns normalized kernel tensor by using the number and mass/volume scales
 """
-function get_normalized_kernel_tensor(kernel::CoalescenceTensor{N, M, FT}, norms::Tuple{FT, FT}) where {N, M, FT <: Real}
+function get_normalized_kernel_tensor(kernel::CoalescenceTensor{FT}, norms::Tuple{FT, FT}) where {FT <: Real}
     r = kernel.r
     c = map(1:r + 1) do i 
         map(1:r + 1) do j 

@@ -33,7 +33,7 @@ end
   `norms` - vector containing scale of number and mass/volume of particles
 Returns normalizing factors of the vector of moments based on given scales of number and mass/volume of particles
 """
-function get_moments_normalizing_factors(NProgMoms::AbstractArray{Int}, norms::AbstractArray{FT}) where {FT <: Real}
+function get_moments_normalizing_factors(NProgMoms::AbstractArray{Int}, norms::Tuple{FT, FT}) where {FT <: Real}
     @assert all(norms .> FT(0))
     norm = zeros(FT, sum(NProgMoms))
     n_dist = length(NProgMoms)
