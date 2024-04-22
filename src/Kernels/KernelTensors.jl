@@ -11,6 +11,7 @@ module KernelTensors
 using LinearAlgebra
 using Optim
 using StaticArrays
+import ..rflatten
 
 # kernel tensors available for microphysics
 export KernelTensor
@@ -24,7 +25,7 @@ export get_normalized_kernel_tensor
 A kernel tensor approximation to a kernel function that can be used for
 different microphysical processes (e.g., coalescence, breakup, sedimentation).
 """
-abstract type KernelTensor{FT} end
+abstract type KernelTensor{N, M, FT} end
 
 
 """
@@ -39,15 +40,15 @@ Represents a Collision-Coalescence kernel.
 # Fields
 
 """
-struct CoalescenceTensor{FT} <: KernelTensor{FT}
+struct CoalescenceTensor{N, M, FT} <: KernelTensor{N, M, FT}
     "polynomial order of the tensor"
     r::Int
     "collision-coalesence rate matrix"
-    c::AbstractArray{FT}
+    c::SMatrix{N, N, FT, M}
 
-    function CoalescenceTensor(c::AbstractArray{FT}) where {FT <: Real}
+    function CoalescenceTensor(c::SMatrix{N, N, FT, M}) where {N, M, FT <: Real}
         check_symmetry(c)
-        new{FT}(size(c)[1] - 1, c)
+        new{N, M, FT}(size(c)[1] - 1, c)
     end
 end
 
@@ -97,7 +98,7 @@ function polyfit(
     # find the first element of the coefficients matrix - constant term in the approximation
     C_1_1 = max(eps(FT), kernel_func(FT(0), FT(0)))
     if r == 0
-        return [C_1_1]
+        return SA[C_1_1]
     end
 
     # define loss function
@@ -122,7 +123,7 @@ function polyfit(
     c_vec0 = zeros(Int((r + 1) * (r + 2) / 2) - 1)
     res_ = optimize(f, c_vec0, g_abstol = opt_tol, iterations = opt_max_iter).minimizer
     res = [C_1_1; res_...]
-    return [i <= j ? res[Int(j * (j - 1) / 2 + i)] : res[Int(i * (i - 1) / 2 + j)] for i in 1:(r + 1), j in 1:(r + 1)]
+    return SMatrix{r+1, r+1}([i <= j ? res[Int(j * (j - 1) / 2 + i)] : res[Int(i * (i - 1) / 2 + j)] for i in 1:(r + 1), j in 1:(r + 1)])
 end
 
 """
@@ -166,14 +167,14 @@ end
   `norms` - vector containing scale of number and mass/volume of particles
 Returns normalized kernel tensor by using the number and mass/volume scales
 """
-function get_normalized_kernel_tensor(kernel::CoalescenceTensor{FT}, norms::Tuple{FT, FT}) where {FT <: Real}
+function get_normalized_kernel_tensor(kernel::CoalescenceTensor{N, M, FT}, norms::Tuple{FT, FT}) where {N, M, FT <: Real}
     r = kernel.r
     c = map(1:r + 1) do i 
         map(1:r + 1) do j 
-            kernel.c[i, j] * (norms[1] * norms[2]^(i + j - 2))
+            kernel.c[i, j] * (norms[1] * norms[2]^(FT(i + j - 2)))
         end
     end
-    return CoalescenceTensor(SMatrix{r+1, r+1}(mapreduce(permutedims, vcat, kernel.c)))
+    return CoalescenceTensor(SMatrix{r+1, r+1}(mapreduce(permutedims, vcat, c)))
 end
 
 end

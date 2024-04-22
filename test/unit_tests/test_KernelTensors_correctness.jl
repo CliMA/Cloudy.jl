@@ -16,7 +16,8 @@ ker = CoalescenceTensor(c)
 #test initialization with kernel function
 kernel_func = (x, y) -> 0.02 + x + y
 ker = CoalescenceTensor(kernel_func, 1, 10.0)
-@test ker.c ≈ [0.02 1.0; 1.0 0.0] rtol = rtol
+@test ker.c ≈ SA[0.02 1.0; 1.0 0.0] rtol = rtol
+@test ker.c isa SMatrix{2, 2}{FT}
 
 # test auxilliary functions
 # test symmetry checks
@@ -35,7 +36,9 @@ f = (x, y) -> x - y
 
 # test polynomial fitting routines
 f = (x, y) -> 0.1 + 0.2 * x * y
-@test polyfit(f, 1, 10.0) ≈ [0.1 0.0; 0.0 0.2] rtol = rtol
+c = polyfit(f, 1, 10.0)
+@test c isa SMatrix{2, 2}{FT}
+@test c ≈ [0.1 0.0; 0.0 0.2] rtol = rtol
 f = (x, y) -> 0.1 - 0.23 * x - 0.23 * y + 0.2 * x * y
 @test polyfit(f, 1, 10.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
 @test polyfit(f, 1, 100.0) ≈ [0.1 -0.23; -0.23 0.2] rtol = rtol
@@ -44,6 +47,7 @@ f = (x, y) -> 0.1 - 0.23 * x - 0.23 * y + 0.2 * x * y
 # test get_normalized_kernel_tensor
 c = SA[1.0 2.0; 2.0 3.0]
 ker = CoalescenceTensor(c)
-ker_n = get_normalized_kernel_tensor(ker, SA[10, 0.2])
+ker_n = get_normalized_kernel_tensor(ker, (10.0, 0.2))
 @test ker_n.r == 1
 @test ker_n.c ≈ [10.0 4.0; 4.0 1.2] atol = 1e-12
+@test ker_n.c isa SMatrix{2, 2}{FT}
