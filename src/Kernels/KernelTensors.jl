@@ -55,7 +55,7 @@ end
 
 function CoalescenceTensor(kernel_func, order::Int, limit::FT; lower_limit::FT = FT(0)) where {FT <: Real} # TODO: kwarg?
     coef = polyfit(kernel_func, order, limit, lower_limit = lower_limit)
-    CoalescenceTensor(coef)
+    CoalescenceTensor(SMatrix{order + 1, order + 1}(coef))
 end
 
 Base.broadcastable(ct::CoalescenceTensor) = Ref(ct)
@@ -80,7 +80,7 @@ function polyfit(
     opt_max_iter = 100000,
 ) where {FT <: Real}
     check_symmetry(kernel_func)
-    if limit < lower_limit || lower_limit < FT(0) 
+    if limit < lower_limit || lower_limit < FT(0)
         error("polyfit limits improperly specified")
     end
 
@@ -89,7 +89,7 @@ function polyfit(
     Δ = limit / (npoints - 1)
     x_ = map(i -> i % npoints * Δ, 0:(npoints * npoints - 1))
     y_ = map(i -> floor(i / npoints) * Δ, 0:(npoints * npoints - 1))
-    ind1_ = map(s -> s > lower_limit, y_) 
+    ind1_ = map(s -> s > lower_limit, y_)
     ind2_ = map(s -> s < 0, y_ - x_)
     inds_ = map(i -> ind1_[i] && ind2_[i], 1:(npoints * npoints))
     x = x_[inds_]
@@ -113,7 +113,7 @@ function polyfit(
         z = map(x_i -> map(y_i -> kernel_func(x_i, y_i), y), x)
         for i in 1:(r + 1)
             for j in 1:(r + 1)
-                z -= map(x_i -> map(y_i -> C[i, j] * x_i ^ (i - 1) * y_i ^ (j - 1), y), x)
+                z -= map(x_i -> map(y_i -> C[i, j] * x_i^(i - 1) * y_i^(j - 1), y), x)
             end
         end
 
@@ -123,7 +123,9 @@ function polyfit(
     c_vec0 = zeros(Int((r + 1) * (r + 2) / 2) - 1)
     res_ = optimize(f, c_vec0, g_abstol = opt_tol, iterations = opt_max_iter).minimizer
     res = [C_1_1; res_...]
-    return SMatrix{r+1, r+1}([i <= j ? res[Int(j * (j - 1) / 2 + i)] : res[Int(i * (i - 1) / 2 + j)] for i in 1:(r + 1), j in 1:(r + 1)])
+    return SMatrix{r + 1, r + 1}([
+        i <= j ? res[Int(j * (j - 1) / 2 + i)] : res[Int(i * (i - 1) / 2 + j)] for i in 1:(r + 1), j in 1:(r + 1)
+    ])
 end
 
 """
@@ -135,7 +137,7 @@ end
 Throws an exception if `array` is not symmetric.
 """
 # only called once at initialization, so performance not strictly necessary
-function check_symmetry(array::AbstractArray{FT}) where {FT <: Real} 
+function check_symmetry(array::AbstractArray{FT}) where {FT <: Real}
     if length(array) > 1
         n, m = size(array)
         if n != m
@@ -151,7 +153,7 @@ function check_symmetry(array::AbstractArray{FT}) where {FT <: Real}
     end
 end
 # only called once at initialization, so performance not strictly necessary
-function check_symmetry(func)  
+function check_symmetry(func)
     n_test = 1000
     test_numbers = rand(n_test, 2)
     for i in 1:n_test
@@ -169,12 +171,12 @@ Returns normalized kernel tensor by using the number and mass/volume scales
 """
 function get_normalized_kernel_tensor(kernel::CoalescenceTensor{FT}, norms::Tuple{FT, FT}) where {FT <: Real}
     r = kernel.r
-    c = map(1:r + 1) do i 
-        map(1:r + 1) do j 
+    c = map(1:(r + 1)) do i
+        map(1:(r + 1)) do j
             kernel.c[i, j] * (norms[1] * norms[2]^(FT(i + j - 2)))
         end
     end
-    return CoalescenceTensor(SMatrix{r+1, r+1}(mapreduce(permutedims, vcat, c)))
+    return CoalescenceTensor(SMatrix{r + 1, r + 1}(mapreduce(permutedims, vcat, c)))
 end
 
 end

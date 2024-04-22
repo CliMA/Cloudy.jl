@@ -23,6 +23,7 @@ using Cloudy.Condensation
 using Cloudy.KernelTensors
 using Cloudy.KernelFunctions
 using SpecialFunctions: gamma, gamma_inc
+using StaticArrays
 
 rtol = 1e-3
 
@@ -39,7 +40,9 @@ NumericalCoalStyle() isa NumericalCoalStyle
 function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
     # Parameters & initial condition
     kernel_func = (x, y) -> 1.0
-    ker = (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) : CoalescenceTensor([1.0])
+    ker =
+        (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) :
+        CoalescenceTensor(SMatrix{1, 1}([1.0]))
 
     # Initial condition
     mom = (1.0, 2.0)

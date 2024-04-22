@@ -7,7 +7,7 @@ using Cloudy.KernelFunctions
 A = 1.0
 x = 2.0
 y = 4.0
-norms = [100.0, 0.001]
+norms = (100.0, 0.001)
 kernel = ConstantKernelFunction(A)
 @test kernel.coll_coal_rate == A
 

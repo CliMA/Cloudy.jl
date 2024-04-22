@@ -35,7 +35,7 @@ dist2b = ExponentialPrimitiveParticleDistribution(10.0, 1000.0)
 kernel = CoalescenceTensor((x, y) -> x + y, 1, 1e-6)
 NProgMoms = [3, 3, 3]
 @test_opt initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
-@test_opt initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = [10.0, 0.1])
+@test_opt initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = (10.0, 0.1))
 moment_order = 0
 
 for pdists in ((dist1a,), (dist1a, dist2a))
@@ -141,7 +141,7 @@ end
 kernel = LinearKernelFunction(1.0)
 NProgMoms = [3, 3, 3]
 @test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
-@test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms, norms = [10.0, 0.1])
+@test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms, norms = (10.0, 0.1))
 moment_order = 0.0
 
 for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
