@@ -17,8 +17,8 @@ dist_init = (
 
 # Solver
 kernel_func = LongKernelFunction(5.236e-10, 9.44e9, 5.78) # 5.236e-10 kg; 9.44e9 m^3/kg^2/s; 5.78 m^3/kg/s
-matrix_of_kernels = Array{CoalescenceTensor{FT}}(undef, 2, 2)
-matrix_of_kernels .= CoalescenceTensor(kernel_func, 1, FT(1e-6), lower_limit = FT(5e-10))
+matrix_of_kernels = Array{CoalescenceTensor{3, FT, 9}}(undef, 2, 2)
+matrix_of_kernels .= CoalescenceTensor(kernel_func, 2, FT(1e-6), lower_limit = FT(5e-10))
 matrix_of_kernels[1, 1] = CoalescenceTensor(kernel_func, 2, FT(5e-10))
 tspan = (FT(0), FT(120))
 NProgMoms = [nparams(dist) for dist in dist_init]
