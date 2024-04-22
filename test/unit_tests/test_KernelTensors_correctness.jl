@@ -10,7 +10,6 @@ rtol = 1e-5
 # test initialization with arrays
 c = SA[0.1 0.0; 0.0 0.2]
 ker = CoalescenceTensor(c)
-@test ker.r == 1
 @test ker.c == Array{FT}(c)
 
 #test initialization with kernel function
@@ -48,6 +47,5 @@ f = (x, y) -> 0.1 - 0.23 * x - 0.23 * y + 0.2 * x * y
 c = SA[1.0 2.0; 2.0 3.0]
 ker = CoalescenceTensor(c)
 ker_n = get_normalized_kernel_tensor(ker, (10.0, 0.2))
-@test ker_n.r == 1
 @test ker_n.c ≈ [10.0 4.0; 4.0 1.2] atol = 1e-12
 @test ker_n.c isa SMatrix{2, 2}{FT}

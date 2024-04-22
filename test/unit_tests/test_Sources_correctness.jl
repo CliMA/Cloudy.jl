@@ -83,16 +83,16 @@ dist = (
     GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),
     ExponentialPrimitiveParticleDistribution(FT(1), FT(1)),
 )
-kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), 1, FT(10))
+order = 1
+kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), order, FT(10))
 NProgMoms = [nparams(d) for d in dist]
-r = kernel.r #maximum([ker.r for ker in kernel])
 thresholds = [FT(0.5), Inf]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, dist_thresholds = thresholds)
 
 # action
 update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
 
-n_mom = maximum(NProgMoms) + r
+n_mom = maximum(NProgMoms) + order + 1
 mom = zeros(FT, 2, n_mom)
 for i in 1:2
     for j in 1:n_mom
@@ -119,8 +119,8 @@ for i in 1:2
     for k in 0:(NProgMoms[i] - 1)
         temp = 0.0
 
-        for a in 0:r
-            for b in 0:r
+        for a in 0:order
+            for b in 0:order
                 coef = kernel.c[a + 1, b + 1] #kernel[i, j].c[a + 1, b + 1]
                 temp -= coef * mom[i, a + k + 1] * mom[i, b + 1]
                 temp -= coef * mom[i, a + k + 1] * mom[j, b + 1]

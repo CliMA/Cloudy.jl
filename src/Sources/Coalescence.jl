@@ -71,13 +71,13 @@ Initializes the coalescence data.
 """
 function initialize_coalescence_data(
     ::AnalyticalCoalStyle,
-    kernel::Union{CoalescenceTensor{FT}, Matrix{CoalescenceTensor{FT}}},
+    kernel::Union{CoalescenceTensor{N, FT, M}, Matrix{CoalescenceTensor{N, FT, M}}},
     NProgMoms::Array{Int};
     dist_thresholds = nothing,
     norms = (1.0, 1.0),
-) where {FT <: Real}
+) where {N, M, FT <: Real}
     Ndist = length(NProgMoms)
-    matrix_of_kernels = Array{CoalescenceTensor{FT}}(undef, Ndist, Ndist)
+    matrix_of_kernels = Array{CoalescenceTensor{N, FT, M}}(undef, Ndist, Ndist)
     if kernel isa CoalescenceTensor
         matrix_of_kernels .= get_normalized_kernel_tensor(kernel, norms)
     else
@@ -91,7 +91,7 @@ function initialize_coalescence_data(
     R = zeros(FT, Ndist, Ndist)
     S = zeros(FT, Ndist, 2)
 
-    kernels_order = [ker.r for ker in matrix_of_kernels]
+    kernels_order = [N for ker in matrix_of_kernels]
     Nmom = maximum(NProgMoms) + maximum(kernels_order)
     moments = zeros(FT, Ndist, Nmom)
 
@@ -158,10 +158,12 @@ function get_coalescence_integral_moment_qrs!(
     NProgMoms::Vector{Int},
     coal_data,
 )
+    order = size(coal_data.matrix_of_kernels[1].c)[1] - 1
     update_Q_coalescence_matrix!(
         cs,
         moment_order,
         coal_data.moments,
+        order,
         coal_data.matrix_of_kernels,
         NProgMoms,
         coal_data.Q,
@@ -170,6 +172,7 @@ function get_coalescence_integral_moment_qrs!(
         cs,
         moment_order,
         coal_data.moments,
+        order,
         coal_data.matrix_of_kernels,
         NProgMoms,
         coal_data.R,
@@ -178,6 +181,7 @@ function get_coalescence_integral_moment_qrs!(
         cs,
         moment_order,
         coal_data.moments,
+        order,
         coal_data.finite_2d_ints,
         coal_data.matrix_of_kernels,
         NProgMoms,
@@ -185,7 +189,15 @@ function get_coalescence_integral_moment_qrs!(
     )
 end
 
-function update_Q_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, moments, matrix_of_kernels, NProgMoms, Q)
+function update_Q_coalescence_matrix!(
+    ::AnalyticalCoalStyle,
+    moment_order,
+    moments,
+    order,
+    matrix_of_kernels,
+    NProgMoms,
+    Q,
+)
     Ndist = size(moments)[1]
 
     for j in 1:Ndist
@@ -194,7 +206,7 @@ function update_Q_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, momen
             if NProgMoms[k] <= moment_order
                 continue
             end
-            r = matrix_of_kernels[j, k].r
+            r = order
             for a in 0:r
                 for b in 0:r
                     for c in 0:moment_order
@@ -210,7 +222,15 @@ function update_Q_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, momen
     end
 end
 
-function update_R_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, moments, matrix_of_kernels, NProgMoms, R)
+function update_R_coalescence_matrix!(
+    ::AnalyticalCoalStyle,
+    moment_order,
+    moments,
+    order,
+    matrix_of_kernels,
+    NProgMoms,
+    R,
+)
     Ndist = size(moments)[1]
 
     for j in 1:Ndist
@@ -219,7 +239,7 @@ function update_R_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, momen
             if NProgMoms[k] <= moment_order
                 continue
             end
-            r = matrix_of_kernels[j, k].r
+            r = order
             for a in 0:r
                 for b in 0:r
                     R[j, k] +=
@@ -234,6 +254,7 @@ function update_S_coalescence_matrix!(
     ::AnalyticalCoalStyle,
     moment_order,
     moments,
+    order,
     finite_2d_ints,
     matrix_of_kernels,
     NProgMoms,
@@ -253,7 +274,7 @@ function update_S_coalescence_matrix!(
                 continue
             end
         end
-        r = matrix_of_kernels[k, k].r
+        r = order
         for a in 0:r
             for b in 0:r
                 for c in 0:moment_order
