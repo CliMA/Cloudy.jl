@@ -22,7 +22,7 @@ kernel_func = (x, y) -> 5 * (x + y) # 5 m^3/kg/s; x, y in kg
 kernel = CoalescenceTensor(kernel_func, 1, FT(1e-6))
 tspan = (FT(0), FT(120))
 NProgMoms = [nparams(dist) for dist in dist_init]
-norms = [1e6, 1e-9] # 1e6/m^3; 1e-9 kg
+norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
 coal_data = initialize_coalescence_data(
     AnalyticalCoalStyle(),
     kernel,

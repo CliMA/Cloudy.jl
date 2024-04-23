@@ -17,7 +17,7 @@ s = 0.05
 ξ = 1e-2
 tspan = (FT(0), FT(120))
 NProgMoms = [nparams(dist) for dist in dist_init]
-norms = [1e6, 1e-9] # 1e6/m^3; 1e-9 kg
+norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
 rhs!(dm, m, par, t) = rhs_condensation!(dm, m, par, s)
 ODE_parameters = (; ξ = ξ, pdists = dist_init, NProgMoms = NProgMoms, norms = norms, dt = FT(10))
 prob = ODEProblem(rhs!, moments_init, tspan, ODE_parameters)

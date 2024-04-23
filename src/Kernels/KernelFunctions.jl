@@ -121,19 +121,19 @@ end
     `norms` - vector containing scale of number and mass/volume of particles
 Returns normalized kernel
 """
-function get_normalized_kernel_func(kern::ConstantKernelFunction, norms::Vector{FT}) where {FT <: Real}
+function get_normalized_kernel_func(kern::ConstantKernelFunction, norms::Tuple{FT, FT}) where {FT <: Real}
     return ConstantKernelFunction(kern.coll_coal_rate * norms[1])
 end
 
-function get_normalized_kernel_func(kern::LinearKernelFunction, norms::Vector{FT}) where {FT <: Real}
+function get_normalized_kernel_func(kern::LinearKernelFunction, norms::Tuple{FT, FT}) where {FT <: Real}
     return LinearKernelFunction(kern.coll_coal_rate * norms[1] * norms[2])
 end
 
-function get_normalized_kernel_func(kern::HydrodynamicKernelFunction, norms::Vector{FT}) where {FT <: Real}
+function get_normalized_kernel_func(kern::HydrodynamicKernelFunction, norms::Tuple{FT, FT}) where {FT <: Real}
     return HydrodynamicKernelFunction(kern.coal_eff * norms[1] * norms[2]^FT(4 / 3))
 end
 
-function get_normalized_kernel_func(kern::LongKernelFunction, norms::Vector{FT}) where {FT <: Real}
+function get_normalized_kernel_func(kern::LongKernelFunction, norms::Tuple{FT, FT}) where {FT <: Real}
     return LongKernelFunction(
         kern.x_threshold / norms[2],
         kern.coal_rate_below_threshold * norms[1] * norms[2]^2,

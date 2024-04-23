@@ -23,6 +23,7 @@ using Cloudy.Condensation
 using Cloudy.KernelTensors
 using Cloudy.KernelFunctions
 using SpecialFunctions: gamma, gamma_inc
+using StaticArrays
 
 rtol = 1e-3
 
@@ -39,7 +40,9 @@ NumericalCoalStyle() isa NumericalCoalStyle
 function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
     # Parameters & initial condition
     kernel_func = (x, y) -> 1.0
-    ker = (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) : CoalescenceTensor([1.0])
+    ker =
+        (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) :
+        CoalescenceTensor(SMatrix{1, 1}([1.0]))
 
     # Initial condition
     mom = (1.0, 2.0)
@@ -80,16 +83,16 @@ dist = (
     GammaPrimitiveParticleDistribution(FT(100), FT(0.1), FT(1)),
     ExponentialPrimitiveParticleDistribution(FT(1), FT(1)),
 )
-kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), 1, FT(10))
+order = 1
+kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), order, FT(10))
 NProgMoms = [nparams(d) for d in dist]
-r = kernel.r #maximum([ker.r for ker in kernel])
 thresholds = [FT(0.5), Inf]
 coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, dist_thresholds = thresholds)
 
 # action
 update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
 
-n_mom = maximum(NProgMoms) + r
+n_mom = maximum(NProgMoms) + order
 mom = zeros(FT, 2, n_mom)
 for i in 1:2
     for j in 1:n_mom
@@ -116,8 +119,8 @@ for i in 1:2
     for k in 0:(NProgMoms[i] - 1)
         temp = 0.0
 
-        for a in 0:r
-            for b in 0:r
+        for a in 0:order
+            for b in 0:order
                 coef = kernel.c[a + 1, b + 1] #kernel[i, j].c[a + 1, b + 1]
                 temp -= coef * mom[i, a + k + 1] * mom[i, b + 1]
                 temp -= coef * mom[i, a + k + 1] * mom[j, b + 1]
