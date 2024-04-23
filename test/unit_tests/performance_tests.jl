@@ -49,8 +49,8 @@ function benchmark_particle_distributions()
     all_pdists = [dist1, dist2, dist3, dist4]
     moments = [(1.1, 2.0), (1.1, 2.0, 4.1), (1.1, 2.0, 4.1), (1.0, 1.0)]
     for (dist, mom) in zip(all_pdists, moments)
-        bench_press(update_dist_from_moments, (dist, mom), 120)
-        bench_press(get_moments, (dist,), 40, max_mem = 80, max_allocs = 1)
+        bench_press(update_dist_from_moments, (dist, mom), 200)
+        bench_press(get_moments, (dist,), 60, max_mem = 80, max_allocs = 1)
     end
 
     bench_press(moment_source_helper, (dist1, 1.0, 0.0, 1.2), 16_000; max_allocs = 20, max_mem = 10_000)
