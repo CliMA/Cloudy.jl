@@ -10,7 +10,7 @@ rtol = 1e-3
 # Evaluations
 x = 2.0
 y = 4.0
-norms = [10.0, 0.1]
+norms = (10.0, 0.1)
 kernel = ConstantKernelFunction(FT(π))
 @test_opt kernel(x, y)
 

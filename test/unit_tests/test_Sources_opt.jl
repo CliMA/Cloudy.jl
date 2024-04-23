@@ -32,10 +32,11 @@ dist2a = GammaPrimitiveParticleDistribution(1.0, 10.0, 5.0)
 dist2b = ExponentialPrimitiveParticleDistribution(10.0, 1000.0)
 
 # Analytical Coal
-kernel = CoalescenceTensor((x, y) -> x + y, 1, 1e-6)
+order = 1
+kernel = CoalescenceTensor((x, y) -> x + y, order, 1e-6)
 NProgMoms = [3, 3, 3]
 @test_opt initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
-@test_opt initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = [10.0, 0.1])
+@test_opt initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = (10.0, 0.1))
 moment_order = 0
 
 for pdists in ((dist1a,), (dist1a, dist2a))
@@ -48,6 +49,7 @@ for pdists in ((dist1a,), (dist1a, dist2a))
         AnalyticalCoalStyle(),
         moment_order,
         cd.moments,
+        order,
         cd.matrix_of_kernels,
         NProgMoms,
         cd.Q,
@@ -56,6 +58,7 @@ for pdists in ((dist1a,), (dist1a, dist2a))
         AnalyticalCoalStyle(),
         moment_order,
         cd.moments,
+        order,
         cd.matrix_of_kernels,
         NProgMoms,
         cd.R,
@@ -64,6 +67,7 @@ for pdists in ((dist1a,), (dist1a, dist2a))
         AnalyticalCoalStyle(),
         moment_order,
         cd.moments,
+        order,
         cd.finite_2d_ints,
         cd.matrix_of_kernels,
         NProgMoms,
@@ -83,6 +87,7 @@ for pdists in ((dist1b,), (dist1b, dist2b))
         AnalyticalCoalStyle(),
         moment_order,
         cd.moments,
+        order,
         cd.matrix_of_kernels,
         NProgMoms,
         cd.Q,
@@ -91,6 +96,7 @@ for pdists in ((dist1b,), (dist1b, dist2b))
         AnalyticalCoalStyle(),
         moment_order,
         cd.moments,
+        order,
         cd.matrix_of_kernels,
         NProgMoms,
         cd.R,
@@ -99,6 +105,7 @@ for pdists in ((dist1b,), (dist1b, dist2b))
         AnalyticalCoalStyle(),
         moment_order,
         cd.moments,
+        order,
         cd.finite_2d_ints,
         cd.matrix_of_kernels,
         NProgMoms,
@@ -141,7 +148,7 @@ end
 kernel = LinearKernelFunction(1.0)
 NProgMoms = [3, 3, 3]
 @test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
-@test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms, norms = [10.0, 0.1])
+@test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms, norms = (10.0, 0.1))
 moment_order = 0.0
 
 for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
