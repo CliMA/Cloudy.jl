@@ -74,7 +74,7 @@ function initialize_coalescence_data(
     kernel::Union{CoalescenceTensor{N, FT, M}, Matrix{CoalescenceTensor{N, FT, M}}},
     NProgMoms::Array{Int};
     dist_thresholds = nothing,
-    norms = (1.0, 1.0),
+    norms = (FT(1), FT(1)),
 ) where {N, M, FT <: Real}
     Ndist = length(NProgMoms)
     matrix_of_kernels = Array{CoalescenceTensor{N, FT, M}}(undef, Ndist, Ndist)
@@ -344,7 +344,7 @@ function initialize_coalescence_data(
     ::NumericalCoalStyle,
     kernel_func::CoalescenceKernelFunction{FT},
     NProgMoms::Array{Int};
-    norms = (1.0, 1.0),
+    norms = (FT(1), FT(1)),
 ) where {FT <: Real}
     Ndist = length(NProgMoms)
     Q = zeros(FT, Ndist, Ndist)

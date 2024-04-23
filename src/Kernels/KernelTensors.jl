@@ -51,8 +51,8 @@ struct CoalescenceTensor{N, FT, M} <: KernelTensor{FT}
 end
 
 
-function CoalescenceTensor(kernel_func, order::Int, limit::FT; lower_limit::FT = FT(0)) where {FT <: Real} # TODO: kwarg?
-    coef = polyfit(kernel_func, order, limit, lower_limit = lower_limit)
+function CoalescenceTensor(kernel_func, order::Int, limit::FT, lower_limit::FT = FT(0)) where {FT <: Real}
+    coef = polyfit(kernel_func, order, limit, lower_limit)
     CoalescenceTensor(SMatrix{order + 1, order + 1}(coef))
 end
 
@@ -69,16 +69,16 @@ kernel function `kernel_func` to order `r` using a monomial basis in two dimensi
 """
 # Plenty of this code is likely not GPU compatible... but it's only run at initialization
 function polyfit(
-    kernel_func, # TODO: kwarg?
+    kernel_func,
     r::Int,
-    limit::FT;
+    limit::FT,
     lower_limit = FT(0),
     npoints = 10,
     opt_tol = 10 * eps(FT),
     opt_max_iter = 100000,
 ) where {FT <: Real}
     check_symmetry(kernel_func)
-    if limit < lower_limit || lower_limit < FT(0)
+    if limit <= lower_limit || lower_limit < FT(0)
         error("polyfit limits improperly specified")
     end
 

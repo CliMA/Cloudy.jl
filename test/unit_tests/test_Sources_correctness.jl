@@ -92,7 +92,7 @@ coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms
 # action
 update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
 
-n_mom = maximum(NProgMoms) + order + 1
+n_mom = maximum(NProgMoms) + order
 mom = zeros(FT, 2, n_mom)
 for i in 1:2
     for j in 1:n_mom
