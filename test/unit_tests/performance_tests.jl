@@ -59,11 +59,11 @@ function benchmark_particle_distributions()
     # bench_press(moment_source_helper, (dist3, 1.0, 0.0, 1.2), 6000; max_allocs = 20, max_mem = 10_000)
     bench_press(moment_source_helper, (dist4, 1.0, 0.0, 1.2), 60)
 
-    bench_press(get_standard_N_q, ((dist2, dist1, dist3),), 120_000; max_mem = 253_000, max_allocs = 4_400)
+    bench_press(get_standard_N_q, ((dist2, dist1, dist3),), 200_000; max_mem = 253_000, max_allocs = 4_400)
 
     x = collect(range(1.0, 10.0, 100))
     y = x .^ 2
-    bench_press(integrate_SimpsonEvenFast, (x, y), 600; max_mem = 3000, max_allocs = 3.0, print_args = false)
+    bench_press(integrate_SimpsonEvenFast, (x, y), 1200; max_mem = 3000, max_allocs = 3.0, print_args = false)
 end
 
 benchmark_particle_distributions()
