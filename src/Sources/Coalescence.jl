@@ -42,7 +42,7 @@ struct CoalescenceData{N, FT}
     "mass thresholds of distributions for the computation of S term"
     dist_thresholds::NTuple{N, FT}
     "matrix containing coalescence tensors for pairs of distributions"
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{FT}, L}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{FT}}
     
     function CoalescenceData(
         kernel::Union{CoalescenceTensor{FT}, SMatrix{N, N, CoalescenceTensor{FT}}},
@@ -145,7 +145,7 @@ function get_coalescence_integral_moment_qrs!(
     NProgMoms::NTuple{N, Int},
     finite_2d_ints::NTuple{N, Int},
     matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{FT}},
-)
+) where {N, M , FT <: Real}
     return (; 
     Q = get_Q_coalescence_matrix!(
         cs,
