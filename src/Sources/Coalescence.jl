@@ -168,29 +168,37 @@ function get_coalescence_integral_moment_qrs!(
     ))
 end
 
-function update_Q_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, moments, matrix_of_kernels, NProgMoms, Q)
-    Ndist = size(moments)[1]
+function update_Q_coalescence_matrix!(
+    ::AnalyticalCoalStyle, 
+    moments::SMatrix{N, M, FT}, 
+    NProgMoms::NTuple{N, Int}, 
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{FT}}
+    ) where {N, M , FT <: Real}
 
-    for j in 1:Ndist
-        for k in (j + 1):Ndist
-            Q[j, k] = 0.0
-            if NProgMoms[k] <= moment_order
-                continue
-            end
-            r = matrix_of_kernels[j, k].r
-            for a in 0:r
-                for b in 0:r
-                    for c in 0:moment_order
-                        Q[j, k] +=
+    Q = ntuple(M) do i
+        moment_order = i - 1
+        ntuple(N) do k
+            ntuple(N) do j
+                if k <= j || NProgMoms[k] <= moment_order
+                    FT(0)
+                end
+                sum(ntuple(matrix_of_kernels[j, k].r + 1) do a1
+                    a = a1 - 1
+                    sum(ntuple(matrix_of_kernels[j, k].r + 1) do b1
+                        b = b1 - 1
+                        sum(ntuple(i) do c1
+                            c = c1 - 1
                             matrix_of_kernels[j, k].c[a + 1, b + 1] *
                             binomial(moment_order, c) *
                             moments[j, a + c + 1] *
                             moments[k, b + moment_order - c + 1]
-                    end
-                end
+                        end)
+                    end)
+                end)
             end
         end
     end
+    return SMatrix{N, N, FT}(Q)
 end
 
 function update_R_coalescence_matrix!(::AnalyticalCoalStyle, moment_order, moments, matrix_of_kernels, NProgMoms, R)
