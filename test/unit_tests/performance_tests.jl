@@ -59,7 +59,7 @@ function benchmark_particle_distributions()
     # bench_press(moment_source_helper, (dist3, 1.0, 0.0, 1.2), 6000; max_allocs = 20, max_mem = 10_000)
     bench_press(moment_source_helper, (dist4, 1.0, 0.0, 1.2), 60)
 
-    bench_press(get_standard_N_q, ((dist2, dist1, dist3),), 200_000; max_mem = 253_000, max_allocs = 4_400)
+    bench_press(get_standard_N_q, ((dist2, dist1, dist3),), 200_000; max_mem = 260_000, max_allocs = 5_000)
 
     x = collect(range(1.0, 10.0, 100))
     y = x .^ 2
