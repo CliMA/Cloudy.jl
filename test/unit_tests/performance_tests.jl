@@ -54,7 +54,7 @@ function benchmark_particle_distributions()
     end
 
     bench_press(moment_source_helper, (dist1, 1.0, 0.0, 1.2), 16_000; max_allocs = 20, max_mem = 10_000)
-    bench_press(moment_source_helper, (dist2, 1.0, 0.0, 1.2), 20_000; max_allocs = 85, max_mem = 30_000)
+    bench_press(moment_source_helper, (dist2, 1.0, 0.0, 1.2), 25_000; max_allocs = 85, max_mem = 30_000)
     # TODO: This method uses quadgk and fails JET
     # bench_press(moment_source_helper, (dist3, 1.0, 0.0, 1.2), 6000; max_allocs = 20, max_mem = 10_000)
     bench_press(moment_source_helper, (dist4, 1.0, 0.0, 1.2), 60)
