@@ -98,9 +98,9 @@ function get_coal_ints(
     coal_ints = ntuple(N_dist) do k
         ntuple(NProgMoms[k]) do m
             if k == 1
-                sum(@views Q[m][:, k]) - sum(@views R[m][:, k]) + S[m][k, 1]
+                sum(@views Q[m][:, k]) - sum(@views R[m][:, k]) + S[m][1, k]
             else
-                sum(@views Q[m][:, k]) - sum(@views R[m][:, k]) + S[m][k, 1] + S[m][k - 1, 2]
+                sum(@views Q[m][:, k]) - sum(@views R[m][:, k]) + S[m][1, k] + S[m][2, k - 1]
             end
         end
     end
@@ -229,47 +229,49 @@ function update_R_coalescence_matrix!(
 end
 
 function update_S_coalescence_matrix!(
-    ::AnalyticalCoalStyle,
-    moment_order,
-    moments,
-    finite_2d_ints,
-    matrix_of_kernels,
-    NProgMoms,
-    S,
-)
-    Ndist = size(moments)[1]
+    ::AnalyticalCoalStyle, 
+    moments::SMatrix{N, M, FT}, 
+    NProgMoms::NTuple{N, Int}, 
+    finite_2d_ints::NTuple{N, Int},
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{FT}},
+    ) where {N, M , FT <: Real}
 
-    for k in 1:Ndist
-        S[k, 1] = 0.0
-        S[k, 2] = 0.0
-        if k < Ndist
-            if (NProgMoms[k] <= moment_order) & (NProgMoms[k + 1] <= moment_order)
-                continue
+    return ntuple(M) do i
+        moment_order = i - 1
+        SMatrix{2, N, FT}(rflatten(ntuple(N) do k
+            if k < N && NProgMoms[k] <= moment_order && NProgMoms[k + 1] <= moment_order
+                (FT(0), FT(0))
+            elseif k == N && NProgMoms[k] <= moment_order
+                (FT(0), FT(0))
+            else
+                (sum(ntuple(matrix_of_kernels[k, k].r + 1) do a1
+                    a = a1 - 1
+                    sum(ntuple(matrix_of_kernels[k, k].r + 1) do b1
+                        b = b1 - 1
+                        sum(ntuple(i) do c1
+                            c = c1 - 1
+                            0.5 * matrix_of_kernels[k, k].c[a + 1, b + 1] *
+                            binomial(moment_order, c) *
+                            finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
+                        end)
+                    end)
+                end),
+                sum(ntuple(matrix_of_kernels[k, k].r + 1) do a1
+                    a = a1 - 1
+                    sum(ntuple(matrix_of_kernels[k, k].r + 1) do b1
+                        b = b1 - 1
+                        sum(ntuple(i) do c1
+                            c = c1 - 1
+                            0.5 * matrix_of_kernels[k, k].c[a + 1, b + 1] *
+                            binomial(moment_order, c) *
+                            moments[k, a + c + 1] *
+                            (moments[k, b + moment_order - c + 1] - 
+                            finite_2d_ints[k][a + c + 1, b + moment_order - c + 1])
+                        end)
+                    end)
+                end))
             end
-        else
-            if NProgMoms[k] <= moment_order
-                continue
-            end
-        end
-        r = matrix_of_kernels[k, k].r
-        for a in 0:r
-            for b in 0:r
-                for c in 0:moment_order
-                    _s1 =
-                        0.5 *
-                        matrix_of_kernels[k, k].c[a + 1, b + 1] *
-                        binomial(moment_order, c) *
-                        finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
-                    S[k, 1] += _s1
-                    S[k, 2] +=
-                        0.5 *
-                        matrix_of_kernels[k, k].c[a + 1, b + 1] *
-                        binomial(moment_order, c) *
-                        moments[k, a + c + 1] *
-                        moments[k, b + moment_order - c + 1] - _s1
-                end
-            end
-        end
+        end))
     end
 end
 
