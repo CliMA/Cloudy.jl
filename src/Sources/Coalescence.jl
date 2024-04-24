@@ -323,7 +323,7 @@ function initialize_coalescence_data(
     ::NumericalCoalStyle,
     kernel_func::CoalescenceKernelFunction{FT},
     NProgMoms::Array{Int};
-    norms = ones(FT, 2),
+    norms = (FT(1), FT(1)),
 ) where {FT <: Real}
     Ndist = length(NProgMoms)
     Q = zeros(FT, Ndist, Ndist)

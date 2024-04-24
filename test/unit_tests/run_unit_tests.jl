@@ -29,12 +29,11 @@ FT = Float64
             include("test_KernelTensors_opt.jl")
         end
 
-        @testset "ParticleDistributions" begin
-            include("test_ParticleDistributions_opt.jl")
-        end
-
         @testset "Sources" begin
             include("test_Sources_opt.jl")
         end
+
+        include("performance_tests.jl")
+
     end
 end

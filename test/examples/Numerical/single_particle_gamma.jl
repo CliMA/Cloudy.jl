@@ -30,7 +30,7 @@ dist_moments = vcat([get_moments(dist) for dist in pdists]...)
 tspan = (0.0, T_end)
 kernel = LinearKernelFunction(coalescence_coeff)
 NProgMoms = [nparams(dist) for dist in pdists]
-norms = [1e6, 1e-9] # 1e6/m^3; 1e-9 kg
+norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
 coal_data = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms, norms = norms)
 rhs = make_box_model_rhs(NumericalCoalStyle())
 ODE_parameters = (pdists = pdists, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = dt)
