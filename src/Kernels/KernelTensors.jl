@@ -29,7 +29,7 @@ abstract type KernelTensor{FT} end
 
 
 """
-  CoalescenceTensor{FT} <: KernelTensor{FT}
+  CoalescenceTensor{P, FT} <: KernelTensor{FT}
 
 Represents a Collision-Coalescence kernel.
 
@@ -40,13 +40,13 @@ Represents a Collision-Coalescence kernel.
 # Fields
 
 """
-struct CoalescenceTensor{R, FT} <: KernelTensor{FT}
+struct CoalescenceTensor{P, FT} <: KernelTensor{FT}
     "collision-coalesence rate matrix"
-    c::SMatrix{R, R, FT}
+    c::SMatrix{P, P, FT}
 
-    function CoalescenceTensor(c::SMatrix{R, R, FT}) where {R, FT <: Real}
+    function CoalescenceTensor(c::SMatrix{P, P, FT}) where {P, FT <: Real}
         check_symmetry(c)
-        new{R, FT}(c)
+        new{P, FT}(c)
     end
 end
 
@@ -168,15 +168,15 @@ end
 Returns normalized kernel tensor by using the number and mass/volume scales
 """
 function get_normalized_kernel_tensor(
-    kernel::CoalescenceTensor{R, FT},
+    kernel::CoalescenceTensor{P, FT},
     norms::Tuple{FT, FT},
-) where {R, FT <: Real}
-    c = ntuple(N) do i
-        ntuple(N) do j
+) where {P, FT <: Real}
+    c = ntuple(P) do i
+        ntuple(P) do j
             kernel.c[i, j] * (norms[1] * norms[2]^(FT(i + j - 2)))
         end
     end
-    return CoalescenceTensor(SMatrix{R, R, FT}(rflatten(c)))
+    return CoalescenceTensor(SMatrix{P, P, FT}(rflatten(c)))
 end
 
 end

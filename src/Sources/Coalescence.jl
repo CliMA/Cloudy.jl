@@ -11,6 +11,7 @@ using ..ParticleDistributions
 using ..KernelTensors
 using ..KernelFunctions
 using ..EquationTypes
+import ..rflatten
 import ..get_dist_moment_ind
 
 using QuadGK
@@ -32,7 +33,7 @@ Represents data needed for coalesce computations. N is the number of distributio
   - `dist_thresholds`: PSD upper thresholds for computing S terms
   - `norms`: a two-element tuple containing normalizing factors for number and mass
 """
-struct CoalescenceData{N, FT}
+struct CoalescenceData{N, P, FT}
     "maximum number of moments that need to be precomputed before computing Q, R, S"
     N_mom_max::Int
     "number of 2d integrals that need to be precomputed before computing S"
@@ -40,14 +41,14 @@ struct CoalescenceData{N, FT}
     "mass thresholds of distributions for the computation of S term"
     dist_thresholds::NTuple{N, FT}
     "matrix containing coalescence tensors for pairs of distributions"
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{R, FT}}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
     
     function CoalescenceData(
-        kernel::Union{CoalescenceTensor{R, FT}, SMatrix{N, N, CoalescenceTensor{R, FT}}},
+        kernel::Union{CoalescenceTensor{P, FT}, SMatrix{N, N, CoalescenceTensor{P, FT}}},
         NProgMoms::NTuple{N, Int},
-        dist_thresholds::NTuple{N, FT} = nothing,
+        dist_thresholds::Union{Nothing, NTuple{N, FT}} = nothing,
         norms::Tuple{FT, FT} = (FT(1), FT(1))
-        ) where {N, FT <: Real}
+        ) where {N, P, FT <: Real}
 
         _kernels = ntuple(N * N) do i
             if kernel isa CoalescenceTensor
@@ -56,18 +57,24 @@ struct CoalescenceData{N, FT}
                 get_normalized_kernel_tensor(kernel[i], norms)
             end
         end
-        matrix_of_kernels = SMatrix{N, N, CoalescenceTensor{R, FT}}(_kernels)
+        matrix_of_kernels = SMatrix{N, N, CoalescenceTensor{P, FT}}(_kernels)
         
-        N_mom_max = maximum(NProgMoms) + R
-        N_2d_ints = diag(kernels_order) .+ [i < Ndist ? max(NProgMoms[i], NProgMoms[i + 1]) : NProgMoms[i] for i in 1:Ndist]
+        N_mom_max = maximum(NProgMoms) + P
+        N_2d_ints = ntuple(N) do i 
+            if i < N
+                P + max(NProgMoms[i], NProgMoms[i + 1])
+            else
+                P + NProgMoms[i]
+            end
+        end
         
         dist_thresholds = dist_thresholds === nothing ? ntuple(N) do i Inf end : ntuple(N) do i dist_thresholds[i] / norms[2] end
 
-        new{N, FT}(
+        new{N, P, FT}(
             N_mom_max,
             N_2d_ints,
-            matrix_of_kernels,
             dist_thresholds,
+            matrix_of_kernels,
         )
     end
 end
@@ -82,8 +89,8 @@ Updates the collision-coalescence integrals.
 function get_coal_ints(
     cs::AnalyticalCoalStyle,
     pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
-    coal_data::CoalescenceData{N, FT},
-) where {N, FT <: Real}
+    coal_data::CoalescenceData{N, P, FT},
+) where {N, P, FT <: Real}
 
     NProgMoms = map(pdists) do dist nparams(dist) end
     moments = get_moments(pdists, coal_data.N_mom_max)
@@ -114,9 +121,9 @@ end
 function get_finite_2d_integrals(
     pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     thresholds::NTuple{N, FT},
-    moments::SMatrix{N, M, FT, L},
+    moments::SMatrix{N, M, FT},
     N_2d_ints::NTuple{N, Int},
-) where {N, M, FT, L <: Real}
+) where {N, M, FT <: Real}
     # for each distribution we compute a matrix of finite_2d_ints
     return ntuple(N) do i
         # finite_2d_ints is a symmetric matrix; 
@@ -155,8 +162,8 @@ function get_coalescence_integral_moment_qrs(
     moments::SMatrix{N, M, FT},
     NProgMoms::NTuple{N, Int},
     finite_2d_ints::NTuple{N, Int},
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{R, FT}},
-) where {N, M , FT <: Real}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
+) where {N, M, P, FT <: Real}
     return (; 
     Q = get_Q_coalescence_matrix(
         cs,
@@ -183,8 +190,8 @@ function get_Q_coalescence_matrix(
     ::AnalyticalCoalStyle, 
     moments::SMatrix{N, M, FT}, 
     NProgMoms::NTuple{N, Int}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{R, FT}}
-) where {N, M, R, FT <: Real}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+) where {N, M, P, FT <: Real}
 
     return ntuple(maximum(NProgMoms)) do i
         moment_order = i - 1
@@ -206,8 +213,8 @@ function Q_jk(
     j::Int,
     k::Int,
     moments::SMatrix{N, M, FT}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{R, FT}}
-) where {N, M, R, FT <: Real}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+) where {N, M, P, FT <: Real}
     return sum(ntuple(R + 1) do a1
         a = a1 - 1
         sum(ntuple(R + 1) do b1
@@ -227,8 +234,8 @@ function get_R_coalescence_matrix(
     ::AnalyticalCoalStyle, 
     moments::SMatrix{N, M, FT}, 
     NProgMoms::NTuple{N, Int}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{R, FT}}
-) where {N, M, R, FT <: Real}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+) where {N, M, P, FT <: Real}
     
     return ntuple(maximum(NProgMoms)) do i
         moment_order = i - 1
@@ -250,8 +257,8 @@ function R_jk(
     j::Int,
     k::Int,
     moments::SMatrix{N, M, FT}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{R, FT}}
-) where {N, M, R, FT <: Real}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+) where {N, M, P, FT <: Real}
     return sum(ntuple(R + 1) do a1
         a = a1 - 1
         sum(ntuple(R + 1) do b1
@@ -266,8 +273,8 @@ function get_S_coalescence_matrix(
     moments::SMatrix{N, M, FT}, 
     NProgMoms::NTuple{N, Int}, 
     finite_2d_ints::NTuple{N, Int},
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{R, FT}},
-) where {N, M, R, FT <: Real}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
+) where {N, M, P, FT <: Real}
 
     return ntuple(maximum(NProgMoms)) do i
         moment_order = i - 1
@@ -289,8 +296,8 @@ function S_1k(
     moment_order::Int,
     k::Int,
     moments::SMatrix{N, M, FT}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{R, FT}}
-) where {N, M, R, FT <: Real}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+) where {N, M, P, FT <: Real}
     return sum(ntuple(R + 1) do a1
         a = a1 - 1
         sum(ntuple(R + 1) do b1
@@ -310,8 +317,8 @@ function S_2k(
     moment_order::Int,
     k::Int,
     moments::SMatrix{N, M, FT}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{R, FT}}
-) where {N, M, R, FT <: Real}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+) where {N, M, P, FT <: Real}
     return sum(ntuple(R + 1) do a1
         a = a1 - 1
         sum(ntuple(R + 1) do b1

@@ -1,9 +1,11 @@
 "Testing correctness of Sources modules, including Coalescence and Sedimentation"
 
+using Test
 using Cloudy
 using Cloudy.ParticleDistributions
 using Cloudy.EquationTypes
 using Cloudy.Coalescence:
+    CoalescenceData,
     weighting_fn,
     q_integrand_inner,
     q_integrand_outer,
@@ -12,12 +14,11 @@ using Cloudy.Coalescence:
     s_integrand1,
     s_integrand2,
     s_integrand_inner,
-    update_R_coalescence_matrix!,
-    update_S_coalescence_matrix!,
-    update_Q_coalescence_matrix!,
-    get_coalescence_integral_moment_qrs!,
-    initialize_coalescence_data,
-    update_coal_ints!
+    get_R_coalescence_matrix,
+    get_S_coalescence_matrix,
+    get_Q_coalescence_matrix,
+    get_coalescence_integral_moment_qrs,
+    get_coal_ints
 using Cloudy.Sedimentation
 using Cloudy.Condensation
 using Cloudy.KernelTensors
@@ -45,15 +46,14 @@ function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
         CoalescenceTensor(SMatrix{1, 1}([1.0]))
 
     # Initial condition
-    mom = (1.0, 2.0)
+    mom = [1.0, 2.0]
     dist = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
-    coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), ker, [nparams(dist[1])])
+    coal_data = CoalescenceData(ker, (nparams(dist[1]),))
 
     # Euler steps
     for i in 1:n_steps
-        ldist = (update_dist_from_moments(dist[1], mom),)
-        update_coal_ints!(AnalyticalCoalStyle(), ldist, coal_data)
-        dmom = coal_data.coal_ints
+        ldist = (update_dist_from_moments(dist[1], Tuple(mom)),)
+        dmom = get_coal_ints(AnalyticalCoalStyle(), ldist, coal_data)
         mom = tuple(δt * dmom .+ mom...)
         dist = ldist
     end
