@@ -150,7 +150,7 @@ function get_finite_2d_integrals(
     end
 end
 
-function get_coalescence_integral_moment_qrs!(
+function get_coalescence_integral_moment_qrs(
     cs::AnalyticalCoalStyle,
     moments::SMatrix{N, M, FT},
     NProgMoms::NTuple{N, Int},
