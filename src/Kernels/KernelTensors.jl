@@ -40,13 +40,13 @@ Represents a Collision-Coalescence kernel.
 # Fields
 
 """
-struct CoalescenceTensor{N, FT, M} <: KernelTensor{FT}
+struct CoalescenceTensor{R, FT} <: KernelTensor{FT}
     "collision-coalesence rate matrix"
-    c::SMatrix{N, N, FT, M}
+    c::SMatrix{R, R, FT}
 
-    function CoalescenceTensor(c::SMatrix{N, N, FT, M}) where {N, M, FT <: Real}
+    function CoalescenceTensor(c::SMatrix{R, R, FT}) where {R, FT <: Real}
         check_symmetry(c)
-        new{N, FT, M}(c)
+        new{R, FT}(c)
     end
 end
 
@@ -168,15 +168,15 @@ end
 Returns normalized kernel tensor by using the number and mass/volume scales
 """
 function get_normalized_kernel_tensor(
-    kernel::CoalescenceTensor{N, FT, M},
+    kernel::CoalescenceTensor{R, FT},
     norms::Tuple{FT, FT},
-) where {N, M, FT <: Real}
+) where {R, FT <: Real}
     c = ntuple(N) do i
         ntuple(N) do j
             kernel.c[i, j] * (norms[1] * norms[2]^(FT(i + j - 2)))
         end
     end
-    return CoalescenceTensor(SMatrix{N, N}(rflatten(c)))
+    return CoalescenceTensor(SMatrix{R, R, FT}(rflatten(c)))
 end
 
 end
