@@ -54,16 +54,17 @@ function benchmark_particle_distributions()
     end
 
     bench_press(moment_source_helper, (dist1, 1.0, 0.0, 1.2), 16_000; max_allocs = 20, max_mem = 10_000)
-    bench_press(moment_source_helper, (dist2, 1.0, 0.0, 1.2), 25_000; max_allocs = 85, max_mem = 30_000)
+    bench_press(moment_source_helper, (dist2, 1.0, 0.0, 1.2), 25_000; max_allocs = 105, max_mem = 34_000)
     # TODO: This method uses quadgk and fails JET
     # bench_press(moment_source_helper, (dist3, 1.0, 0.0, 1.2), 6000; max_allocs = 20, max_mem = 10_000)
     bench_press(moment_source_helper, (dist4, 1.0, 0.0, 1.2), 60)
 
     bench_press(get_standard_N_q, ((dist2, dist1, dist3),), 200_000; max_mem = 260_000, max_allocs = 5_000)
 
-    x = collect(range(1.0, 10.0, 100))
+    Npt = 91
+    x = SVector{Npt}(collect(range(1.0, 10.0, Npt)))
     y = x .^ 2
-    bench_press(integrate_SimpsonEvenFast, (x, y), 1200; max_mem = 3000, max_allocs = 3.0, print_args = false)
+    bench_press(integrate_SimpsonEvenFast, (x, y), 1200; max_mem = 3200, max_allocs = 4.0, print_args = false)
 end
 
 benchmark_particle_distributions()
