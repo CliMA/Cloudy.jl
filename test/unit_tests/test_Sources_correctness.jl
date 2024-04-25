@@ -141,21 +141,21 @@ for i in 1:2
             end
         end
 
-        local ind = get_dist_moment_ind(collect(NProgMoms), i, k + 1)
+        local ind = get_dist_moment_ind(NProgMoms, i, k + 1)
         coal_int[ind] = temp
     end
 end
 
 # test
-ind = get_dist_moment_ind(collect(NProgMoms), 1, 1)
+ind = get_dist_moment_ind(NProgMoms, 1, 1)
 @test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
-ind = get_dist_moment_ind(collect(NProgMoms), 1, 1)
+ind = get_dist_moment_ind(NProgMoms, 1, 1)
 @test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
-ind = get_dist_moment_ind(collect(NProgMoms), 1, 3)
+ind = get_dist_moment_ind(NProgMoms, 1, 3)
 @test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
-ind = get_dist_moment_ind(collect(NProgMoms), 2, 1)
+ind = get_dist_moment_ind(NProgMoms, 2, 1)
 @test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
-ind = get_dist_moment_ind(collect(NProgMoms), 2, 2)
+ind = get_dist_moment_ind(NProgMoms, 2, 2)
 @test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
 
 # Numerical cases
@@ -240,11 +240,11 @@ S = get_S_coalescence_matrix(NumericalCoalStyle(), pdists, kernel_func)
 @test maximum(S[1]) > 0.0
 
 coal_ints = get_coal_ints(NumericalCoalStyle(), pdists, kernel_func)
-@test coal_ints[get_dist_moment_ind(collect(NProgMoms), 1, 1)] < 0.0
+@test coal_ints[get_dist_moment_ind(NProgMoms, 1, 1)] < 0.0
 dM = zeros(Float64, 3)
 for i in 1:length(NProgMoms)
     for j in 1:3
-        dM[j] += coal_ints[get_dist_moment_ind(collect(NProgMoms), i, j)]
+        dM[j] += coal_ints[get_dist_moment_ind(NProgMoms, i, j)]
     end
 end
 @test dM[1] < 0.0
