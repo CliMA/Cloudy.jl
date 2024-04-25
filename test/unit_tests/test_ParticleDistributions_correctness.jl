@@ -232,5 +232,5 @@ Nq2 = get_standard_N_q(pdists; size_cutoff = 0.5)
 Npt = 90
 x = collect(range(1.0, 10.0, Npt + 1))
 dx = x[2] - x[1]
-y(j) = x[j]^2
-@test integrate_SimpsonEvenFast(Npt, dx, y) ≈ 333.0 atol = 1e-6
+yy(j) = x[j]^2
+@test integrate_SimpsonEvenFast(Npt, dx, yy) ≈ 333.0 atol = 1e-6
