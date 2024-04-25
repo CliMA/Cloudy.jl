@@ -20,5 +20,5 @@ for i in 1:7
     @test norm_factors[i] ≈ norm_factors_[i] atol = 1e-12
 end
 
-tmp_tuple = ((1,2), (3.2, (1.2, 1.0)), (1),)
+tmp_tuple = ((1, 2), (3.2, (1.2, 1.0)), (1))
 @test Cloudy.rflatten(tmp_tuple) == (1, 2, 3.2, 1.2, 1.0, 1)

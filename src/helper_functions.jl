@@ -38,7 +38,7 @@ end
 Returns normalizing factors of the vector of moments based on given scales of number and mass/volume of particles
 """
 function get_moments_normalizing_factors(NProgMoms::NTuple{N, Int}, norms::Tuple{FT, FT}) where {N, FT <: Real}
-    if norms[1] <=0 || norms[2] <= 0
+    if norms[1] <= 0 || norms[2] <= 0
         error("norms must be positive!")
     end
 

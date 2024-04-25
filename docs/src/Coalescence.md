@@ -9,7 +9,6 @@ CurrentModule = Cloudy.Coalescence
 ## Functions
 
 ```@docs
-update_coal_ints!
-initialize_coalescence_data
+get_coal_ints
 ```
 
