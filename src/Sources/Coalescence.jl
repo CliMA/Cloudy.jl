@@ -42,13 +42,13 @@ struct CoalescenceData{N, P, FT}
     dist_thresholds::NTuple{N, FT}
     "matrix containing coalescence tensors for pairs of distributions"
     matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
-    
+
     function CoalescenceData(
         kernel::Union{CoalescenceTensor{P, FT}, SMatrix{N, N, CoalescenceTensor{P, FT}}},
         NProgMoms::NTuple{N, Int},
         dist_thresholds::Union{Nothing, NTuple{N, FT}} = nothing,
-        norms::Tuple{FT, FT} = (FT(1), FT(1))
-        ) where {N, P, FT <: Real}
+        norms::Tuple{FT, FT} = (FT(1), FT(1)),
+    ) where {N, P, FT <: Real}
 
         _kernels = ntuple(N * N) do i
             if kernel isa CoalescenceTensor
@@ -58,24 +58,23 @@ struct CoalescenceData{N, P, FT}
             end
         end
         matrix_of_kernels = SMatrix{N, N, CoalescenceTensor{P, FT}}(_kernels)
-        
+
         N_mom_max = maximum(NProgMoms) + (P - 1)
-        N_2d_ints = ntuple(N) do i 
+        N_2d_ints = ntuple(N) do i
             if i < N
                 (P - 1) + max(NProgMoms[i], NProgMoms[i + 1])
             else
                 (P - 1) + NProgMoms[i]
             end
         end
-        
-        dist_thresholds = dist_thresholds === nothing ? ntuple(N) do i Inf end : ntuple(N) do i dist_thresholds[i] / norms[2] end
 
-        new{N, P, FT}(
-            N_mom_max,
-            N_2d_ints,
-            dist_thresholds,
-            matrix_of_kernels,
-        )
+        dist_thresholds = dist_thresholds === nothing ? ntuple(N) do i
+            Inf
+        end : ntuple(N) do i
+            dist_thresholds[i] / norms[2]
+        end
+
+        new{N, P, FT}(N_mom_max, N_2d_ints, dist_thresholds, matrix_of_kernels)
     end
 end
 
@@ -92,10 +91,13 @@ function get_coal_ints(
     coal_data::CoalescenceData{N, P, FT},
 ) where {N, P, FT <: Real}
 
-    NProgMoms = map(pdists) do dist nparams(dist) end
+    NProgMoms = map(pdists) do dist
+        nparams(dist)
+    end
     moments = get_moments(pdists, coal_data.N_mom_max)
     finite_2d_ints = get_finite_2d_integrals(pdists, coal_data.dist_thresholds, moments, coal_data.N_2d_ints)
-    (; Q, R, S) = get_coalescence_integral_moment_qrs(cs, moments, NProgMoms, finite_2d_ints, coal_data.matrix_of_kernels)
+    (; Q, R, S) =
+        get_coalescence_integral_moment_qrs(cs, moments, NProgMoms, finite_2d_ints, coal_data.matrix_of_kernels)
 
     coal_ints = ntuple(N) do k
         ntuple(NProgMoms[k]) do m
@@ -128,7 +130,7 @@ function get_finite_2d_integrals(
     return ntuple(N) do i
         # finite_2d_ints is a symmetric matrix; 
         # first the upper diagonal (j <= k) is computed
-        finite_2d_ints_upper_diag =  ntuple(N_2d_ints[i]) do j
+        finite_2d_ints_upper_diag = ntuple(N_2d_ints[i]) do j
             ntuple(N_2d_ints[i]) do k
                 mom_times_mom = moments[i, j] * moments[i, k]
                 if mom_times_mom < eps(FT) || k < j
@@ -151,7 +153,7 @@ function get_finite_2d_integrals(
                 end
             end
         end
-        
+
         # Conversion from tuple of tuples to SMatrix
         SMatrix{N_2d_ints[i], N_2d_ints[i], FT}(rflatten(finite_2d_ints))
     end
@@ -165,33 +167,18 @@ function get_coalescence_integral_moment_qrs(
     # finite_2d_ints::NTuple{N, SMatrix{L, L, FT}},
     matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
 ) where {N, M, P, L, FT <: Real}
-    return (; 
-    Q = get_Q_coalescence_matrix(
-        cs,
-        moments,
-        NProgMoms,
-        matrix_of_kernels,
-    ),
-    R = get_R_coalescence_matrix(
-        cs,
-        moments,
-        NProgMoms,
-        matrix_of_kernels,
-    ),
-    S = get_S_coalescence_matrix(
-        cs,
-        moments,
-        NProgMoms,
-        finite_2d_ints,
-        matrix_of_kernels,
-    ))
+    return (;
+        Q = get_Q_coalescence_matrix(cs, moments, NProgMoms, matrix_of_kernels),
+        R = get_R_coalescence_matrix(cs, moments, NProgMoms, matrix_of_kernels),
+        S = get_S_coalescence_matrix(cs, moments, NProgMoms, finite_2d_ints, matrix_of_kernels),
+    )
 end
 
 function get_Q_coalescence_matrix(
-    cs::AnalyticalCoalStyle, 
-    moments::SMatrix{N, M, FT}, 
-    NProgMoms::NTuple{N, Int}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+    cs::AnalyticalCoalStyle,
+    moments::SMatrix{N, M, FT},
+    NProgMoms::NTuple{N, Int},
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
 ) where {N, M, P, FT <: Real}
 
     return ntuple(maximum(NProgMoms)) do i
@@ -209,35 +196,41 @@ function get_Q_coalescence_matrix(
 end
 
 function Q_jk(
-    ::AnalyticalCoalStyle, 
+    ::AnalyticalCoalStyle,
     moment_order::Int,
     j::Int,
     k::Int,
-    moments::SMatrix{N, M, FT}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+    moments::SMatrix{N, M, FT},
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
 ) where {N, M, P, FT <: Real}
-    return sum(ntuple(P) do a1
-        a = a1 - 1
-        sum(ntuple(P) do b1
-            b = b1 - 1
-            sum(ntuple(moment_order + 1) do c1
-                c = c1 - 1
-                matrix_of_kernels[j, k].c[a + 1, b + 1] *
-                binomial(moment_order, c) *
-                moments[j, a + c + 1] *
-                moments[k, b + moment_order - c + 1]
-            end)
-        end)
-    end)
+    return sum(
+        ntuple(P) do a1
+            a = a1 - 1
+            sum(
+                ntuple(P) do b1
+                    b = b1 - 1
+                    sum(
+                        ntuple(moment_order + 1) do c1
+                            c = c1 - 1
+                            matrix_of_kernels[j, k].c[a + 1, b + 1] *
+                            binomial(moment_order, c) *
+                            moments[j, a + c + 1] *
+                            moments[k, b + moment_order - c + 1]
+                        end,
+                    )
+                end,
+            )
+        end,
+    )
 end
 
 function get_R_coalescence_matrix(
-    cs::AnalyticalCoalStyle, 
-    moments::SMatrix{N, M, FT}, 
-    NProgMoms::NTuple{N, Int}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+    cs::AnalyticalCoalStyle,
+    moments::SMatrix{N, M, FT},
+    NProgMoms::NTuple{N, Int},
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
 ) where {N, M, P, FT <: Real}
-    
+
     return ntuple(maximum(NProgMoms)) do i
         moment_order = i - 1
         SMatrix{N, N, FT}(rflatten(ntuple(N) do k
@@ -253,26 +246,28 @@ function get_R_coalescence_matrix(
 end
 
 function R_jk(
-    ::AnalyticalCoalStyle, 
+    ::AnalyticalCoalStyle,
     moment_order::Int,
     j::Int,
     k::Int,
-    moments::SMatrix{N, M, FT}, 
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+    moments::SMatrix{N, M, FT},
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
 ) where {N, M, P, FT <: Real}
-    return sum(ntuple(P) do a1
-        a = a1 - 1
-        sum(ntuple(P) do b1
-            b = b1 - 1
-            matrix_of_kernels[j, k].c[a + 1, b + 1] * moments[j, a + 1] * moments[k, b + moment_order + 1]
-        end)
-    end)
+    return sum(
+        ntuple(P) do a1
+            a = a1 - 1
+            sum(ntuple(P) do b1
+                b = b1 - 1
+                matrix_of_kernels[j, k].c[a + 1, b + 1] * moments[j, a + 1] * moments[k, b + moment_order + 1]
+            end)
+        end,
+    )
 end
 
 function get_S_coalescence_matrix(
-    cs::AnalyticalCoalStyle, 
-    moments::SMatrix{N, M, FT}, 
-    NProgMoms::NTuple{N, Int}, 
+    cs::AnalyticalCoalStyle,
+    moments::SMatrix{N, M, FT},
+    NProgMoms::NTuple{N, Int},
     # finite_2d_ints::NTuple{N, SMatrix{L, L, FT}},
     finite_2d_ints::NTuple{N, SMatrix},
     matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
@@ -280,65 +275,86 @@ function get_S_coalescence_matrix(
 
     return ntuple(maximum(NProgMoms)) do i
         moment_order = i - 1
-        SMatrix{2, N, FT}(rflatten(ntuple(N) do k
-            if k < N && NProgMoms[k] <= moment_order && NProgMoms[k + 1] <= moment_order
-                (FT(0), FT(0))
-            elseif k == N && NProgMoms[k] <= moment_order
-                (FT(0), FT(0))
-            else
-                (S_1k(cs, moment_order, k, moments, finite_2d_ints, matrix_of_kernels),
-                S_2k(cs, moment_order, k, moments, finite_2d_ints, matrix_of_kernels))
-            end
-        end))
+        SMatrix{2, N, FT}(
+            rflatten(
+                ntuple(N) do k
+                    if k < N && NProgMoms[k] <= moment_order && NProgMoms[k + 1] <= moment_order
+                        (FT(0), FT(0))
+                    elseif k == N && NProgMoms[k] <= moment_order
+                        (FT(0), FT(0))
+                    else
+                        (
+                            S_1k(cs, moment_order, k, moments, finite_2d_ints, matrix_of_kernels),
+                            S_2k(cs, moment_order, k, moments, finite_2d_ints, matrix_of_kernels),
+                        )
+                    end
+                end,
+            ),
+        )
     end
 end
 
 function S_1k(
-    ::AnalyticalCoalStyle, 
+    ::AnalyticalCoalStyle,
     moment_order::Int,
     k::Int,
     moments::SMatrix{N, M, FT},
     # finite_2d_ints::NTuple{N, SMatrix{L, L, FT}},
     finite_2d_ints::NTuple{N, SMatrix},
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
 ) where {N, M, P, L, FT <: Real}
-    return sum(ntuple(P) do a1
-        a = a1 - 1
-        sum(ntuple(P) do b1
-            b = b1 - 1
-            sum(ntuple(moment_order + 1) do c1
-                c = c1 - 1
-                0.5 * matrix_of_kernels[k, k].c[a + 1, b + 1] *
-                binomial(moment_order, c) *
-                finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
-            end)
-        end)
-    end)
+    return sum(
+        ntuple(P) do a1
+            a = a1 - 1
+            sum(
+                ntuple(P) do b1
+                    b = b1 - 1
+                    sum(
+                        ntuple(moment_order + 1) do c1
+                            c = c1 - 1
+                            0.5 *
+                            matrix_of_kernels[k, k].c[a + 1, b + 1] *
+                            binomial(moment_order, c) *
+                            finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
+                        end,
+                    )
+                end,
+            )
+        end,
+    )
 end
 
 function S_2k(
-    ::AnalyticalCoalStyle, 
+    ::AnalyticalCoalStyle,
     moment_order::Int,
     k::Int,
-    moments::SMatrix{N, M, FT}, 
+    moments::SMatrix{N, M, FT},
     # finite_2d_ints::NTuple{N, SMatrix{L, L, FT}},
     finite_2d_ints::NTuple{N, SMatrix},
-    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}}
+    matrix_of_kernels::SMatrix{N, N, CoalescenceTensor{P, FT}},
 ) where {N, M, P, L, FT <: Real}
-    return sum(ntuple(P) do a1
-        a = a1 - 1
-        sum(ntuple(P) do b1
-            b = b1 - 1
-            sum(ntuple(moment_order + 1) do c1
-                c = c1 - 1
-                0.5 * matrix_of_kernels[k, k].c[a + 1, b + 1] *
-                binomial(moment_order, c) *
-                (moments[k, a + c + 1] *
-                moments[k, b + moment_order - c + 1] - 
-                finite_2d_ints[k][a + c + 1, b + moment_order - c + 1])
-            end)
-        end)
-    end)
+    return sum(
+        ntuple(P) do a1
+            a = a1 - 1
+            sum(
+                ntuple(P) do b1
+                    b = b1 - 1
+                    sum(
+                        ntuple(moment_order + 1) do c1
+                            c = c1 - 1
+                            0.5 *
+                            matrix_of_kernels[k, k].c[a + 1, b + 1] *
+                            binomial(moment_order, c) *
+                            (
+                                moments[k, a + c + 1] * moments[k, b + moment_order - c + 1] -
+                                finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
+                            )
+                        end,
+                    )
+                end,
+            )
+        end,
+    )
 end
 
 
@@ -362,7 +378,7 @@ function get_coal_ints(
 
     NProgMoms = [nparams(dist) for dist in pdists]
     (; Q, R, S) = get_coalescence_integral_moment_qrs(cs, pdists, kernel_func)
-    
+
     coal_ints = ntuple(N) do k
         ntuple(NProgMoms[k]) do m
             if k == 1
@@ -381,9 +397,9 @@ function get_coalescence_integral_moment_qrs(
     kernel_func::CoalescenceKernelFunction{FT},
 ) where {N, FT <: Real}
     return (;
-    Q = get_Q_coalescence_matrix(cs, pdists, kernel_func),
-    R = get_R_coalescence_matrix(cs, pdists, kernel_func),
-    S = get_S_coalescence_matrix(cs, pdists, kernel_func),
+        Q = get_Q_coalescence_matrix(cs, pdists, kernel_func),
+        R = get_R_coalescence_matrix(cs, pdists, kernel_func),
+        S = get_S_coalescence_matrix(cs, pdists, kernel_func),
     )
 end
 
@@ -392,18 +408,30 @@ function get_Q_coalescence_matrix(
     pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     kernel::CoalescenceKernelFunction{FT},
 ) where {N, FT <: Real}
-    NProgMoms = map(pdists) do dist nparams(dist) end
+    NProgMoms = map(pdists) do dist
+        nparams(dist)
+    end
     return ntuple(maximum(NProgMoms)) do i
         moment_order = i - 1
-        SMatrix{N, N, FT}(rflatten(ntuple(N) do k
-            ntuple(N) do j
-                if k <= j || NProgMoms[k] <= moment_order
-                    FT(0)
-                else
-                    quadgk(x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, Inf; rtol = 1e-8, maxevals = 1000,)[1]
-                end
-            end
-        end))
+        SMatrix{N, N, FT}(
+            rflatten(
+                ntuple(N) do k
+                    ntuple(N) do j
+                        if k <= j || NProgMoms[k] <= moment_order
+                            FT(0)
+                        else
+                            quadgk(
+                                x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order),
+                                0.0,
+                                Inf;
+                                rtol = 1e-8,
+                                maxevals = 1000,
+                            )[1]
+                        end
+                    end
+                end,
+            ),
+        )
     end
 end
 
@@ -412,18 +440,30 @@ function get_R_coalescence_matrix(
     pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     kernel::CoalescenceKernelFunction{FT},
 ) where {N, FT <: Real}
-    NProgMoms = map(pdists) do dist nparams(dist) end
+    NProgMoms = map(pdists) do dist
+        nparams(dist)
+    end
     return ntuple(maximum(NProgMoms)) do i
         moment_order = i - 1
-        SMatrix{N, N, FT}(rflatten(ntuple(N) do k
-            ntuple(N) do j
-                if NProgMoms[k] <= moment_order
-                    FT(0)
-                else
-                    quadgk(x -> r_integrand_outer(x, j, k, kernel, pdists, moment_order), 0.0, Inf; rtol = 1e-8, maxevals = 1000, )[1]
-                end
-            end
-        end))
+        SMatrix{N, N, FT}(
+            rflatten(
+                ntuple(N) do k
+                    ntuple(N) do j
+                        if NProgMoms[k] <= moment_order
+                            FT(0)
+                        else
+                            quadgk(
+                                x -> r_integrand_outer(x, j, k, kernel, pdists, moment_order),
+                                0.0,
+                                Inf;
+                                rtol = 1e-8,
+                                maxevals = 1000,
+                            )[1]
+                        end
+                    end
+                end,
+            ),
+        )
     end
 end
 
@@ -432,19 +472,39 @@ function get_S_coalescence_matrix(
     pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     kernel::CoalescenceKernelFunction{FT},
 ) where {N, FT <: Real}
-    NProgMoms = map(pdists) do dist nparams(dist) end
+    NProgMoms = map(pdists) do dist
+        nparams(dist)
+    end
     return ntuple(maximum(NProgMoms)) do i
         moment_order = i - 1
-        SMatrix{2, N, FT}(rflatten(ntuple(N) do k
-            if k < N && NProgMoms[k] <= moment_order && NProgMoms[k + 1] <= moment_order
-                (FT(0), FT(0))
-            elseif k == N && NProgMoms[k] <= moment_order
-                (FT(0), FT(0))
-            else
-                (quadgk(x -> s_integrand1(x, k, kernel, pdists, moment_order), 0.0, Inf; rtol = 1e-8, maxevals = 1000)[1],
-                quadgk(x -> s_integrand2(x, k, kernel, pdists, moment_order), 0.0, Inf; rtol = 1e-8, maxevals = 1000)[1])
-            end
-        end))
+        SMatrix{2, N, FT}(
+            rflatten(
+                ntuple(N) do k
+                    if k < N && NProgMoms[k] <= moment_order && NProgMoms[k + 1] <= moment_order
+                        (FT(0), FT(0))
+                    elseif k == N && NProgMoms[k] <= moment_order
+                        (FT(0), FT(0))
+                    else
+                        (
+                            quadgk(
+                                x -> s_integrand1(x, k, kernel, pdists, moment_order),
+                                0.0,
+                                Inf;
+                                rtol = 1e-8,
+                                maxevals = 1000,
+                            )[1],
+                            quadgk(
+                                x -> s_integrand2(x, k, kernel, pdists, moment_order),
+                                0.0,
+                                Inf;
+                                rtol = 1e-8,
+                                maxevals = 1000,
+                            )[1],
+                        )
+                    end
+                end,
+            ),
+        )
     end
 end
 

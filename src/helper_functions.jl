@@ -12,7 +12,9 @@ Returns index of the m'th moment of the i'th distribution in the long vector con
 """
 function get_dist_moment_ind(NProgMoms::NTuple, i::Int, m::Int)
     if ~(0 < m <= NProgMoms[i])
-        error("moment index must be positive integer and equal or smaller than the dist number of prognostic moments!!!")
+        error(
+            "moment index must be positive integer and equal or smaller than the dist number of prognostic moments!!!",
+        )
     end
     return i == 1 ? m : sum(NProgMoms[1:(i - 1)]) + m
 end

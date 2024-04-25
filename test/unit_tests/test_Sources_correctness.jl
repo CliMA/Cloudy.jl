@@ -53,7 +53,9 @@ function sm1916(n_steps, δt; is_kernel_function = true)
     for i in 1:n_steps
         ldist = (update_dist_from_moments(dist[1], mom),)
         dmom = get_coal_ints(AnalyticalCoalStyle(), ldist, coal_data)
-        mom = ntuple(2) do i δt * dmom[i] + mom[i] end
+        mom = ntuple(2) do i
+            δt * dmom[i] + mom[i]
+        end
         dist = ldist
     end
 

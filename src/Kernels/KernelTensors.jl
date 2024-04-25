@@ -167,10 +167,7 @@ end
   `norms` - vector containing scale of number and mass/volume of particles
 Returns normalized kernel tensor by using the number and mass/volume scales
 """
-function get_normalized_kernel_tensor(
-    kernel::CoalescenceTensor{P, FT},
-    norms::Tuple{FT, FT},
-) where {P, FT <: Real}
+function get_normalized_kernel_tensor(kernel::CoalescenceTensor{P, FT}, norms::Tuple{FT, FT}) where {P, FT <: Real}
     c = ntuple(P) do i
         ntuple(P) do j
             kernel.c[i, j] * (norms[1] * norms[2]^(FT(i + j - 2)))
