@@ -16,7 +16,9 @@ dist_init = (GammaPrimitiveParticleDistribution(FT(1e8), FT(1e-10), FT(1)),) # 1
 s = 0.05
 ξ = 1e-2
 tspan = (FT(0), FT(120))
-NProgMoms = [nparams(dist) for dist in dist_init]
+NProgMoms = map(dist_init) do dist
+    nparams(dist)
+end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
 rhs!(dm, m, par, t) = rhs_condensation!(dm, m, par, s)
 ODE_parameters = (; ξ = ξ, pdists = dist_init, NProgMoms = NProgMoms, norms = norms, dt = FT(10))

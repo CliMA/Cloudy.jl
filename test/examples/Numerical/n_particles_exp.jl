@@ -23,7 +23,7 @@ particle_number[1] = N0
 mass_scale = m0 * [1000.0^(k - 1) for k in 1:Ndist]
 
 # Initialize ODE info
-pdists = map(1:Ndist) do i
+pdists = ntuple(Ndist) do i
     ExponentialPrimitiveParticleDistribution(particle_number[i], mass_scale[i])
 end
 dist_moments = vcat([get_moments(dist) for dist in pdists]...)
@@ -31,11 +31,13 @@ dist_moments = vcat([get_moments(dist) for dist in pdists]...)
 # Set up ODE
 tspan = (0.0, T_end)
 kernel = LinearKernelFunction(coalescence_coeff)
-NProgMoms = [nparams(dist) for dist in pdists]
+NProgMoms = map(pdists) do dist
+    nparams(dist)
+end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
-coal_data = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms, norms = norms)
+kernel_n = get_normalized_kernel_func(kernel, norms)
 rhs = make_box_model_rhs(NumericalCoalStyle())
-ODE_parameters = (pdists = pdists, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = dt)
+ODE_parameters = (pdists = pdists, kernel_func = kernel_n, NProgMoms = NProgMoms, norms = norms, dt = dt)
 prob = ODEProblem(rhs, dist_moments, tspan, ODE_parameters; progress = true)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 plot_params!(sol, ODE_parameters; file_name = "n_particle_exp_params.png")

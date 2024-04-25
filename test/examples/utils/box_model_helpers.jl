@@ -29,8 +29,16 @@ function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         update_dist_from_moments(p.pdists[i], mom_normalized[ind_rng])
     end))
-    update_coal_ints!(coal_type, p.pdists, p.coal_data)
-    dmom .= p.coal_data.coal_ints .* mom_norms
+
+    if coal_type isa AnalyticalCoalStyle
+        coal_ints = get_coal_ints(coal_type, p.pdists, p.coal_data)
+    elseif coal_type isa NumericalCoalStyle
+        coal_ints = get_coal_ints(coal_type, p.pdists, p.kernel_func)
+    else
+        error("Invalid coal style!")
+    end
+
+    dmom .= coal_ints .* mom_norms
 end
 
 function rhs_condensation!(dmom, mom, p, s)
