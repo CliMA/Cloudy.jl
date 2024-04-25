@@ -12,6 +12,7 @@ module ParticleDistributions
 using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
 using QuadGK
+using StaticArrays
 
 # particle mass distributions available for microphysics
 export AbstractParticleDistribution
@@ -473,19 +474,21 @@ function moment_source_helper(
     dist::ExponentialPrimitiveParticleDistribution{FT},
     p1::FT,
     p2::FT,
-    x_threshold::FT;
-    n_bins_per_log_unit = 15,
-) where {FT <: Real}
+    x_threshold::FT,
+    ::Val{n_bins} = Val(100),
+) where {n_bins, FT <: Real}
     (; n, θ) = dist
 
     f(x) = x^p1 * exp(-x / θ) * gamma_inc(p2 + 1, (x_threshold - x) / θ)[1] * gamma(p2 + 1)
 
     x_lowerbound = FT(min(1e-5, 1e-5 * x_threshold))
-    n_bins = floor(Int, n_bins_per_log_unit * log10(x_threshold / x_lowerbound))
-    logx = collect(range(log(x_lowerbound), log(x_threshold), n_bins + 1))
-    x = exp.(logx)
-    y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
-
+    x_min = log(x_lowerbound)
+    dx = (log(x_threshold) - log(x_lowerbound)) / n_bins
+    logx = StaticArrays.sacollect(SVector{n_bins + 1}, x_min + (j - 1) * dx for j in 1:(n_bins + 1))
+    y = StaticArrays.sacollect(
+        SVector{n_bins + 1},
+        j <= n_bins ? exp(logx[j]) * f(exp(logx[j])) : FT(0) for j in 1:(n_bins + 1)
+    )
     return n^2 * θ^(p2 - 1) * integrate_SimpsonEvenFast(logx, y)
 end
 
@@ -493,18 +496,21 @@ function moment_source_helper(
     dist::GammaPrimitiveParticleDistribution{FT},
     p1::FT,
     p2::FT,
-    x_threshold::FT;
-    n_bins_per_log_unit = 15,
-) where {FT <: Real}
+    x_threshold::FT,
+    ::Val{n_bins} = Val(100),
+) where {n_bins, FT <: Real}
     (; n, θ, k) = dist
 
     f(x) = x^(p1 + k - 1) * exp(-x / θ) * gamma_inc(p2 + k, (x_threshold - x) / θ)[1] * gamma(p2 + k)
 
     x_lowerbound = FT(min(1e-5, 1e-5 * x_threshold))
-    n_bins = floor(Int, n_bins_per_log_unit * log10(x_threshold / x_lowerbound))
-    logx = collect(range(log(x_lowerbound), log(x_threshold), n_bins + 1))
-    x = exp.(logx)
-    y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
+    x_min = log(x_lowerbound)
+    dx = (log(x_threshold) - log(x_lowerbound)) / n_bins
+    logx = StaticArrays.sacollect(SVector{n_bins + 1}, x_min + (j - 1) * dx for j in 1:(n_bins + 1))
+    y = StaticArrays.sacollect(
+        SVector{n_bins + 1},
+        j <= n_bins ? exp(logx[j]) * f(exp(logx[j])) : FT(0) for j in 1:(n_bins + 1)
+    )
     return n^2 * θ^(p2 - k) / gamma(k)^2 * integrate_SimpsonEvenFast(logx, y)
 end
 
@@ -551,17 +557,14 @@ end
 Returns the numerical integral, assuming evenly spaced points x. 
 This is a reimplementation from NumericalIntegration.jl which has outdated dependencies.
 """
-function integrate_SimpsonEvenFast(x::Vector{FT}, y::Vector{FT}) where {FT <: Real}
-    length(x) == length(y) || error("x and y vectors must be of the same length!")
-    length(x) ≥ 4 || error("vectors must contain at least 4 elements")
-    dx = x[2:end] - x[1:(end - 1)]
+function integrate_SimpsonEvenFast(x::SVector{K, FT}, y::SVector{K, FT}) where {K, FT <: Real}
+    K ≥ 4 || error("vectors must contain at least 4 elements")
+    dx = SVector{K - 1}(x[2:end] - x[1:(end - 1)])
     minimum(dx) ≈ maximum(dx) || error("x must be evenly spaced")
 
-    @inbounds retval =
+    @fastmath @inbounds retval =
+        sum(y[5:(K - 4)]) +
         (17 * (y[1] + y[end]) + 59 * (y[2] + y[end - 1]) + 43 * (y[3] + y[end - 2]) + 49 * (y[4] + y[end - 3])) / 48
-    @fastmath @inbounds for i in 5:(length(y) - 4)
-        retval += y[i]
-    end
     @inbounds return (x[2] - x[1]) * retval
 end
 
