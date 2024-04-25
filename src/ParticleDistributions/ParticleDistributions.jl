@@ -488,7 +488,7 @@ function moment_source_helper(
     x_min = log(x_lowerbound)
     dx = (log(x_threshold) - log(x_lowerbound)) / n_bins
     y_func(j) = j <= n_bins ? exp(logx(x_min, j, dx)) * f(exp(logx(x_min, j, dx))) : zero(typeof(dx))
-    return n^2 * θ^(p2 - 1) * integrate_SimpsonEvenFast(n_bins, x_min, dx, y_func)
+    return n^2 * θ^(p2 - 1) * integrate_SimpsonEvenFast(n_bins, dx, y_func)
 end
 
 function moment_source_helper(
@@ -510,7 +510,7 @@ function moment_source_helper(
     x_min = log(x_lowerbound)
     dx = (log(x_threshold) - log(x_lowerbound)) / n_bins
     y_func(j) = j <= n_bins ? exp(logx(x_min, j, dx)) * f(exp(logx(x_min, j, dx))) : zero(typeof(dx))
-    return n^2 * θ^(p2 - k) / γ_k^2 * integrate_SimpsonEvenFast(n_bins, x_min, dx, y_func)
+    return n^2 * θ^(p2 - k) / γ_k^2 * integrate_SimpsonEvenFast(n_bins, dx, y_func)
 end
 
 function moment_source_helper(
@@ -551,17 +551,18 @@ end
 """
   integrate_SimpsonEvenFast(x::AbstractVector, y::AbstractVector)
 
-  `x` - evenly spaced domain x
+  `n_bins` - number of evaluation points
+  `dx` - spacing of domain x
   `y` - desired function evaluated at the domain points x
 Returns the numerical integral, assuming evenly spaced points x. 
 This is a reimplementation from NumericalIntegration.jl which has outdated dependencies.
 """
-function integrate_SimpsonEvenFast(n_bins::Int, x_min::FT, dx::FT, y::F) where {FT <: Real, F}
+function integrate_SimpsonEvenFast(n_bins::Int, dx::FT, y::F) where {FT <: Real, F}
     n_bins ≥ 3 || error("n_bins must be at least 3")
     e = n_bins + 1
     retval =
-        sum(j-> y(j), 5:(n_bins-3); init = FT(0)) +
+        sum(j -> y(j), 5:(n_bins - 3); init = FT(0)) +
         (17 * (y(1) + y(e)) + 59 * (y(2) + y(e - 1)) + 43 * (y(3) + y(e - 2)) + 49 * (y(4) + y(e - 3))) / 48
-    return (logx(x_min, 2, dx) - logx(x_min, 1, dx)) * retval
+    return dx * retval
 end
 end #module ParticleDistributions.jl
