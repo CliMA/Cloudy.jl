@@ -32,7 +32,7 @@ end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
 kernel_n = get_normalized_kernel_func(kernel, norms)
 rhs = make_box_model_rhs(NumericalCoalStyle())
-ODE_parameters = (pdists = pdists, kernel_func = kernel, NProgMoms = NProgMoms, norms = norms, dt = dt)
+ODE_parameters = (pdists = pdists, kernel_func = kernel_n, NProgMoms = NProgMoms, norms = norms, dt = dt)
 prob = ODEProblem(rhs, dist_moments, tspan, ODE_parameters; progress = true)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 @show sol.u
