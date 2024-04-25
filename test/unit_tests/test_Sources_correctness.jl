@@ -1,6 +1,5 @@
 "Testing correctness of Sources modules, including Coalescence and Sedimentation"
 
-using Test
 using Cloudy
 using Cloudy.ParticleDistributions
 using Cloudy.EquationTypes
@@ -38,7 +37,7 @@ NumericalCoalStyle() isa NumericalCoalStyle
 ## Coalescence.jl
 ## Analytical cases
 # Constant kernel test (e.g, Smoluchowski 1916)
-function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
+function sm1916(n_steps, δt; is_kernel_function = true)
     # Parameters & initial condition
     kernel_func = (x, y) -> 1.0
     ker =
@@ -46,15 +45,15 @@ function sm1916(n_steps, δt; is_kernel_function = true, is_one_mode = true)
         CoalescenceTensor(SMatrix{1, 1}([1.0]))
 
     # Initial condition
-    mom = [1.0, 2.0]
+    mom = (1.0, 2.0)
     dist = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
     coal_data = CoalescenceData(ker, (nparams(dist[1]),))
 
     # Euler steps
     for i in 1:n_steps
-        ldist = (update_dist_from_moments(dist[1], Tuple(mom)),)
+        ldist = (update_dist_from_moments(dist[1], mom),)
         dmom = get_coal_ints(AnalyticalCoalStyle(), ldist, coal_data)
-        mom = tuple(δt * dmom .+ mom...)
+        mom = ntuple(2) do i δt * dmom[i] + mom[i] end
         dist = ldist
     end
 
@@ -85,12 +84,12 @@ dist = (
 )
 order = 1
 kernel = CoalescenceTensor((x, y) -> 5e-3 * (x + y), order, FT(10))
-NProgMoms = [nparams(d) for d in dist]
-thresholds = [FT(0.5), Inf]
-coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, dist_thresholds = thresholds)
+NProgMoms = (3, 2)
+thresholds = (FT(0.5), Inf)
+coal_data = CoalescenceData(kernel, NProgMoms, thresholds)
 
 # action
-update_coal_ints!(AnalyticalCoalStyle(), dist, coal_data)
+coal_ints = get_coal_ints(AnalyticalCoalStyle(), dist, coal_data)
 
 n_mom = maximum(NProgMoms) + order
 mom = zeros(FT, 2, n_mom)
@@ -142,22 +141,22 @@ for i in 1:2
             end
         end
 
-        ind = get_dist_moment_ind(NProgMoms, i, k + 1)
+        local ind = get_dist_moment_ind(collect(NProgMoms), i, k + 1)
         coal_int[ind] = temp
     end
 end
 
 # test
-@test coal_data.coal_ints[get_dist_moment_ind(NProgMoms, 1, 1)] ≈ coal_int[get_dist_moment_ind(NProgMoms, 1, 1)] rtol =
-    10 * eps(FT)
-@test coal_data.coal_ints[get_dist_moment_ind(NProgMoms, 1, 2)] ≈ coal_int[get_dist_moment_ind(NProgMoms, 1, 2)] rtol =
-    10 * eps(FT)
-@test coal_data.coal_ints[get_dist_moment_ind(NProgMoms, 1, 3)] ≈ coal_int[get_dist_moment_ind(NProgMoms, 1, 3)] rtol =
-    10 * eps(FT)
-@test coal_data.coal_ints[get_dist_moment_ind(NProgMoms, 2, 1)] ≈ coal_int[get_dist_moment_ind(NProgMoms, 2, 1)] rtol =
-    10 * eps(FT)
-@test coal_data.coal_ints[get_dist_moment_ind(NProgMoms, 2, 2)] ≈ coal_int[get_dist_moment_ind(NProgMoms, 2, 2)] rtol =
-    10 * eps(FT)
+ind = get_dist_moment_ind(collect(NProgMoms), 1, 1)
+@test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
+ind = get_dist_moment_ind(collect(NProgMoms), 1, 1)
+@test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
+ind = get_dist_moment_ind(collect(NProgMoms), 1, 3)
+@test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
+ind = get_dist_moment_ind(collect(NProgMoms), 2, 1)
+@test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
+ind = get_dist_moment_ind(collect(NProgMoms), 2, 2)
+@test coal_ints[ind] ≈ coal_int[ind] rtol = 10 * eps(FT)
 
 # Numerical cases
 # weighting function
@@ -220,36 +219,32 @@ for k in 1:3
     end
 end
 
-NProgMoms = [3, 3, 3]
-(Q, R, S, coal_ints, kernel_func) = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
+NProgMoms = (3, 3, 3)
+kernel_func = LinearKernelFunction(1.0)
+# moment_order = 1 (mass)
+Q = get_Q_coalescence_matrix(NumericalCoalStyle(), pdists, kernel_func)
+@test maximum(Q[2][end, :]) == 0.0
+@test minimum(Q[2][1, 2:end]) > 0.0
+R = get_R_coalescence_matrix(NumericalCoalStyle(), pdists, kernel_func)
+@test minimum(R[2]) > 0.0
+S = get_S_coalescence_matrix(NumericalCoalStyle(), pdists, kernel_func)
+@test S[2][2, end] == 0.0
+@test maximum(S[2]) > 0.0
 
-moment_order = 1
+# moment_order = 0 (number)
+(; Q, R, S) = get_coalescence_integral_moment_qrs(NumericalCoalStyle(), pdists, kernel_func)
+@test maximum(Q[1][end, :]) == 0.0
+@test minimum(Q[1][1, 2:end]) > 0.0
+@test minimum(R[1]) > 0.0
+@test S[1][2, end] == 0.0
+@test maximum(S[1]) > 0.0
 
-update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, kernel_func, Q)
-@test maximum(Q[end, :]) == 0.0
-@test minimum(Q[1, 2:end]) > 0.0
-update_R_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, kernel_func, R)
-@test minimum(R) > 0.0
-
-update_S_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, kernel_func, S)
-@test S[end, 2] == 0.0
-@test maximum(S) > 0.0
-
-moment_order = 0
-coal_data = initialize_coalescence_data(NumericalCoalStyle(), kernel, [3, 3, 3])
-get_coalescence_integral_moment_qrs!(NumericalCoalStyle(), moment_order, pdists, coal_data)
-@test maximum(Q[end, :]) == 0.0
-@test minimum(Q[1, 2:end]) > 0.0
-@test minimum(R) > 0.0
-@test S[end, 2] == 0.0
-@test maximum(S) > 0.0
-
-update_coal_ints!(NumericalCoalStyle(), pdists, coal_data)
-@test coal_data.coal_ints[get_dist_moment_ind(NProgMoms, 1, 1)] < 0.0
+coal_ints = get_coal_ints(NumericalCoalStyle(), pdists, kernel_func)
+@test coal_ints[get_dist_moment_ind(collect(NProgMoms), 1, 1)] < 0.0
 dM = zeros(Float64, 3)
 for i in 1:length(NProgMoms)
     for j in 1:3
-        dM[j] += coal_data.coal_ints[get_dist_moment_ind(NProgMoms, i, j)]
+        dM[j] += coal_ints[get_dist_moment_ind(collect(NProgMoms), i, j)]
     end
 end
 @test dM[1] < 0.0
