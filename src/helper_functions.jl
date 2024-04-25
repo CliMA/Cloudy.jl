@@ -27,7 +27,7 @@ end
 Returns range of indecies of the i'th distribution's moments in the long vector containing moments of all distributions
 """
 function get_dist_moments_ind_range(NProgMoms::NTuple, i::Int)
-    last_ind = sum(NProgMoms[1:(i - 1)])
+    last_ind = i == 1 ? 0 : sum(NProgMoms[1:(i - 1)])
     return (last_ind + 1):(last_ind + NProgMoms[i])
 end
 
@@ -37,16 +37,16 @@ end
   `norms` - vector containing scale of number and mass/volume of particles
 Returns normalizing factors of the vector of moments based on given scales of number and mass/volume of particles
 """
-function get_moments_normalizing_factors(NProgMoms::AbstractArray{Int}, norms::Tuple{FT, FT}) where {FT <: Real}
-    @assert all(norms .> FT(0))
-    norm = zeros(FT, sum(NProgMoms))
-    n_dist = length(NProgMoms)
-    for (i, n_mom) in enumerate(NProgMoms)
-        for j in 1:n_mom
-            norm[get_dist_moment_ind(NProgMoms, i, j)] = norms[1] * norms[2]^(j - 1)
-        end
+function get_moments_normalizing_factors(NProgMoms::NTuple{N, Int}, norms::Tuple{FT, FT}) where {N, FT <: Real}
+    if norms[1] <=0 || norms[2] <= 0
+        error("norms must be positive!")
     end
-    return norm
+
+    return rflatten(ntuple(length(NProgMoms)) do i
+        ntuple(NProgMoms[i]) do j
+            norms[1] * norms[2]^(j - 1)
+        end
+    end)
 end
 
 rflatten(tup::Tuple) = (rflatten(Base.first(tup))..., rflatten(Base.tail(tup))...)
