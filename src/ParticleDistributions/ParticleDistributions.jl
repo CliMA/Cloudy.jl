@@ -12,6 +12,7 @@ module ParticleDistributions
 using SpecialFunctions: gamma, gamma_inc
 using DocStringExtensions
 using QuadGK
+using StaticArrays
 
 # particle mass distributions available for microphysics
 export AbstractParticleDistribution
@@ -469,43 +470,47 @@ function moment_source_helper(
     return (dist.θ < x_threshold / 2) ? dist.n^2 * dist.θ^(p1 + p2) : FT(0)
 end
 
+logx(x_min::FT, j::Int, dx::FT) where {FT} = x_min + (j - 1) * dx
 function moment_source_helper(
     dist::ExponentialPrimitiveParticleDistribution{FT},
     p1::FT,
     p2::FT,
-    x_threshold::FT;
-    n_bins_per_log_unit = 15,
+    x_threshold::FT,
+    n_bins_per_log_unit::Int = 15,
 ) where {FT <: Real}
     (; n, θ) = dist
+    γ_p2k = gamma(p2 + 1)
 
-    f(x) = x^p1 * exp(-x / θ) * gamma_inc(p2 + 1, (x_threshold - x) / θ)[1] * gamma(p2 + 1)
+    f(x) = x^p1 * exp(-x / θ) * gamma_inc(p2 + 1, (x_threshold - x) / θ)[1] * γ_p2k
 
-    x_lowerbound = FT(min(1e-5, 1e-5 * x_threshold))
+    x_lowerbound = FT(min(FT(1e-5), FT(1e-5) * x_threshold))
     n_bins = floor(Int, n_bins_per_log_unit * log10(x_threshold / x_lowerbound))
-    logx = collect(range(log(x_lowerbound), log(x_threshold), n_bins + 1))
-    x = exp.(logx)
-    y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
-
-    return n^2 * θ^(p2 - 1) * integrate_SimpsonEvenFast(logx, y)
+    x_min = log(x_lowerbound)
+    dx = (log(x_threshold) - log(x_lowerbound)) / n_bins
+    y_func(j) = j <= n_bins ? exp(logx(x_min, j, dx)) * f(exp(logx(x_min, j, dx))) : zero(typeof(dx))
+    return n^2 * θ^(p2 - 1) * integrate_SimpsonEvenFast(n_bins, dx, y_func)
 end
 
 function moment_source_helper(
     dist::GammaPrimitiveParticleDistribution{FT},
     p1::FT,
     p2::FT,
-    x_threshold::FT;
-    n_bins_per_log_unit = 15,
+    x_threshold::FT,
+    n_bins_per_log_unit::Int = 15,
 ) where {FT <: Real}
     (; n, θ, k) = dist
+    γ_k = gamma(k)
+    γ_p2k = gamma(p2 + k)
 
-    f(x) = x^(p1 + k - 1) * exp(-x / θ) * gamma_inc(p2 + k, (x_threshold - x) / θ)[1] * gamma(p2 + k)
+    # Note that gamma_inc is the source of evil allocations this time
+    f(x) = x^(p1 + k - 1) * exp(-x / θ) * gamma_inc(p2 + k, (x_threshold - x) / θ)[1] * γ_p2k
 
-    x_lowerbound = FT(min(1e-5, 1e-5 * x_threshold))
+    x_lowerbound = FT(min(FT(1e-5), FT(1e-5) * x_threshold))
     n_bins = floor(Int, n_bins_per_log_unit * log10(x_threshold / x_lowerbound))
-    logx = collect(range(log(x_lowerbound), log(x_threshold), n_bins + 1))
-    x = exp.(logx)
-    y = [x[1:(end - 1)] .* f.(x[1:(end - 1)]); FT(0)]
-    return n^2 * θ^(p2 - k) / gamma(k)^2 * integrate_SimpsonEvenFast(logx, y)
+    x_min = log(x_lowerbound)
+    dx = (log(x_threshold) - log(x_lowerbound)) / n_bins
+    y_func(j) = j <= n_bins ? exp(logx(x_min, j, dx)) * f(exp(logx(x_min, j, dx))) : zero(typeof(dx))
+    return n^2 * θ^(p2 - k) / γ_k^2 * integrate_SimpsonEvenFast(n_bins, dx, y_func)
 end
 
 function moment_source_helper(
@@ -546,23 +551,18 @@ end
 """
   integrate_SimpsonEvenFast(x::AbstractVector, y::AbstractVector)
 
-  `x` - evenly spaced domain x
+  `n_bins` - number of evaluation points
+  `dx` - spacing of domain x
   `y` - desired function evaluated at the domain points x
 Returns the numerical integral, assuming evenly spaced points x. 
 This is a reimplementation from NumericalIntegration.jl which has outdated dependencies.
 """
-function integrate_SimpsonEvenFast(x::Vector{FT}, y::Vector{FT}) where {FT <: Real}
-    length(x) == length(y) || error("x and y vectors must be of the same length!")
-    length(x) ≥ 4 || error("vectors must contain at least 4 elements")
-    dx = x[2:end] - x[1:(end - 1)]
-    minimum(dx) ≈ maximum(dx) || error("x must be evenly spaced")
-
-    @inbounds retval =
-        (17 * (y[1] + y[end]) + 59 * (y[2] + y[end - 1]) + 43 * (y[3] + y[end - 2]) + 49 * (y[4] + y[end - 3])) / 48
-    @fastmath @inbounds for i in 5:(length(y) - 4)
-        retval += y[i]
-    end
-    @inbounds return (x[2] - x[1]) * retval
+function integrate_SimpsonEvenFast(n_bins::Int, dx::FT, y::F) where {FT <: Real, F}
+    n_bins ≥ 3 || error("n_bins must be at least 3")
+    e = n_bins + 1
+    retval =
+        sum(j -> y(j), 5:(n_bins - 3); init = FT(0)) +
+        (17 * (y(1) + y(e)) + 59 * (y(2) + y(e - 1)) + 43 * (y(3) + y(e - 2)) + 49 * (y(4) + y(e - 3))) / 48
+    return dx * retval
 end
-
 end #module ParticleDistributions.jl
