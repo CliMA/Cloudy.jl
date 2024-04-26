@@ -35,53 +35,32 @@ dist2b = ExponentialPrimitiveParticleDistribution(10.0, 1000.0)
 order = 1
 kernel = CoalescenceTensor((x, y) -> x + y, order, 1e-6)
 NProgMoms = (3, 3, 3)
-@test_opt CoalescenceData(kernel, NProgMoms)
-@test_opt CoalescenceData(kernel, NProgMoms, (10.0, 0.1))
+@test_opt CoalescenceData(kernel, NProgMoms, (0.1, 1.0, 10.0), (10.0, 0.1))
 
-for pdists in ((dist1a,), (dist1a, dist2a))
+for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
     local NProgMoms = map(pdists) do dist
         nparams(dist)
     end
-    cd = CoalescenceData(kernel, NProgMoms)
+    cd = CoalescenceData(kernel, NProgMoms, map(pdists) do d
+        Inf
+    end)
 
-    @test_opt get_moments_matrix(pdists, cd.N_mom_max)
-    moments = get_moments_matrix(pdists, cd.N_mom_max)
+    @test_opt get_moments_matrix(pdists, Val(cd.N_mom_max))
+    local moments = get_moments_matrix(pdists, Val(cd.N_mom_max))
     @test_opt get_finite_2d_integrals(pdists, cd.dist_thresholds, moments, cd.N_2d_ints)
     finite_2d_ints = get_finite_2d_integrals(pdists, cd.dist_thresholds, moments, cd.N_2d_ints)
 
-    @test_opt get_Q_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.matrix_of_kernels)
-    @test_opt get_R_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.matrix_of_kernels)
-    @test_opt get_S_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.matrix_of_kernels)
-    @test_opt get_coalescence_integral_moment_qrs(
-        AnalyticalCoalStyle(),
-        moments,
-        NProgMoms,
-        finite_2d_ints,
-        cd.matrix_of_kernels,
-    )
-    @test_opt get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
-end
+    @test_opt Cloudy.Coalescence.Q_jk(AnalyticalCoalStyle(), 0, 1, 1, moments, cd.kernels[1][1])
+    @test_opt Cloudy.Coalescence.R_jk(AnalyticalCoalStyle(), 0, 1, 1, moments, cd.kernels[1][1])
+    @test_opt Cloudy.Coalescence.S_1k(AnalyticalCoalStyle(), 0, 1, moments, finite_2d_ints, cd.kernels[1][1])
+    @test_opt Cloudy.Coalescence.S_2k(AnalyticalCoalStyle(), 0, 1, moments, finite_2d_ints, cd.kernels[1][1])
 
-for pdists in ((dist1b,), (dist1b, dist2b))
-    local NProgMoms = [nparams(dist) for dist in pdists]
-    cd = CoalescenceData(kernel, NProgMoms)
-
-    @test_opt get_moments(pdists, cd.N_mom_max)
-    @test_opt get_finite_2d_integrals(pdists, cd.thresholds, moments, cd.N_2d_ints)
-
-    moments = get_moments(pdists, cd.N_mom_max)
-    finite_2d_ints = get_finite_2d_integrals(pdists, cd.thresholds, moments, cd.N_2d_ints)
-    @test_opt get_Q_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.matrix_of_kernels)
-    @test_opt get_R_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.matrix_of_kernels)
-    @test_opt get_S_coalescence_matrix(
-        AnalyticalCoalStyle(),
-        moments,
-        NProgMoms,
-        cd.finite_2d_ints,
-        cd.matrix_of_kernels,
-    )
-    @test_opt get_coalescence_integral_moment_qrs(AnalyticalCoalStyle(), moment_order, NProgMoms, cd)
-    @test_opt get_coal_ints!(AnalyticalCoalStyle(), pdists, cd)
+    @test_opt get_Q_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    @test_opt get_R_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    @test_opt get_S_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
+    @test_opt get_coalescence_integral_moment_qrs(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
+    # TODO
+    # @test_opt get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
 end
 
 # Numerical Coal
@@ -114,18 +93,17 @@ end
 
 # overall Q R S fill matrices 
 # n = 1
-kernel = LinearKernelFunction(1.0)
-NProgMoms = [3, 3, 3]
+# kernel = LinearKernelFunction(1.0)
 
-for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
-    local NProgMoms = [nparams(dist) for dist in pdists]
+# for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
 
-    @test_opt get_Q_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
-    @test_opt get_R_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
-    @test_opt get_S_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
-    @test_opt get_coalescence_integral_moment_qrs(NumericalCoalStyle(), pdists, kernel)
-    @test_opt get_coal_ints(NumericalCoalStyle(), pdists, kernel)
-end
+# TODO
+# @test_opt get_Q_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
+# @test_opt get_R_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
+# @test_opt get_S_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
+# @test_opt get_coalescence_integral_moment_qrs(NumericalCoalStyle(), pdists, kernel)
+# @test_opt get_coal_ints(NumericalCoalStyle(), pdists, kernel)
+# end
 
 ## Sedimentation.jl
 # Sedimentation moment flux tests

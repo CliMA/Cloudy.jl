@@ -47,7 +47,7 @@ function sm1916(n_steps, δt; is_kernel_function = true)
     # Initial condition
     mom = (1.0, 2.0)
     dist = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
-    coal_data = CoalescenceData(ker, (nparams(dist[1]),))
+    coal_data = CoalescenceData(ker, (nparams(dist[1]),), (Inf,))
 
     # Euler steps
     for i in 1:n_steps
