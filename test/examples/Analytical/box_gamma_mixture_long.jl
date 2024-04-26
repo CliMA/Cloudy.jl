@@ -18,13 +18,15 @@ dist_init = (
 
 # Solver
 kernel_func = LongKernelFunction(5.236e-10, 9.44e9, 5.78) # 5.236e-10 kg; 9.44e9 m^3/kg^2/s; 5.78 m^3/kg/s
-matrix_of_kernels = SMatrix{2, 2, CoalescenceTensor{3, FT}}(ntuple(4) do i
-    if i == 1
-        CoalescenceTensor(kernel_func, 2, FT(5e-10))
-    else
-        CoalescenceTensor(kernel_func, 2, FT(1e-6), FT(5e-10))
+matrix_of_kernels = ntuple(2) do i
+    ntuple(2) do j
+        if i == j == 1
+            CoalescenceTensor(kernel_func, 2, FT(5e-10))
+        else
+            CoalescenceTensor(kernel_func, 2, FT(1e-6), FT(5e-10))
+        end
     end
-end)
+end
 tspan = (FT(0), FT(120))
 NProgMoms = map(dist_init) do dist
     nparams(dist)
