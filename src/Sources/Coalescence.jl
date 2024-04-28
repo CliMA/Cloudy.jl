@@ -419,108 +419,84 @@ function get_coalescence_integral_moment_qrs(
     )
 end
 
-function get_Q_coalescence_matrix(
-    ::NumericalCoalStyle,
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
-    kernel::CoalescenceKernelFunction{FT},
-) where {N, FT <: Real}
-    NProgMoms = map(pdists) do dist
-        nparams(dist)
-    end
-    return ntuple(maximum(NProgMoms)) do i
+function get_Q_coalescence_matrix(::NumericalCoalStyle, pdists, kernel)
+    Ndist = length(pdists)
+    FT = eltype(pdists[1])
+    return ntuple(3) do i
         moment_order = i - 1
-        SMatrix{N, N, FT}(
-            rflatten(
-                ntuple(N) do k
-                    ntuple(N) do j
-                        if k <= j || NProgMoms[k] <= moment_order
-                            FT(0)
-                        else
-                            quadgk(
-                                x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order),
-                                0.0,
-                                Inf;
-                                rtol = 1e-8,
-                                maxevals = 1000,
-                            )[1]
-                        end
-                    end
-                end,
-            ),
-        )
+        Q = zeros(FT, Ndist, Ndist)
+        for j in 1:Ndist
+            for k in (j + 1):Ndist
+                if k <= j || nparams(pdists[k]) <= moment_order
+                    continue
+                else
+                    Q[j, k] = quadgk(
+                        x -> q_integrand_outer(x, j, k, kernel, pdists, moment_order),
+                        0.0,
+                        Inf;
+                        rtol = 1e-8,
+                        maxevals = 1000,
+                    )[1]
+                end
+            end
+        end
+        Q
     end
 end
 
-function get_R_coalescence_matrix(
-    ::NumericalCoalStyle,
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
-    kernel::CoalescenceKernelFunction{FT},
-) where {N, FT <: Real}
-    NProgMoms = map(pdists) do dist
-        nparams(dist)
-    end
-    return ntuple(maximum(NProgMoms)) do i
+function get_R_coalescence_matrix(::NumericalCoalStyle, pdists, kernel)
+    Ndist = length(pdists)
+    FT = eltype(pdists[1])
+    return ntuple(3) do i
         moment_order = i - 1
-        SMatrix{N, N, FT}(
-            rflatten(
-                ntuple(N) do k
-                    ntuple(N) do j
-                        if NProgMoms[k] <= moment_order
-                            FT(0)
-                        else
-                            quadgk(
-                                x -> r_integrand_outer(x, j, k, kernel, pdists, moment_order),
-                                0.0,
-                                Inf;
-                                rtol = 1e-8,
-                                maxevals = 1000,
-                            )[1]
-                        end
-                    end
-                end,
-            ),
-        )
+        R = zeros(FT, Ndist, Ndist)
+        for j in 1:Ndist
+            for k in 1:Ndist
+                if nparams(pdists[k]) <= moment_order
+                    continue
+                end
+                R[j, k] = quadgk(
+                    x -> r_integrand_outer(x, j, k, kernel, pdists, moment_order),
+                    0.0,
+                    Inf;
+                    rtol = 1e-8,
+                    maxevals = 1000,
+                )[1]
+            end
+        end
+        R
     end
 end
 
-function get_S_coalescence_matrix(
-    ::NumericalCoalStyle,
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
-    kernel::CoalescenceKernelFunction{FT},
-) where {N, FT <: Real}
-    NProgMoms = map(pdists) do dist
-        nparams(dist)
-    end
-    return ntuple(maximum(NProgMoms)) do i
+function get_S_coalescence_matrix(::NumericalCoalStyle, pdists, kernel)
+    Ndist = length(pdists)
+    FT = eltype(pdists[1])
+    return ntuple(3) do i
         moment_order = i - 1
-        SMatrix{2, N, FT}(
-            rflatten(
-                ntuple(N) do k
-                    if k < N && NProgMoms[k] <= moment_order && NProgMoms[k + 1] <= moment_order
-                        (FT(0), FT(0))
-                    elseif k == N && NProgMoms[k] <= moment_order
-                        (FT(0), FT(0))
-                    else
-                        (
-                            quadgk(
-                                x -> s_integrand1(x, k, kernel, pdists, moment_order),
-                                0.0,
-                                Inf;
-                                rtol = 1e-8,
-                                maxevals = 1000,
-                            )[1],
-                            quadgk(
-                                x -> s_integrand2(x, k, kernel, pdists, moment_order),
-                                0.0,
-                                Inf;
-                                rtol = 1e-8,
-                                maxevals = 1000,
-                            )[1],
-                        )
-                    end
-                end,
-            ),
-        )
+        S = zeros(FT, 2, Ndist)
+        for k in 1:Ndist
+            if k < Ndist && nparams(pdists[k]) <= moment_order && nparams(pdists[k + 1]) <= moment_order
+                continue
+            elseif k == Ndist && nparams(pdists[k]) <= moment_order
+                continue
+            else
+                S[1, k] = quadgk(
+                    x -> s_integrand1(x, k, kernel, pdists, moment_order),
+                    0.0,
+                    Inf;
+                    rtol = 1e-8,
+                    maxevals = 1000,
+                )[1]
+                S[1, k] = quadgk(
+                    x -> s_integrand2(x, k, kernel, pdists, moment_order),
+                    0.0,
+                    Inf;
+                    rtol = 1e-8,
+                    maxevals = 1000,
+                )[1]
+            end
+        end
+        S
     end
 end
 
