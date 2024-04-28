@@ -39,7 +39,7 @@ CoalescenceData(kernel, NProgMoms, dist_thresholds, norms)
   - `dist_thresholds`: PSD upper thresholds for computing S terms
   - `norms`: a two-element tuple containing normalizing factors for number and mass
 """
-struct CoalescenceData{N, P, FT}
+struct CoalescenceData{N, P, FT, T}
     "maximum number of moments that need to be precomputed before computing Q, R, S"
     N_mom_max::Int
     "number of 2d integrals that need to be precomputed before computing S"
@@ -47,14 +47,14 @@ struct CoalescenceData{N, P, FT}
     "mass thresholds of distributions for the computation of S term"
     dist_thresholds::NTuple{N, FT}
     "matrix containing coalescence tensors for pairs of distributions"
-    kernels::NTuple{N, NTuple{N, CoalescenceTensor{P, FT}}}
+    kernels::NTuple{N, NTuple{N, CoalescenceTensor{P, FT, T}}}
 
     function CoalescenceData(
-        kernel::NTuple{N, NTuple{N, CoalescenceTensor{P, FT}}},
+        kernel::NTuple{N, NTuple{N, CoalescenceTensor{P, FT, T}}},
         NProgMoms::NTuple{N, Int},
         dist_thresholds::NTuple{N, FT},
         norms::Tuple{FT, FT} = (FT(1), FT(1)),
-    ) where {N, P, FT <: Real}
+    ) where {N, P, T, FT <: Real}
 
         kernels = ntuple(N) do j
             ntuple(N) do k
@@ -75,15 +75,15 @@ struct CoalescenceData{N, P, FT}
             dist_thresholds[i] / norms[2]
         end
 
-        new{N, P, FT}(N_mom_max, N_2d_ints, thresholds, kernels)
+        new{N, P, FT, T}(N_mom_max, N_2d_ints, thresholds, kernels)
     end
 
     function CoalescenceData(
-        kernel::CoalescenceTensor{P, FT},
+        kernel::CoalescenceTensor{P, FT, T},
         NProgMoms::NTuple{N, Int},
         dist_thresholds::NTuple{N, FT},
         norms::Tuple{FT, FT} = (FT(1), FT(1)),
-    ) where {N, P, FT <: Real}
+    ) where {N, P, T, FT <: Real}
 
         kernel_ = get_normalized_kernel_tensor(kernel, norms)
         kernels = ntuple(N) do j
@@ -114,7 +114,7 @@ function get_coal_ints(
         nparams(dist)
     end
 
-    moments = get_moments_matrix(pdists, Val(coal_data.N_mom_max))
+    moments = get_moments_matrix(pdists, Val(P + 2), coal_data.N_mom_max)
     finite_2d_ints = get_finite_2d_integrals(pdists, coal_data.dist_thresholds, moments, coal_data.N_2d_ints)
     (; Q, R, S) = get_coalescence_integral_moment_qrs(cs, moments, NProgMoms, finite_2d_ints, coal_data.kernels)
 
@@ -130,10 +130,14 @@ function get_coal_ints(
     return rflatten(coal_ints)
 end
 
-function get_moments_matrix(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, ::Val{M}) where {N, M, FT <: Real}
+function get_moments_matrix(
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
+    ::Val{M},
+    N_mom_max::Int,
+) where {N, M, FT <: Real}
     moments = ntuple(M) do j
         ntuple(N) do i
-            moment(pdists[i], FT(j - 1))
+            j <= N_mom_max ? moment(pdists[i], FT(j - 1)) : FT(0)
         end
     end
     return SMatrix{N, M, FT}(rflatten(moments))
@@ -198,7 +202,7 @@ function get_Q_coalescence_matrix(
     kernels::NTuple{N, NTuple{N, CoalescenceTensor{P, FT}}},
 ) where {N, M, P, FT <: Real}
 
-    return ntuple(maximum(NProgMoms)) do i
+    return ntuple(3) do i
         moment_order = i - 1
         SMatrix{N, N, FT}(rflatten(ntuple(N) do k
             ntuple(N) do j
@@ -248,7 +252,7 @@ function get_R_coalescence_matrix(
     kernel::NTuple{N, NTuple{N, CoalescenceTensor{P, FT}}},
 ) where {N, M, P, FT <: Real}
 
-    return ntuple(maximum(NProgMoms)) do i
+    return ntuple(3) do i
         moment_order = i - 1
         SMatrix{N, N, FT}(rflatten(ntuple(N) do k
             ntuple(N) do j
@@ -287,7 +291,7 @@ function get_S_coalescence_matrix(
     kernels::NTuple{N, NTuple{N, CoalescenceTensor{P, FT}}},
 ) where {N, M, P, FT <: Real}
 
-    return ntuple(maximum(NProgMoms)) do i
+    return ntuple(3) do i
         moment_order = i - 1
         SMatrix{2, N, FT}(
             rflatten(

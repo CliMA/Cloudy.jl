@@ -45,8 +45,8 @@ for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
         Inf
     end)
 
-    @test_opt get_moments_matrix(pdists, Val(cd.N_mom_max))
-    local moments = get_moments_matrix(pdists, Val(cd.N_mom_max))
+    @test_opt get_moments_matrix(pdists, Val(cd.N_mom_max), cd.N_mom_max)
+    moments = get_moments_matrix(pdists, Val(cd.N_mom_max), cd.N_mom_max)
     @test_opt get_finite_2d_integrals(pdists, cd.dist_thresholds, moments, cd.N_2d_ints)
     finite_2d_ints = get_finite_2d_integrals(pdists, cd.dist_thresholds, moments, cd.N_2d_ints)
 
@@ -59,8 +59,7 @@ for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
     @test_opt get_R_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
     @test_opt get_S_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
     @test_opt get_coalescence_integral_moment_qrs(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
-    # TODO
-    # @test_opt get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
+    @test_opt get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
 end
 
 # Numerical Coal
@@ -92,17 +91,16 @@ for pdists in ((dist1a, dist2a), (dist1b, dist2b))
 end
 
 # overall Q R S fill matrices 
-# n = 1
 # kernel = LinearKernelFunction(1.0)
 
 # for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
 
-# TODO
-# @test_opt get_Q_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
-# @test_opt get_R_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
-# @test_opt get_S_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
-# @test_opt get_coalescence_integral_moment_qrs(NumericalCoalStyle(), pdists, kernel)
-# @test_opt get_coal_ints(NumericalCoalStyle(), pdists, kernel)
+#     @test_opt get_Q_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
+#     @test_opt get_R_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
+#     @test_opt get_S_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
+#     @test_opt get_coalescence_integral_moment_qrs(NumericalCoalStyle(), pdists, kernel)
+#     @test_opt get_coal_ints(NumericalCoalStyle(), pdists, kernel)
+
 # end
 
 ## Sedimentation.jl
