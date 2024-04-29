@@ -27,13 +27,16 @@ export get_coal_ints
 Represents data needed for coalesce computations. N is the number of distributions.
 
 # Constructors
-CoalescenceData(kernel, NProgMoms, dist_thresholds, norms)
+
+    CoalescenceData(kernel, NProgMoms, dist_thresholds, norms)
+  
   - `kernel`: Array of kernel tensors that determine rate of coalescence based on pair of distributions and size of particles x, y
   - `NProgMoms`: Array containing number of prognostic moments associated with each distribution
   - `dist_thresholds`: PSD upper thresholds for computing S terms
   - `norms`: a two-element tuple containing normalizing factors for number and mass
 
-CoalescenceData(kernel, NProgMoms, dist_thresholds, norms)
+    CoalescenceData(kernel, NProgMoms, dist_thresholds, norms)
+  
   - `kernel`: kernel tensor applied to all distributions
   - `NProgMoms`: Array containing number of prognostic moments associated with each distribution
   - `dist_thresholds`: PSD upper thresholds for computing S terms
@@ -97,7 +100,7 @@ struct CoalescenceData{N, P, FT, T}
 end
 
 """
-get_coal_ints(::AnalyticalCoalStyle, pdists::Array{ParticleDistribution{FT}}, coal_data::NamedTuple)
+    get_coal_ints(::AnalyticalCoalStyle, pdists::Array{ParticleDistribution{FT}}, coal_data::NamedTuple)
 
   - `pdists`: array of PSD subdistributions
   - `coal_data`: coalescence data struct
@@ -374,14 +377,14 @@ end
 
 
 """
-get_coal_ints(
-    cs::NumericalCoalStyle,
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
-    kernel_func::CoalescenceKernelFunction{FT},
+    get_coal_ints(
+        cs::NumericalCoalStyle,
+        pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
+        kernel_func::CoalescenceKernelFunction{FT},
     )
 
-    - pdists: array of PSD subdistributions 
-    - kernel_func: K(x,y) function that determines rate of coalescence based on size of particles x, y
+  - pdists: array of PSD subdistributions 
+  - kernel_func: K(x,y) function that determines rate of coalescence based on size of particles x, y
     
 Updates the collision-coalescence integrals.
 """
