@@ -70,18 +70,18 @@ for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
     get_S_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
     get_coalescence_integral_moment_qrs(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
     get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
-    @test 3000 >= @allocated get_Q_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
-    @test 3000 >= @allocated get_R_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
-    @test 5000 >=
+    @test 432 >= @allocated get_Q_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    @test 432 >= @allocated get_R_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    @test 432 >=
           @allocated get_S_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
-    @test 6000 >= @allocated get_coalescence_integral_moment_qrs(
+    @test 624 >= @allocated get_coalescence_integral_moment_qrs(
         AnalyticalCoalStyle(),
         moments,
         NProgMoms,
         finite_2d_ints,
         cd.kernels,
     )
-    @test 6000 >= @allocated get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
+    @test 64 >= @allocated get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
 end
 
 # Numerical Coal

@@ -226,25 +226,24 @@ function Q_jk(
     moments::SMatrix{N, M, FT},
     kernel::CoalescenceTensor{P, FT},
 ) where {N, M, P, FT <: Real}
+    init = FT(0)
     return sum(
         ntuple(P) do a1
             a = a1 - 1
             sum(
                 ntuple(P) do b1
                     b = b1 - 1
-                    sum(
-                        map(1:(moment_order + 1)) do c1
+                    sum(1:(moment_order + 1); init) do c1
                             c = c1 - 1
                             kernel.c[a + 1, b + 1] *
                             binomial(moment_order, c) *
                             moments[j, a + c + 1] *
                             moments[k, b + moment_order - c + 1]
-                        end,
-                    )
+                        end
                 end,
             )
         end,
-    )
+        )
 end
 
 function get_R_coalescence_matrix(
@@ -322,21 +321,20 @@ function S_1k(
     finite_2d_ints::NTuple{N, SMatrix},
     kernel::CoalescenceTensor{P, FT},
 ) where {N, M, P, FT <: Real}
+    init = FT(0)
     return sum(
         ntuple(P) do a1
             a = a1 - 1
             sum(
                 ntuple(P) do b1
                     b = b1 - 1
-                    sum(
-                        map(1:(moment_order + 1)) do c1
+                    sum(1:(moment_order + 1); init) do c1
                             c = c1 - 1
                             0.5 *
                             kernel.c[a + 1, b + 1] *
                             binomial(moment_order, c) *
                             finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
-                        end,
-                    )
+                        end
                 end,
             )
         end,
@@ -351,14 +349,14 @@ function S_2k(
     finite_2d_ints::NTuple{N, SMatrix},
     kernel::CoalescenceTensor{P, FT},
 ) where {N, M, P, FT <: Real}
+    init = FT(0)
     return sum(
         ntuple(P) do a1
             a = a1 - 1
             sum(
                 ntuple(P) do b1
                     b = b1 - 1
-                    sum(
-                        map(1:(moment_order + 1)) do c1
+                    sum(1:(moment_order + 1); init) do c1
                             c = c1 - 1
                             0.5 *
                             kernel.c[a + 1, b + 1] *
@@ -367,8 +365,7 @@ function S_2k(
                                 moments[k, a + c + 1] * moments[k, b + moment_order - c + 1] -
                                 finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
                             )
-                        end,
-                    )
+                        end
                 end,
             )
         end,
