@@ -49,7 +49,7 @@ axis and analytic expressions for moments and partial moments.
 """
 abstract type PrimitiveParticleDistribution{FT} <: AbstractParticleDistribution{FT} end
 
-eltype(::PrimitiveParticleDistribution{FT}) where {FT} = FT
+Base.eltype(::PrimitiveParticleDistribution{FT}) where {FT} = FT
 
 """
   ExponentialPrimitiveParticleDistribution{FT} <: PrimitiveParticleDistribution{FT}
