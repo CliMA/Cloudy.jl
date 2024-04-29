@@ -85,10 +85,9 @@ struct CoalescenceData{N, P, FT, T}
         norms::Tuple{FT, FT} = (FT(1), FT(1)),
     ) where {N, P, T, FT <: Real}
 
-        kernel_ = get_normalized_kernel_tensor(kernel, norms)
         kernels = ntuple(N) do j
             ntuple(N) do k
-                kernel_
+                kernel
             end
         end
 
