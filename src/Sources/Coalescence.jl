@@ -234,16 +234,16 @@ function Q_jk(
                 ntuple(P) do b1
                     b = b1 - 1
                     sum(1:(moment_order + 1); init) do c1
-                            c = c1 - 1
-                            kernel.c[a + 1, b + 1] *
-                            binomial(moment_order, c) *
-                            moments[j, a + c + 1] *
-                            moments[k, b + moment_order - c + 1]
-                        end
+                        c = c1 - 1
+                        kernel.c[a + 1, b + 1] *
+                        binomial(moment_order, c) *
+                        moments[j, a + c + 1] *
+                        moments[k, b + moment_order - c + 1]
+                    end
                 end,
             )
         end,
-        )
+    )
 end
 
 function get_R_coalescence_matrix(
@@ -329,12 +329,12 @@ function S_1k(
                 ntuple(P) do b1
                     b = b1 - 1
                     sum(1:(moment_order + 1); init) do c1
-                            c = c1 - 1
-                            0.5 *
-                            kernel.c[a + 1, b + 1] *
-                            binomial(moment_order, c) *
-                            finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
-                        end
+                        c = c1 - 1
+                        0.5 *
+                        kernel.c[a + 1, b + 1] *
+                        binomial(moment_order, c) *
+                        finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
+                    end
                 end,
             )
         end,
@@ -357,15 +357,15 @@ function S_2k(
                 ntuple(P) do b1
                     b = b1 - 1
                     sum(1:(moment_order + 1); init) do c1
-                            c = c1 - 1
-                            0.5 *
-                            kernel.c[a + 1, b + 1] *
-                            binomial(moment_order, c) *
-                            (
-                                moments[k, a + c + 1] * moments[k, b + moment_order - c + 1] -
-                                finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
-                            )
-                        end
+                        c = c1 - 1
+                        0.5 *
+                        kernel.c[a + 1, b + 1] *
+                        binomial(moment_order, c) *
+                        (
+                            moments[k, a + c + 1] * moments[k, b + moment_order - c + 1] -
+                            finite_2d_ints[k][a + c + 1, b + moment_order - c + 1]
+                        )
+                    end
                 end,
             )
         end,
