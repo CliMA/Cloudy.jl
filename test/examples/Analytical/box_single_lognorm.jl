@@ -16,9 +16,11 @@ dist_init = (LognormalPrimitiveParticleDistribution(FT(1e6), -20.233, 0.637),) #
 kernel_func = (x, y) -> 5 * (x + y) # 5 m^3/kg/s; x, y in kg
 kernel = CoalescenceTensor(kernel_func, 1, FT(1e-6))
 tspan = (FT(0), FT(1000))
-NProgMoms = [nparams(dist) for dist in dist_init]
+NProgMoms = map(dist_init) do dist
+    nparams(dist)
+end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
-coal_data = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = norms)
+coal_data = CoalescenceData(kernel, NProgMoms, (Inf,), norms)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
 ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(10))
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)

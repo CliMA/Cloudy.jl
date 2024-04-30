@@ -1,6 +1,7 @@
 "Box model with two gamma modes and using Long's kernel"
 
 using DifferentialEquations
+using StaticArrays
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")
@@ -17,19 +18,21 @@ dist_init = (
 
 # Solver
 kernel_func = LongKernelFunction(5.236e-10, 9.44e9, 5.78) # 5.236e-10 kg; 9.44e9 m^3/kg^2/s; 5.78 m^3/kg/s
-matrix_of_kernels = Array{CoalescenceTensor{3, FT, 9}}(undef, 2, 2)
-matrix_of_kernels .= CoalescenceTensor(kernel_func, 2, FT(1e-6), FT(5e-10))
-matrix_of_kernels[1, 1] = CoalescenceTensor(kernel_func, 2, FT(5e-10))
+matrix_of_kernels = ntuple(2) do i
+    ntuple(2) do j
+        if i == j == 1
+            CoalescenceTensor(kernel_func, 2, FT(5e-10))
+        else
+            CoalescenceTensor(kernel_func, 2, FT(1e-6), FT(5e-10))
+        end
+    end
+end
 tspan = (FT(0), FT(120))
-NProgMoms = [nparams(dist) for dist in dist_init]
+NProgMoms = map(dist_init) do dist
+    nparams(dist)
+end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
-coal_data = initialize_coalescence_data(
-    AnalyticalCoalStyle(),
-    matrix_of_kernels,
-    NProgMoms,
-    norms = norms,
-    dist_thresholds = [5e-10, Inf],
-)
+coal_data = CoalescenceData(matrix_of_kernels, NProgMoms, (5e-10, Inf), norms)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
 ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(1.0))
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)

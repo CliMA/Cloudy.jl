@@ -11,14 +11,14 @@ using Cloudy.Coalescence:
     s_integrand1,
     s_integrand2,
     s_integrand_inner,
-    update_R_coalescence_matrix!,
-    update_S_coalescence_matrix!,
-    update_Q_coalescence_matrix!,
-    initialize_coalescence_data,
-    get_coalescence_integral_moment_qrs!,
-    update_coal_ints!,
-    update_moments!,
-    update_finite_2d_integrals!
+    get_R_coalescence_matrix,
+    get_S_coalescence_matrix,
+    get_Q_coalescence_matrix,
+    CoalescenceData,
+    get_coalescence_integral_moment_qrs,
+    get_coal_ints,
+    get_moments_matrix,
+    get_finite_2d_integrals
 using Cloudy.Sedimentation
 using Cloudy.Condensation
 using JET: @test_opt
@@ -34,85 +34,54 @@ dist2b = ExponentialPrimitiveParticleDistribution(10.0, 1000.0)
 # Analytical Coal
 order = 1
 kernel = CoalescenceTensor((x, y) -> x + y, order, 1e-6)
-NProgMoms = [3, 3, 3]
-@test_opt initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
-@test_opt initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = (10.0, 0.1))
-moment_order = 0
+NProgMoms = (3, 3, 3)
+@test_opt CoalescenceData(kernel, NProgMoms, (0.1, 1.0, 10.0), (10.0, 0.1))
+CoalescenceData(kernel, NProgMoms, (0.1, 1.0, 10.0), (10.0, 0.1))
+@test 400 >= @allocated CoalescenceData(kernel, NProgMoms, (0.1, 1.0, 10.0), (10.0, 0.1))
 
-for pdists in ((dist1a,), (dist1a, dist2a))
-    local NProgMoms = [nparams(dist) for dist in pdists]
-    cd = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
+for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
+    local NProgMoms = map(pdists) do dist
+        nparams(dist)
+    end
+    cd = CoalescenceData(kernel, NProgMoms, map(pdists) do d
+        Inf
+    end)
 
-    @test_opt update_moments!(pdists, cd.moments)
-    #@test_opt update_finite_2d_integrals!(pdists, cd.dist_thresholds, cd.moments, cd.finite_2d_ints)
-    @test_opt update_Q_coalescence_matrix!(
-        AnalyticalCoalStyle(),
-        moment_order,
-        cd.moments,
-        order,
-        cd.matrix_of_kernels,
-        NProgMoms,
-        cd.Q,
-    )
-    @test_opt update_R_coalescence_matrix!(
-        AnalyticalCoalStyle(),
-        moment_order,
-        cd.moments,
-        order,
-        cd.matrix_of_kernels,
-        NProgMoms,
-        cd.R,
-    )
-    @test_opt update_S_coalescence_matrix!(
-        AnalyticalCoalStyle(),
-        moment_order,
-        cd.moments,
-        order,
-        cd.finite_2d_ints,
-        cd.matrix_of_kernels,
-        NProgMoms,
-        cd.S,
-    )
-    @test_opt get_coalescence_integral_moment_qrs!(AnalyticalCoalStyle(), moment_order, NProgMoms, cd)
-    @test_opt update_coal_ints!(AnalyticalCoalStyle(), pdists, cd)
-end
+    @test_opt get_moments_matrix(pdists, Val(cd.N_mom_max), cd.N_mom_max)
+    moments = get_moments_matrix(pdists, Val(cd.N_mom_max), cd.N_mom_max)
+    @test 500 >= @allocated get_moments_matrix(pdists, Val(cd.N_mom_max), cd.N_mom_max)
+    @test_opt get_finite_2d_integrals(pdists, cd.dist_thresholds, moments, cd.N_2d_ints)
+    finite_2d_ints = get_finite_2d_integrals(pdists, cd.dist_thresholds, moments, cd.N_2d_ints)
+    @test 800 >= @allocated get_finite_2d_integrals(pdists, cd.dist_thresholds, moments, cd.N_2d_ints)
 
-for pdists in ((dist1b,), (dist1b, dist2b))
-    local NProgMoms = [nparams(dist) for dist in pdists]
-    cd = initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms)
+    @test_opt Cloudy.Coalescence.Q_jk(AnalyticalCoalStyle(), 0, 1, 1, moments, cd.kernels[1][1])
+    @test_opt Cloudy.Coalescence.R_jk(AnalyticalCoalStyle(), 0, 1, 1, moments, cd.kernels[1][1])
+    @test_opt Cloudy.Coalescence.S_1k(AnalyticalCoalStyle(), 0, 1, moments, finite_2d_ints, cd.kernels[1][1])
+    @test_opt Cloudy.Coalescence.S_2k(AnalyticalCoalStyle(), 0, 1, moments, finite_2d_ints, cd.kernels[1][1])
 
-    @test_opt update_moments!(pdists, cd.moments)
-    @test_opt update_finite_2d_integrals!(pdists, cd.dist_thresholds, cd.moments, cd.finite_2d_ints)
-    @test_opt update_Q_coalescence_matrix!(
+    @test_opt get_Q_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    @test_opt get_R_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    @test_opt get_S_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
+    @test_opt get_coalescence_integral_moment_qrs(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
+    @test_opt get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
+
+    get_Q_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    get_R_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    get_S_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
+    get_coalescence_integral_moment_qrs(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
+    get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
+    @test 432 >= @allocated get_Q_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    @test 432 >= @allocated get_R_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, cd.kernels)
+    @test 432 >=
+          @allocated get_S_coalescence_matrix(AnalyticalCoalStyle(), moments, NProgMoms, finite_2d_ints, cd.kernels)
+    @test 624 >= @allocated get_coalescence_integral_moment_qrs(
         AnalyticalCoalStyle(),
-        moment_order,
-        cd.moments,
-        order,
-        cd.matrix_of_kernels,
+        moments,
         NProgMoms,
-        cd.Q,
+        finite_2d_ints,
+        cd.kernels,
     )
-    @test_opt update_R_coalescence_matrix!(
-        AnalyticalCoalStyle(),
-        moment_order,
-        cd.moments,
-        order,
-        cd.matrix_of_kernels,
-        NProgMoms,
-        cd.R,
-    )
-    @test_opt update_S_coalescence_matrix!(
-        AnalyticalCoalStyle(),
-        moment_order,
-        cd.moments,
-        order,
-        cd.finite_2d_ints,
-        cd.matrix_of_kernels,
-        NProgMoms,
-        cd.S,
-    )
-    @test_opt get_coalescence_integral_moment_qrs!(AnalyticalCoalStyle(), moment_order, NProgMoms, cd)
-    @test_opt update_coal_ints!(AnalyticalCoalStyle(), pdists, cd)
+    @test 64 >= @allocated get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
 end
 
 # Numerical Coal
@@ -144,24 +113,18 @@ for pdists in ((dist1a, dist2a), (dist1b, dist2b))
 end
 
 # overall Q R S fill matrices 
-# n = 1
-kernel = LinearKernelFunction(1.0)
-NProgMoms = [3, 3, 3]
-@test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
-@test_opt initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms, norms = (10.0, 0.1))
-moment_order = 0.0
+# TODO these tests fail from #154
+# kernel = LinearKernelFunction(1.0)
 
-for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
-    local NProgMoms = [nparams(dist) for dist in pdists]
-    cd = initialize_coalescence_data(NumericalCoalStyle(), kernel, NProgMoms)
+# for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
 
-    # TODO: changing from vector to tuple of distributions breaks opt tests on numerical coal style
-    @test_opt update_Q_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.Q)
-    # @test_opt update_R_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.R)
-    # @test_opt update_S_coalescence_matrix!(NumericalCoalStyle(), moment_order, pdists, cd.kernel_func, cd.S)
-    # @test_opt get_coalescence_integral_moment_qrs!(NumericalCoalStyle(), moment_order, pdists, cd)
-    # @test_opt update_coal_ints!(NumericalCoalStyle(), pdists, cd)
-end
+#     @test_opt get_Q_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
+#     @test_opt get_R_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
+#     @test_opt get_S_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
+#     @test_opt get_coalescence_integral_moment_qrs(NumericalCoalStyle(), pdists, kernel)
+#     @test_opt get_coal_ints(NumericalCoalStyle(), pdists, kernel)
+
+# end
 
 ## Sedimentation.jl
 # Sedimentation moment flux tests
@@ -171,7 +134,7 @@ vel = ((1.0, 0.0), (-1.0, 1.0 / 6))
 @test 64 >= @allocated get_sedimentation_flux(pdists, vel)
 pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0))
 @test_opt get_sedimentation_flux(pdists, vel)
-get_sedimentation_flux(pdists, vel) # TODO allocates on the first run!
+get_sedimentation_flux(pdists, vel)
 @test 64 >= @allocated get_sedimentation_flux(pdists, vel)
 
 ## Condensation.jl

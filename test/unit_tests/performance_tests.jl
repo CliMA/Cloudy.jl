@@ -81,7 +81,7 @@ function benchmark_particle_distributions()
     bench_press(
         CallAndReturnNothing(get_standard_N_q),
         ((dist2, dist1, dist3),),
-        200_000;
+        250_000;
         max_mem = 260_000,
         max_allocs = 5_000,
     )

@@ -162,7 +162,7 @@ Plots the evolution of particle distribution parameters in time (for normalized 
 function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     time = sol.t
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
-    moments = vcat(sol.u'...) ./ mom_norms'
+    moments = vcat(sol.u'...) ./ collect(mom_norms)'
     params = similar(moments)
     n_dist = length(p.pdists)
     plt = Array{Plots.Plot}(undef, n_dist)

@@ -19,10 +19,11 @@ dist_init = (
 kernel_func = HydrodynamicKernelFunction(1e2 * π) # 1e2 π m^3/kg^(4/3)/s
 kernel = CoalescenceTensor(kernel_func, 4, FT(1e-6))
 tspan = (FT(0), FT(240))
-NProgMoms = [nparams(dist) for dist in dist_init]
+NProgMoms = map(dist_init) do dist
+    nparams(dist)
+end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
-coal_data =
-    initialize_coalescence_data(AnalyticalCoalStyle(), kernel, NProgMoms, norms = norms, dist_thresholds = [4e-9, Inf])
+coal_data = coal_data = CoalescenceData(kernel, NProgMoms, (4e-9, Inf), norms)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
 ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(10))
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
