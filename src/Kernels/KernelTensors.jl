@@ -87,8 +87,8 @@ function polyfit(
     Δ = limit / (npoints - 1)
     x_ = map(i -> i % npoints * Δ, 0:(npoints * npoints - 1))
     y_ = map(i -> floor(i / npoints) * Δ, 0:(npoints * npoints - 1))
-    ind1_ = map(s -> s > lower_limit, y_)
-    ind2_ = map(s -> s < 0, y_ - x_)
+    ind1_ = map(s -> s >= lower_limit, y_)
+    ind2_ = map(s -> s >= 0, y_ - x_)
     inds_ = map(i -> ind1_[i] && ind2_[i], 1:(npoints * npoints))
     x = x_[inds_]
     y = y_[inds_]
