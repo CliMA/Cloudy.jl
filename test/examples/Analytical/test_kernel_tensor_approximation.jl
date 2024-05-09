@@ -35,10 +35,20 @@ for i in 1:n
     end
 end
 
-p1 = contourf(x, y, z_kernel, xaxis = "x", yaxis = "y", title = "Kernel Function", colorbar_exponentformat="power")
-p2 = contourf(x, y, z_tensor, xaxis = "x", yaxis = "y", title = "Kernel Tensor", colorbar_exponentformat="power")
+p1 = contourf(x, y, z_kernel, xaxis = "x", yaxis = "y", title = "Kernel Function", colorbar_exponentformat = "power")
+p2 = contourf(x, y, z_tensor, xaxis = "x", yaxis = "y", title = "Kernel Tensor", colorbar_exponentformat = "power")
 
-plot(p1, p2, layout = (1, 2), size = (1200, 400), bottom_margin = 10Plots.mm, left_margin = 2Plots.mm, right_margin = 10Plots.mm, yformatter = :scientific, xformatter = :scientific)
+plot(
+    p1,
+    p2,
+    layout = (1, 2),
+    size = (1200, 400),
+    bottom_margin = 10Plots.mm,
+    left_margin = 2Plots.mm,
+    right_margin = 10Plots.mm,
+    yformatter = :scientific,
+    xformatter = :scientific,
+)
 path = joinpath(pkgdir(Cloudy), "test/outputs/")
 mkpath(path)
 savefig(path * "HydrodynamicKernelFunction_Approximation.pdf")
@@ -47,7 +57,7 @@ savefig(path * "HydrodynamicKernelFunction_Approximation.pdf")
 limit = FT(1e-9)
 order = 2
 
-kernel_func =  LongKernelFunction(5.236e-10, 9.44e9, 5.78) # 5.236e-10 kg; 9.44e9 m^3/kg^2/s; 5.78 m^3/kg/s
+kernel_func = LongKernelFunction(5.236e-10, 9.44e9, 5.78) # 5.236e-10 kg; 9.44e9 m^3/kg^2/s; 5.78 m^3/kg/s
 kernel_tensor = CoalescenceTensor(kernel_func, order, limit)
 
 n = 100
@@ -62,10 +72,20 @@ for i in 1:n
     end
 end
 
-p1 = contourf(x, y, z_kernel, xaxis = "x", yaxis = "y", title = "Kernel Function", colorbar_exponentformat="power")
-p2 = contourf(x, y, z_tensor, xaxis = "x", yaxis = "y", title = "Kernel Tensor", colorbar_exponentformat="power")
+p1 = contourf(x, y, z_kernel, xaxis = "x", yaxis = "y", title = "Kernel Function", colorbar_exponentformat = "power")
+p2 = contourf(x, y, z_tensor, xaxis = "x", yaxis = "y", title = "Kernel Tensor", colorbar_exponentformat = "power")
 
-plot(p1, p2, layout = (1, 2), size = (1200, 400), bottom_margin = 10Plots.mm, left_margin = 2Plots.mm, right_margin = 10Plots.mm, yformatter = :scientific, xformatter = :scientific)
+plot(
+    p1,
+    p2,
+    layout = (1, 2),
+    size = (1200, 400),
+    bottom_margin = 10Plots.mm,
+    left_margin = 2Plots.mm,
+    right_margin = 10Plots.mm,
+    yformatter = :scientific,
+    xformatter = :scientific,
+)
 path = joinpath(pkgdir(Cloudy), "test/outputs/")
 mkpath(path)
 savefig(path * "LongKernelFunction_Approximation.pdf")
