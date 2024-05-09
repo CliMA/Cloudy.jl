@@ -17,6 +17,7 @@ include("./examples/Analytical/condensation_exp_gamma.jl")
 include("./examples/Analytical/rainshaft_single_gamma.jl")
 include("./examples/Analytical/rainshaft_gamma_mixture.jl")
 include("./examples/Analytical/test_kernel_tensor_approximation.jl")
+include("./examples/Analytical/parcel_example.jl")
 
 # Numerical examples
 include("./examples/Numerical/single_particle_exp.jl")

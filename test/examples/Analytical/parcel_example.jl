@@ -34,7 +34,13 @@ function parcel_model_cloudy(dY, Y, p, t)
     ρ_air = TD.air_density(tps, ts)
 
     qᵢ = FT(0.0)
-    qₗ = CPD.get_standard_N_q(pdists).M_liq * ρₗ / ρ_air
+    qₗ = FT(0)
+    # ... water mass budget
+    mass_ind = 2
+    for i in 1:length(pdists)
+        qₗ += moments[mass_ind] / ρ_air
+        mass_ind += NProgMoms[i]
+    end
     q = TD.PhasePartition(qᵥ + qₗ + qᵢ, qₗ, qᵢ)
     ts = TD.PhaseNonEquil_pTq(tps, p_air, T, q)
 
@@ -55,19 +61,20 @@ function parcel_model_cloudy(dY, Y, p, t)
         CPD.update_dist_from_moments(p.pdists[i], moments[ind_rng])
     end))
     ξ = CO.G_func(aps, tps, T, TD.Liquid())
-    dmom_ce = CL.Condensation.get_cond_evap(pdists, Sₗ-1, ξ, ρₗ)
-
+    dmom_ce = CL.Condensation.get_cond_evap(pdists, Sₗ - 1, ξ, ρₗ)
     # ... water mass budget
-    dqₗ_dt_v2l = dmom_ce[2] + dmom_ce[4]
+    mass_ind = 2
+    dqₗ_dt_v2l = FT(0)
+    for i in 1:length(pdists)
+        dqₗ_dt_v2l += dmom_ce[mass_ind] / ρ_air
+        mass_ind += NProgMoms[i]
+    end
 
     # Update the tendecies
     dqₗ_dt = dqₗ_dt_v2l
     dqᵥ_dt = -dqₗ_dt
-
     dSₗ_dt = a1 * w * Sₗ - (a2 + a3) * Sₗ * dqₗ_dt_v2l
-
     dp_air_dt = -p_air * grav / R_air / T * w
-
     dT_dt = -grav / cp_air * w + L_vap / cp_air * dqₗ_dt_v2l
 
     # Set tendencies
@@ -88,15 +95,8 @@ function run_parcel_cloudy(Yinit, t_0, t_end, pp)
     # Parameters for the ODE solver
     p = (wps = pp.wps, aps = pp.aps, tps = pp.tps, w = pp.w, pdists = pp.pdists, NProgMoms = pp.NProgMoms)
 
-    problem =
-        ODE.ODEProblem(parcel_model_cloudy, Yinit, (FT(t_0), FT(t_end)), p)
-    return ODE.solve(
-        problem,
-        ODE.Euler(),
-        dt = pp.const_dt,
-        reltol = 100 * eps(FT),
-        abstol = 100 * eps(FT),
-    )
+    problem = ODE.ODEProblem(parcel_model_cloudy, Yinit, (FT(t_0), FT(t_end)), p)
+    return ODE.solve(problem, ODE.Euler(), dt = pp.const_dt, reltol = 100 * eps(FT), abstol = 100 * eps(FT))
 end
 
 function init_conditions(ρₗ, type::String)
@@ -115,12 +115,12 @@ function init_conditions(ρₗ, type::String)
         M1 = [N * m₀ / 2, N * m₀ / 2]
         k = FT(2)
         dist_init = (
-            CPD.ExponentialPrimitiveParticleDistribution(M0[1], M1[1] / M0[1])
-            CPD.GammaPrimitiveParticleDistribution(M0[2], M1[2] / M0[2] / k, k)
+            CPD.ExponentialPrimitiveParticleDistribution(M0[1], M1[1] / M0[1]),
+            CPD.GammaPrimitiveParticleDistribution(M0[2], M1[2] / M0[2] / k, k),
         )
     end
 
-    NProgMoms = ntuple(length(dist_init)) do k 
+    NProgMoms = ntuple(length(dist_init)) do k
         Integer(CPD.nparams(dist_init[k]))
     end
     moments_init = rflatten(ntuple(length(dist_init)) do k
@@ -140,7 +140,7 @@ function get_spectrum(pdists, NProgMoms, moments)
 
     for (i, dist) in enumerate(pdists)
         ind_rng = CL.get_dist_moments_ind_range(NProgMoms, i)
-        dist_new = CPD.update_dist_from_moments!(dist, moments[ind_rng])
+        dist_new = CPD.update_dist_from_moments(dist, tuple(moments[ind_rng]...))
         y = y .+ (3 * x .^ 2 .* dist_new.(x))
     end
 
@@ -167,7 +167,7 @@ md_v = (p₀ - e) / R_d / T₀
 mv_v = e / R_v / T₀
 qᵢ = FT(0)
 # Simulation parameters passed into ODE solver
-w = FT(1)                                  # updraft speed
+w = FT(10)                                  # updraft speed
 const_dt = FT(0.5)                         # model timestep
 t_max = FT(20)
 
@@ -187,50 +187,28 @@ ax2 = MK.Axis(fig[3, 1], xlabel = "Time [s]", ylabel = "Temperature [K]")
 ax3 = MK.Axis(fig[2, 1], ylabel = "q_vap [g/kg]")
 ax4 = MK.Axis(fig[2, 2], xlabel = "Time [s]", ylabel = "q_liq [g/kg]")
 ax5 = MK.Axis(fig[1, 2], ylabel = "radius [μm]")
-ax6 = MK.Axis(
-    fig[3, 2],
-    xlabel = "radius [μm]",
-    ylabel = "dm / d(ln r) [kg / m^3]",
-    xscale = log10,
-)
+ax6 = MK.Axis(fig[3, 2], xlabel = "radius [μm]", ylabel = "dm / d(ln r) [kg / m^3]", xscale = log10)
 MK.lines!(ax1, Rogers_time_supersat, Rogers_supersat, label = "Rogers_1975")
 MK.lines!(ax5, Rogers_time_radius, Rogers_radius)
 
 # Initial conditions
 size_distribution_list = ["monodisperse", "gamma", "mixture"]
-for j in 1:eachindex(size_distribution_list)
+for j in 1:length(size_distribution_list)
 
     DSD = size_distribution_list[j]
-    (dist_init, moments_init, ml_v) = init_conditions(ρₗ, DSD)
-    
+    (dist_init, NProgMoms, moments_init, ml_v) = init_conditions(ρₗ, DSD)
+
     qᵥ = mv_v / (md_v + mv_v + ml_v)
     qₗ = ml_v / (md_v + mv_v + ml_v)
 
-    clinfo = CMF.CLSetup{FT}(pdists = dist_init, mom = moments_init)
-
-    (r, y) = get_spectrum(clinfo, moments_init)
+    (r, y) = get_spectrum(dist_init, NProgMoms, moments_init)
     if DSD != "monodisperse"
-        MK.lines!(
-            ax6,
-            r,
-            y,
-            color = MK.Cycled(j + 1),
-            linestyle = :dash,
-            label = "init",
-        )
+        MK.lines!(ax6, r, y, color = MK.Cycled(j + 1), linestyle = :dash, label = "init")
     end
 
 
     Y0 = [Sₗ, p₀, T₀, qᵥ, moments_init...]
-    p = (
-        wps = wps,
-        aps = aps,
-        tps = tps,
-        w = w,
-        const_dt = const_dt,
-        pdists = dist_init,
-        NProgMoms = NProgMoms
-    )
+    p = (wps = wps, aps = aps, tps = tps, w = w, const_dt = const_dt, pdists = dist_init, NProgMoms = NProgMoms)
 
     # solve ODE
     sol = run_parcel_cloudy(Y0, FT(0), t_max, p)
@@ -244,7 +222,7 @@ for j in 1:eachindex(size_distribution_list)
     M_l = sol[6, :] #+ sol[8, :]  # kg / m^3 air
     N_l = sol[5, :] #+ sol[7, :]  # number / m^3 air
     r_l = (M_l ./ N_l / ρₗ / 4 / π * 3) .^ (1 / 3) * 1e6
-    (r, y) = get_spectrum(clinfo, sol[5:end, end])
+    (r, y) = get_spectrum(dist_init, NProgMoms, sol[5:end, end])
 
     MK.lines!(ax4, sol.t, M_l ./ ρ_air * 1e3)
     MK.lines!(ax5, sol.t, r_l)
@@ -253,22 +231,8 @@ for j in 1:eachindex(size_distribution_list)
     end
 end
 
-MK.axislegend(
-    ax1,
-    framevisible = false,
-    labelsize = 12,
-    orientation = :horizontal,
-    nbanks = 2,
-    position = :rb,
-)
+MK.axislegend(ax1, framevisible = false, labelsize = 12, orientation = :horizontal, nbanks = 2, position = :rb)
 
-MK.axislegend(
-    ax6,
-    framevisible = false,
-    labelsize = 12,
-    orientation = :horizontal,
-    nbanks = 2,
-    position = :rt,
-)
+MK.axislegend(ax6, framevisible = false, labelsize = 12, orientation = :horizontal, nbanks = 2, position = :rt)
 
 MK.save("parcel_exp_gamma.pdf", fig)
