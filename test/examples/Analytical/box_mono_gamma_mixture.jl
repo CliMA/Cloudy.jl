@@ -1,6 +1,6 @@
 "Box model with a mixture of a monodisperse and a gamma dist"
 
-using DifferentialEquations
+using OrdinaryDiffEq
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")

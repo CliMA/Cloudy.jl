@@ -1,6 +1,6 @@
 "Test case with N gamma distributions"
 
-using DifferentialEquations
+using OrdinaryDiffEq
 using Cloudy.KernelFunctions
 
 include("../utils/plotting_helpers.jl")

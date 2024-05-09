@@ -1,6 +1,6 @@
 "Box model with two gamma modes"
 
-using DifferentialEquations
+using OrdinaryDiffEq
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")
