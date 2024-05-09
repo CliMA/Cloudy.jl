@@ -1,6 +1,6 @@
 "Box model with two gamma modes and using Long's kernel"
 
-using DifferentialEquations
+using OrdinaryDiffEq
 using StaticArrays
 
 include("../utils/box_model_helpers.jl")

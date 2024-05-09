@@ -1,6 +1,6 @@
 "Box model with a single Lognormal mode"
 
-using DifferentialEquations
+using OrdinaryDiffEq
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")

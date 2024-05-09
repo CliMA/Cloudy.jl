@@ -1,7 +1,7 @@
 "Test case with a single gamma distribution"
 
 
-using DifferentialEquations
+using OrdinaryDiffEq
 using Cloudy.KernelFunctions
 
 include("../utils/box_model_helpers.jl")
