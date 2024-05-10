@@ -1,6 +1,6 @@
 "1D Rainshaft model with coalescence and sedimentation for two gamma modes"
 
-using DifferentialEquations
+using OrdinaryDiffEq
 
 include("../utils/rainshaft_helpers.jl")
 include("../utils/plotting_helpers.jl")
@@ -11,7 +11,7 @@ FT = Float64
 # Build discrete domain
 a = 0.0
 b = 3000.0
-dz = (b - a) / 60
+dz = (b - a) / 20
 z = (a + dz / 2):dz:b
 
 # Initial condition

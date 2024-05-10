@@ -376,7 +376,7 @@ function update_dist_from_moments(
     moments::Tuple{FT, FT, FT};
     param_range = (; :θ => (eps(FT), Inf), :k => (eps(FT), Inf)),
 ) where {FT <: Real}
-    if moments[1] > eps(FT) && moments[2] > eps(FT) && moments[3] > eps(FT)
+    if moments[1] > eps(FT) && moments[2] > eps(FT)
         k = max(
             param_range.k[1],
             min(param_range.k[2], (moments[2] / moments[1]) / (moments[3] / moments[2] - moments[2] / moments[1])),

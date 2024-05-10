@@ -1,7 +1,7 @@
 "Box model with a single gamma mode"
 
 import Cloudy
-using DifferentialEquations
+using OrdinaryDiffEq
 
 include(joinpath(pkgdir(Cloudy), "test", "examples", "utils", "box_model_helpers.jl"))
 include(joinpath(pkgdir(Cloudy), "test", "examples", "utils", "plotting_helpers.jl"))

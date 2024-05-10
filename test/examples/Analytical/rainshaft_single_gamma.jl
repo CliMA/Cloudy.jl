@@ -1,6 +1,6 @@
 "1D Rainshaft model with coalescence and sedimentation for a single gamma distribution"
 
-using DifferentialEquations
+using OrdinaryDiffEq
 
 include("../utils/rainshaft_helpers.jl")
 include("../utils/plotting_helpers.jl")

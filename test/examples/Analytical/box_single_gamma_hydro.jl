@@ -1,6 +1,6 @@
 "Box model with a single gamma mode"
 
-using DifferentialEquations
+using OrdinaryDiffEq
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")
@@ -13,8 +13,8 @@ moments_init = [1e8, 1e-2, 2e-12]
 dist_init = (GammaPrimitiveParticleDistribution(FT(1e8), FT(1e-10), FT(1)),) # 1e8/m^3; 1e-10 kg; k = 1
 
 # Solver
-kernel_func = HydrodynamicKernelFunction(2e2 * π) # 1e2 π m^3/kg^(4/3)/s
-kernel = CoalescenceTensor(kernel_func, 4, FT(1e-6))
+kernel_func = HydrodynamicKernelFunction(1e2 * π) # 1e2 π m^3/kg^(4/3)/s
+kernel = CoalescenceTensor(kernel_func, 5, FT(1e-6))
 tspan = (FT(0), FT(240))
 NProgMoms = map(dist_init) do dist
     nparams(dist)

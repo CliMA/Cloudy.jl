@@ -129,10 +129,10 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
                 label = "Pdist " * string(j),
                 title = "time = " * string(round(sol.t[t_ind[i]], sigdigits = 4)),
             )
-            sp_sum[:, i] += 3 * x .^ 2 .* p.pdists[j].(x)
+            sp_sum[:, i] += 3 * x .^ 2 .* pdist_tmp.(x)
 
             if print
-                @show 3 * x .^ 2 .* p.pdists[j].(x)
+                @show 3 * x .^ 2 .* pdist_tmp.(x)
             end
         end
         plot!(r, sp_sum[:, i], linewidth = 2, linestyle = :dash, linecolor = :black, label = "Sum")

@@ -76,6 +76,14 @@ steps:
         command: "julia --color=yes --project=test test/examples/Analytical/rainshaft_gamma_mixture.jl"
         artifact_paths: "test/outputs/*"
 
+      - label: ":crystal_ball: Examples: analytical, parcel"
+        command: "julia --color=yes --project=test test/examples/Analytical/parcel_example.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crystal_ball: Examples: kernel tensor approximation"
+        command: "julia --color=yes --project=test test/examples/Analytical/test_kernel_tensor_approximation.jl"
+        artifact_paths: "test/outputs/*"
+
       - label: ":crystal_ball: Examples: numerical, box, single exp"
         command: "julia --color=yes --project=test test/examples/Numerical/single_particle_exp.jl"
         artifact_paths: "test/outputs/*"

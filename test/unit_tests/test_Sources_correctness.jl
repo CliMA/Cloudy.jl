@@ -264,7 +264,10 @@ vel = ((1.0, 0.0), (-1.0, 1.0 / 6))
 pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
 ξ = 1e-6
 s = 0.01
-@test all(get_cond_evap(pdists, s, ξ) .≈ (0.0, 3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3)))
+@test all(
+    get_cond_evap(pdists, s, ξ) .≈
+    (0.0, 3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3)),
+)
 
 pdists = (
     ExponentialPrimitiveParticleDistribution(1.0, 1.0),
@@ -274,12 +277,12 @@ pdists = (
 @test all(
     get_cond_evap(pdists, s, ξ) .≈ (
         0.0,
-        3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3),
+        3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
         0.0,
-        3 * 1e-6 * 0.01 * moment(pdists[2], 1 - 2 / 3),
-        3 * 2 * 1e-6 * 0.01 * moment(pdists[2], 2 - 2 / 3),
+        3 * 1e-6 * 0.01 * moment(pdists[2], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
+        3 * 2 * 1e-6 * 0.01 * moment(pdists[2], 2 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
         0.0,
-        3 * 1e-6 * 0.01 * moment(pdists[3], 1 - 2 / 3),
-        3 * 2 * 1e-6 * 0.01 * moment(pdists[3], 2 - 2 / 3),
+        3 * 1e-6 * 0.01 * moment(pdists[3], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
+        3 * 2 * 1e-6 * 0.01 * moment(pdists[3], 2 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
     ),
 )
