@@ -125,9 +125,9 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
                 linewidth = 2,
                 xaxis = :log,
                 yaxis = "dm / d(ln r)",
-                xlabel = "r",
+                xlabel = "r (um)",
                 label = "Pdist " * string(j),
-                title = "time = " * string(round(sol.t[t_ind[i]], sigdigits = 4)),
+                title = "time = " * string(round(sol.t[t_ind[i]], sigdigits = 4)) * "[s]", 
             )
             sp_sum[:, i] += 3 * x .^ 2 .* pdist_tmp.(x)
 
@@ -176,12 +176,12 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
             end)
             params[j, ind_rng] = vcat(get_params(pdist_tmp)[2]...)
         end
-
         plot()
         for j in ind_rng
+            @show params[:, j]
             plot!(time, params[:, j], linewidth = 2, label = "p_" * string(j - ind_rng[1] + 1), yscale = yscale)
         end
-        plt[i] = plot!(xaxis = "time", yaxis = "parameters (mode " * string(i) * ")")
+        plt[i] = plot!(xaxis = "time" * " [s]", yaxis = "parameters (mode " * string(i) * ")")
     end
     nrow = floor(Int, sqrt(n_dist))
     ncol = ceil(Int, sqrt(n_dist))
