@@ -1,0 +1,3 @@
+# EquationTypes
+
+TODO
