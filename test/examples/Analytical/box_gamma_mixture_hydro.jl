@@ -17,7 +17,7 @@ dist_init = (
 
 # Solver
 kernel_func = HydrodynamicKernelFunction(1e2 * π) # 1e2 π m^3/kg^(4/3)/s
-kernel = CoalescenceTensor(kernel_func, 4, FT(1e-6))
+kernel = CoalescenceTensor(kernel_func, 5, FT(1e-6))
 tspan = (FT(0), FT(240))
 NProgMoms = map(dist_init) do dist
     nparams(dist)
