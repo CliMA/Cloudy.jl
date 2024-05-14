@@ -17,7 +17,7 @@ dist_init = (
 
 # Solver
 s = 0.05
-ξ = 1e-2
+ξ = 1e-8
 tspan = (FT(0), FT(120))
 rhs!(dm, m, par, t) = rhs_condensation!(dm, m, par, s)
 NProgMoms = map(dist_init) do dist
