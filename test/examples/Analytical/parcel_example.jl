@@ -219,8 +219,8 @@ for j in 1:length(size_distribution_list)
     MK.lines!(ax3, sol.t, sol[4, :] * 1e3)
 
     ρ_air = sol[2, :] / R_v ./ sol[3, :]
-    M_l = sol[6, :] #+ sol[8, :]  # kg / m^3 air
-    N_l = sol[5, :] #+ sol[7, :]  # number / m^3 air
+    M_l = sol[6, :]  # kg / m^3 air
+    N_l = sol[5, :]  # number / m^3 air
     if length(Y0) > 7
         M_l += sol[8,:]
         N_l += sol[7,:]
