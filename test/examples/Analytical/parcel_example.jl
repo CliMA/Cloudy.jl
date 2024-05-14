@@ -221,6 +221,10 @@ for j in 1:length(size_distribution_list)
     ρ_air = sol[2, :] / R_v ./ sol[3, :]
     M_l = sol[6, :] #+ sol[8, :]  # kg / m^3 air
     N_l = sol[5, :] #+ sol[7, :]  # number / m^3 air
+    if length(Y0) > 7
+        M_l += sol[8,:]
+        N_l += sol[7,:]
+    end
     r_l = (M_l ./ N_l / ρₗ / 4 / π * 3) .^ (1 / 3) * 1e6
     (r, y) = get_spectrum(dist_init, NProgMoms, sol[5:end, end])
 
