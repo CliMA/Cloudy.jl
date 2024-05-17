@@ -11,6 +11,7 @@ steps:
   - label: "Init environment :computer:"
     key: "init_cpu_env"
     command:
+      - "julia --project=test -e 'using Pkg; Pkg.Registry.update()'"
       - "julia --project=test -e 'using Pkg; Pkg.develop(path = \".\")'"
       - "julia --project=test -e 'using Pkg; Pkg.instantiate(;verbose=true)'"
       - "julia --project=test -e 'using Pkg; Pkg.precompile()'"
