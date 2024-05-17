@@ -1,5 +1,7 @@
 env:
+  SLURM_CPUS_PER_TASK: 1
   OPENBLAS_NUM_THREADS: 1
+  CLIMATEMACHINE_SETTINGS_FIX_RNG_SEED: "true"
   JULIA_DEPOT_PATH: "${BUILDKITE_BUILD_PATH}/${BUILDKITE_PIPELINE_SLUG}/depot/default"
 
 agents:
@@ -11,6 +13,7 @@ steps:
   - label: "Init environment :computer:"
     key: "init_cpu_env"
     command:
+      - "julia --project=test -e 'using Pkg; Pkg.Registry.update()'"
       - "julia --project=test -e 'using Pkg; Pkg.develop(path = \".\")'"
       - "julia --project=test -e 'using Pkg; Pkg.instantiate(;verbose=true)'"
       - "julia --project=test -e 'using Pkg; Pkg.precompile()'"
