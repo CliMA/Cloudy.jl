@@ -374,15 +374,15 @@ Returns a new gamma distribution given the first three moments
 function update_dist_from_moments(
     pdist::GammaPrimitiveParticleDistribution{FT},
     moments::Tuple{FT, FT, FT};
-    param_range = (; :θ => (eps(FT), Inf), :k => (eps(FT), Inf)),
+    param_range = (; :k => (eps(FT), Inf)),
 ) where {FT <: Real}
     if moments[1] > eps(FT) && moments[2] > eps(FT)
+        n = moments[1]
         k = max(
             param_range.k[1],
             min(param_range.k[2], (moments[2] / moments[1]) / (moments[3] / moments[2] - moments[2] / moments[1])),
         )
-        θ = max(param_range.θ[1], min(param_range.θ[2], moments[3] / moments[2] - moments[2] / moments[1]))
-        n = moments[2] / (k * θ)
+        θ = moments[2] / moments[1] / k
         return GammaPrimitiveParticleDistribution(n, θ, k)
     else #don't change θ and k
         GammaPrimitiveParticleDistribution(FT(0), pdist.θ, pdist.k)
@@ -416,12 +416,11 @@ Returns a new exponential distribution given the first two moments
 """
 function update_dist_from_moments(
     pdist::ExponentialPrimitiveParticleDistribution{FT},
-    moments::Tuple{FT, FT};
-    param_range = (; :θ => (eps(FT), Inf)),
+    moments::Tuple{FT, FT},
 ) where {FT <: Real}
     if moments[1] > eps(FT) && moments[2] > eps(FT)
-        θ = max(param_range.θ[1], min(param_range.θ[2], moments[2] / moments[1]))
-        n = moments[2] / θ
+        n = moments[1]
+        θ = moments[2] / moments[1]
         return ExponentialPrimitiveParticleDistribution(n, θ)
     else #don't change θ
         return ExponentialPrimitiveParticleDistribution(FT(0), pdist.θ)
@@ -435,12 +434,11 @@ Returns a new monodisperse distribution given the first two moments
 """
 function update_dist_from_moments(
     pdist::MonodispersePrimitiveParticleDistribution{FT},
-    moments::Tuple{FT, FT};
-    param_range::NamedTuple = (; :θ => (eps(FT), Inf)),
+    moments::Tuple{FT, FT},
 ) where {FT <: Real}
     if moments[1] > eps(FT) && moments[2] > eps(FT)
-        θ = max(param_range.θ[1], min(param_range.θ[2], moments[2] / moments[1]))
-        n = moments[2] / θ
+        n = moments[1]
+        θ = moments[2] / moments[1]
         return MonodispersePrimitiveParticleDistribution(n, θ)
     else #don't change θ
         return MonodispersePrimitiveParticleDistribution(FT(0), pdist.θ)
