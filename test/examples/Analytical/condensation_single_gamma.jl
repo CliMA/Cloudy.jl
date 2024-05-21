@@ -14,7 +14,7 @@ dist_init = (GammaPrimitiveParticleDistribution(FT(1e8), FT(1e-10), FT(1)),) # 1
 
 # Solver
 s = 0.05
-ξ = 1e-2
+ξ = 1e-8
 tspan = (FT(0), FT(120))
 NProgMoms = map(dist_init) do dist
     nparams(dist)

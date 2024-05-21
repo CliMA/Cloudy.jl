@@ -48,7 +48,8 @@ function rhs_condensation!(dmom, mom, p, s)
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
         update_dist_from_moments(p.pdists[i], mom_normalized[ind_rng])
     end))
-    dmom .= get_cond_evap(p.pdists, s, ξ) .* mom_norms
+    ξ_normalized = p.ξ / p.norms[2]^(2 / 3)
+    dmom .= get_cond_evap(p.pdists, s, ξ_normalized) .* mom_norms
 end
 
 """

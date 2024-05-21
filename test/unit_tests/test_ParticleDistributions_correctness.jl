@@ -34,8 +34,8 @@ dist = MonodispersePrimitiveParticleDistribution(1.0, 2.0)
 @test density(dist, 3.1) == 0.0
 
 ## Update params from moments
-dist = update_dist_from_moments(dist, (1.0, 1.0); param_range = (; :θ => (0.1, 0.5)))
-@test moment(dist, 0.0) ≈ 2.0 rtol = rtol
+dist = update_dist_from_moments(dist, (1.0, 1.0))
+@test moment(dist, 0.0) ≈ 1.0 rtol = rtol
 @test moment(dist, 1.0) ≈ 1.0 rtol = rtol
 dist = update_dist_from_moments(dist, (1.1, 2.0))
 @test moment(dist, 0.0) ≈ 1.1 rtol = rtol
@@ -117,11 +117,11 @@ dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 @test_throws Exception density(dist, -3.1)
 
 # Update params or dist from moments
-dist = update_dist_from_moments(dist, (1.1, 2.0, 4.1); param_range = (; :θ => (1e-5, 1e5), :k => (eps(Float64), 5.0)))
-@test normed_density(dist, 1.0) ≈ 0.833 rtol = rtol
-@test moment(dist, 0.0) ≈ 1.726 rtol = rtol
+dist = update_dist_from_moments(dist, (1.1, 2.0, 4.1); param_range = (; :k => (eps(Float64), 5.0)))
+@test normed_density(dist, 1.0) ≈ 0.419 rtol = rtol
+@test moment(dist, 0.0) ≈ 1.1 rtol = rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol = rtol
-@test moment(dist, 2.0) ≈ 2.782 rtol = rtol
+@test moment(dist, 2.0) ≈ 4.364 rtol = rtol
 dist = update_dist_from_moments(dist, (1.1, 2.423, 8.112))
 @test moment(dist, 0.0) ≈ 1.1 rtol = rtol
 @test moment(dist, 1.0) ≈ 2.423 rtol = rtol
