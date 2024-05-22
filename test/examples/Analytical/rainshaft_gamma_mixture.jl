@@ -33,7 +33,7 @@ NProgMoms = map(dist_init) do dist
     nparams(dist)
 end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
-coal_data = CoalescenceData(kernel, NProgMoms, (5e-10, Inf), norms)
+coal_data = CoalescenceData(kernel, NProgMoms, (2e-10, Inf), norms)
 rhs = make_rainshaft_rhs(AnalyticalCoalStyle())
 ODE_parameters = (;
     pdists = dist_init,
