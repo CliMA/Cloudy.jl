@@ -216,6 +216,60 @@ function moment(dist::AbstractParticleDistribution{FT}, q::FT) where {FT <: Real
     moment_func(dist)(q)
 end
 
+"""
+  partial_moment_func(dist)
+
+  `dist` - particle mass distribution function
+Returns a function that computes the moments of `dist`, integrated up to some threhold
+"""
+function partial_moment_func(dist::ExponentialPrimitiveParticleDistribution{FT}) where {FT <: Real}
+    # moment_of_dist = n * θ^q * Γ(q+1)
+    function f(q, x_threshold)
+        dist.n * dist.θ^q * gamma_inc(q + FT(1), x_threshold / dist.θ)[1]
+    end
+    return f
+end
+
+function partial_moment_func(dist::GammaPrimitiveParticleDistribution{FT}) where {FT <: Real}
+    # moment_of_dist = n * θ^q / Γ(k) * (Γ(k+q) - Γ(k+q, x/θ))
+    function f(q, x_threshold)
+        dist.n * dist.θ^q * gamma_inc(q + dist.k, x_threshold / dist.θ)[1] / gamma(dist.k)
+    end
+    return f
+end
+
+function partial_moment_func(dist::MonodispersePrimitiveParticleDistribution{FT}) where {FT <: Real}
+    # moment_of_dist = n * θ^(q)
+    function f(q, x_threshold)
+        if x_threshold < dist.θ
+            FT(0)
+        else
+            dist.n * dist.θ^q
+        end
+    end
+    return f
+end
+
+function partial_moment_func(dist::LognormalPrimitiveParticleDistribution{FT}) where {FT <: Real}
+    # moment_of_dist = n * exp(q * μ + 1/2 * q^2 * σ^2)
+    function f(q, x_threshold)
+        quadgk(x -> x^q * dist(x), FT(0.0), FT(x_threshold))[1]
+    end
+    return f
+end
+
+"""
+  partial_moment(dist, q, x_threshold)
+
+  - `dist` - distribution of which the partial moment `q` is taken
+  - `q` - is a potentially real-valued order of the moment
+  - `x_threshold` - is the integration limit for the moment computation
+Returns the q-th moment of a particle mass distribution function integrated up to some threshold size.
+"""
+function partial_moment(dist::AbstractParticleDistribution{FT}, q::FT, x_threshold::FT) where {FT <: Real}
+    return partial_moment_func(dist)(q, x_threshold)
+end
+
 # TODO: Move to examples
 """
     get_moments(pdist::GammaParticleDistribution{FT})
@@ -528,20 +582,18 @@ end
   get_standard_N_q(pdists; size_cutoff, rtol)
   `pdists` - tuple of particle size distributions
   `size_cutoff` - size distinguishing between cloud and rain
-  `rtol` - numerical integration tolerance
 Returns a named tuple (N_liq, N_rai, M_liq, M_rai) of the number and mass densities of liquid (cloud) and rain computed
 from the current pdists given a size cutoff
 """
 function get_standard_N_q(
     pdists::NTuple{N, PrimitiveParticleDistribution{FT}};
-    size_cutoff = 1,
-    rtol = 1e-8,
+    size_cutoff = 1e-6,
 ) where {FT, N}
     Ndist = length(pdists)
-    N_liq = mapreduce(j -> quadgk(x -> pdists[j](x), FT(0.0), FT(size_cutoff); rtol = FT(rtol))[1], +, 1:Ndist)
-    M_liq = mapreduce(j -> quadgk(x -> x * pdists[j](x), FT(0.0), FT(size_cutoff); rtol = FT(rtol))[1], +, 1:Ndist)
-    N_rai = mapreduce(j -> quadgk(x -> pdists[j](x), FT(size_cutoff), Inf; rtol = FT(rtol))[1], +, 1:Ndist)
-    M_rai = mapreduce(j -> quadgk(x -> x * pdists[j](x), FT(size_cutoff), Inf; rtol = FT(rtol))[1], +, 1:Ndist)
+    N_liq = mapreduce(j -> partial_moment(pdists[j], FT(0), size_cutoff), +, 1:Ndist)
+    M_liq = mapreduce(j -> partial_moment(pdists[j], FT(1), size_cutoff), +, 1:Ndist)
+    N_rai = mapreduce(j -> moment(pdists[j], FT(0)) - partial_moment(pdists[j], FT(0), size_cutoff), +, 1:Ndist)
+    M_rai = mapreduce(j -> moment(pdists[j], FT(1)) - partial_moment(pdists[j], FT(1), size_cutoff), +, 1:Ndist)
 
     return (; N_liq, N_rai, M_liq, M_rai)
 end
