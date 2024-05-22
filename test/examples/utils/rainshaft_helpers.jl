@@ -12,17 +12,19 @@ import Cloudy.ParticleDistributions: density
   initial_condition(z)
 
   `z` - array of discrete heights
-Returns initial profiles of three moments for two different modes. The initial profile is 
-chosen to be formed by using atan functions.
+Returns initial profiles of three moments for two different modes.
 """
 function initial_condition(z, mom_amp)
 
     zmax = findmax(z)[1]
-    zs1 = 2 .* (z .- 0.5 .* zmax) ./ zmax .* 500.0
-    zs2 = 2 .* (z .- 0.75 .* zmax) ./ zmax .* 500.0
-    at1 = 0.5 .* (1 .+ atan.(zs1) .* 2 ./ pi)
-    at2 = 0.5 .* (1 .+ atan.(zs2) .* 2 ./ pi)
-    at = 1e-6 .+ at1 .- at2
+    dz = z[2] - z[1]
+    at = map(1:length(z)) do iz
+        if z[iz] >= 0.5 * zmax - dz / 2 && z[iz] < 0.75 * zmax - dz / 2
+            1.0
+        else
+            0.0
+        end
+    end
 
     nmom = length(mom_amp)
     ic = zeros(length(z), nmom)
