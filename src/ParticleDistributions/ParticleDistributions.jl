@@ -585,42 +585,27 @@ end
 Returns a named tuple (N_liq, N_rai, M_liq, M_rai) of the number and mass densities of liquid (cloud) and rain computed
 from the current pdists given a size cutoff
 """
-function get_standard_N_q(
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}};
-    size_cutoff = 1e-6,
-) where {FT, N}
-    N_liq = get_standard_N_liq(pdists, size_cutoff=size_cutoff)
-    M_liq = get_standard_M_liq(pdists, size_cutoff=size_cutoff)
-    N_rai = get_standard_N_rai(pdists, size_cutoff=size_cutoff)
-    M_rai = get_standard_M_rai(pdists, size_cutoff=size_cutoff)
+function get_standard_N_q(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}; size_cutoff = 1e-6) where {FT, N}
+    N_liq = get_standard_N_liq(pdists, size_cutoff = size_cutoff)
+    M_liq = get_standard_M_liq(pdists, size_cutoff = size_cutoff)
+    N_rai = get_standard_N_rai(pdists, size_cutoff = size_cutoff)
+    M_rai = get_standard_M_rai(pdists, size_cutoff = size_cutoff)
     return (; N_liq, N_rai, M_liq, M_rai)
 end
 
-function get_standard_N_liq(
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}};
-    size_cutoff = 1e-6,
-) where {FT, N}
+function get_standard_N_liq(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}; size_cutoff = 1e-6) where {FT, N}
     return mapreduce(j -> partial_moment(pdists[j], FT(0), size_cutoff), +, 1:N)
 end
 
-function get_standard_N_rai(
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}};
-    size_cutoff = 1e-6,
-) where {FT, N}
+function get_standard_N_rai(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}; size_cutoff = 1e-6) where {FT, N}
     return mapreduce(j -> moment(pdists[j], FT(0)) - partial_moment(pdists[j], FT(0), size_cutoff), +, 1:N)
 end
 
-function get_standard_M_liq(
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}};
-    size_cutoff = 1e-6,
-) where {FT, N}
+function get_standard_M_liq(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}; size_cutoff = 1e-6) where {FT, N}
     return mapreduce(j -> partial_moment(pdists[j], FT(1), size_cutoff), +, 1:N)
 end
 
-function get_standard_M_rai(
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}};
-    size_cutoff = 1e-6,
-) where {FT, N}
+function get_standard_M_rai(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}; size_cutoff = 1e-6) where {FT, N}
     return mapreduce(j -> moment(pdists[j], FT(1)) - partial_moment(pdists[j], FT(1), size_cutoff), +, 1:N)
 end
 
