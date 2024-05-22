@@ -16,7 +16,7 @@ z = (a + dz / 2):dz:b
 
 # Initial condition
 # M0: 1/m^3 - M1: kg/m^3 - M2: kg^2/m^3
-mom_max = [1e7, 1e-3, 2e-13, 1.0, 1e-9, 2e-18]
+mom_max = [1e7, 1e-3, 2e-13, 0.0, 0.0, 0.0]
 nm_tot = length(mom_max)
 ic = initial_condition(z, mom_max)
 m = ic
@@ -24,7 +24,7 @@ m = ic
 # Solver
 dist_init = (
     GammaPrimitiveParticleDistribution(FT(1e7), FT(1e-10), FT(1)), # 1e7/m^3; 1e-10 kg; k = 1
-    GammaPrimitiveParticleDistribution(FT(1), FT(1e-9), FT(1)), # 1/m^3; 1e-9 kg; k = 1
+    GammaPrimitiveParticleDistribution(FT(0), FT(1e-9), FT(1)), # 0/m^3; 1e-9 kg; k = 1
 )
 kernel_func = (x, y) -> 5 * (x + y) # 5 m^3/kg/s; x, y in kg
 kernel = CoalescenceTensor(kernel_func, 1, FT(1e-6))
@@ -33,7 +33,7 @@ NProgMoms = map(dist_init) do dist
     nparams(dist)
 end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
-coal_data = CoalescenceData(kernel, NProgMoms, (5e-10, Inf), norms)
+coal_data = CoalescenceData(kernel, NProgMoms, (2e-10, Inf), norms)
 rhs = make_rainshaft_rhs(AnalyticalCoalStyle())
 ODE_parameters = (;
     pdists = dist_init,

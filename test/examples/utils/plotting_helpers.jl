@@ -282,11 +282,34 @@ function plot_rainshaft_results(
             end
             for (k, t_ind) in enumerate(plot_time_inds)
                 plot!(res[t_ind][:, (i - 1) * nm_max + j], z / 1000, lw = 3, c = k, label = false)
-                if print
-                    ind = (i - 1) * nm_max + j
-                    @show t_ind, i, j, res[t_ind][:, (i - 1) * nm_max + j]
-                end
             end
+        end
+    end
+
+    if print
+        for t_ind in plot_time_inds
+            Nc = zeros(length(z))
+            Nr = zeros(length(z))
+            Mc = zeros(length(z))
+            Mr = zeros(length(z))
+            for iz in 1:length(z)
+                pdists_tmp = ntuple(n_dist) do ip
+                    ind_rng = get_dist_moments_ind_range(p.NProgMoms, ip)
+                    update_dist_from_moments(p.pdists[ip], ntuple(length(ind_rng)) do im
+                        res[t_ind][iz, ind_rng[im]]
+                    end)
+                end
+                (; N_liq, M_liq, N_rai, M_rai) = get_standard_N_q(pdists_tmp, size_cutoff = 5.236e-10)
+                Nc[iz] = N_liq
+                Nr[iz] = N_rai
+                Mc[iz] = M_liq
+                Mr[iz] = M_rai
+            end
+            @show t_ind
+            @show Nc
+            @show Nr
+            @show Mc
+            @show Mr
         end
     end
 
