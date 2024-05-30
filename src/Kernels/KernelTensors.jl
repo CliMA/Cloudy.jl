@@ -11,6 +11,7 @@ module KernelTensors
 using LinearAlgebra
 using Optim
 using StaticArrays
+using ..KernelFunctions
 import ..rflatten
 
 # kernel tensors available for microphysics
@@ -51,8 +52,8 @@ struct CoalescenceTensor{P, FT, T} <: KernelTensor{FT}
 end
 
 
-function CoalescenceTensor(kernel_func, order::Int, limit::FT, lower_limit::FT = FT(0)) where {FT <: Real}
-    coef = polyfit(kernel_func, order, limit, lower_limit)
+function CoalescenceTensor(kernel_func, order::Int, limit::FT, lower_limit::FT = FT(0), norms::Tuple{FT, FT} = (FT(1e6), FT(1e-9))) where {FT <: Real}
+    coef = polyfit(kernel_func, order, limit, lower_limit, norms)
     CoalescenceTensor(SMatrix{order + 1, order + 1}(coef))
 end
 
@@ -73,28 +74,36 @@ function polyfit(
     r::Int,
     limit::FT,
     lower_limit = FT(0),
+    norms = (FT(1e6), FT(1e-9)),
     npoints = 10,
     opt_tol = 10 * eps(FT),
-    opt_max_iter = 100000,
+    opt_max_iter = 1000,
 ) where {FT <: Real}
-    check_symmetry(kernel_func)
-    if limit <= lower_limit || lower_limit < FT(0)
+
+    kernel_func_n = get_normalized_kernel_func(kernel_func, norms)
+    limit_n = limit / norms[2]
+    lower_limit_n = lower_limit / norms[2]
+    @show kernel_func_n
+    @show limit_n
+
+    check_symmetry(kernel_func_n)
+    if limit_n <= lower_limit_n || lower_limit_n < FT(0)
         error("polyfit limits improperly specified")
     end
 
     # use a 2d grid (with 0 < x < y and lower_limit < y < limit)
     # to fit a 2d polynomial function to kernel_func
-    Δ = limit / (npoints - 1)
+    Δ = limit_n / (npoints - 1)
     x_ = map(i -> i % npoints * Δ, 0:(npoints * npoints - 1))
     y_ = map(i -> floor(i / npoints) * Δ, 0:(npoints * npoints - 1))
-    ind1_ = map(s -> s >= lower_limit, y_)
+    ind1_ = map(s -> s >= lower_limit_n, y_)
     ind2_ = map(s -> s >= 0, y_ - x_)
     inds_ = map(i -> ind1_[i] && ind2_[i], 1:(npoints * npoints))
     x = x_[inds_]
     y = y_[inds_]
 
     # find the first element of the coefficients matrix - constant term in the approximation
-    C_1_1 = max(eps(FT), kernel_func(FT(0), FT(0)))
+    C_1_1 = max(eps(FT), kernel_func_n(FT(0), FT(0)))
     if r == 0
         return SA[C_1_1]
     end
@@ -108,13 +117,12 @@ function polyfit(
             j in 1:(r + 1)
         ]
 
-        z = map(x_i -> map(y_i -> kernel_func(x_i, y_i), y), x)
+        z = map(x_i -> map(y_i -> kernel_func_n(x_i, y_i), y), x)
         for i in 1:(r + 1)
             for j in 1:(r + 1)
                 z -= map(x_i -> map(y_i -> C[i, j] * x_i^(i - 1) * y_i^(j - 1), y), x)
             end
         end
-
         return norm(z)
     end
 
