@@ -17,7 +17,7 @@ dist_init = (
 )
 
 # Solver
-kernel_func = (x, y) -> 5 * (x + y) # 5 m^3/kg/s; x, y in kg
+kernel_func = LinearKernelFunction(FT(5)) # 5 m^3/kg/s; x, y in kg
 kernel = CoalescenceTensor(kernel_func, 1, FT(1e-6))
 tspan = (FT(0), FT(120))
 NProgMoms = map(dist_init) do dist

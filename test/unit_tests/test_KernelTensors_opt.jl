@@ -1,4 +1,5 @@
 using Cloudy.KernelTensors
+using Cloudy.KernelFunctions
 import Cloudy.KernelTensors: check_symmetry, polyfit
 using StaticArrays
 using JET: @test_opt
@@ -9,7 +10,7 @@ c = SA[0.1 0.0; 0.0 0.2]
 @test 80 >= @allocated CoalescenceTensor(c)
 
 # test initialization with kernel function
-kernel_func = (x, y) -> 0.02 + x + y
+kernel_func = LinearKernelFunction(FT(0.02))
 # @test_opt CoalescenceTensor(kernel_func, 1, 10.0) # TODO polyfit fails optimization
 
 # test symmetry checks
@@ -17,7 +18,7 @@ kernel_func = (x, y) -> 0.02 + x + y
 @test 0 == @allocated check_symmetry(c)
 
 # test polynomial fitting routines
-kernel_func = (x, y) -> 0.1 + 0.2 * x * y
+kernel_func = ConstantKernelFunction(FT(0.1))
 @test_opt kernel_func(1.0, 2.0)
 # @test_opt polyfit(kernel_func, 1, 10.0)  # TODO polyfit fails optimization
 

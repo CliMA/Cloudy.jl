@@ -13,7 +13,7 @@ moments_init = [1e6, 2e-3, 6e-12]
 dist_init = (LognormalPrimitiveParticleDistribution(FT(1e6), -20.233, 0.637),) # 1e6/m^3; μ = -20.233; σ = 0.637
 
 # Solver
-kernel_func = (x, y) -> 5 * (x + y) # 5 m^3/kg/s; x, y in kg
+kernel_func = LinearKernelFunction(FT(5)) # 5 m^3/kg/s; x, y in kg
 kernel = CoalescenceTensor(kernel_func, 1, FT(1e-6))
 tspan = (FT(0), FT(1000))
 NProgMoms = map(dist_init) do dist
