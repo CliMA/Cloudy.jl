@@ -52,7 +52,13 @@ struct CoalescenceTensor{P, FT, T} <: KernelTensor{FT}
 end
 
 
-function CoalescenceTensor(kernel_func, order::Int, limit::FT, lower_limit::FT = FT(0), norms::Tuple{FT, FT} = (FT(1e6), FT(1e-9))) where {FT <: Real}
+function CoalescenceTensor(
+    kernel_func,
+    order::Int,
+    limit::FT,
+    lower_limit::FT = FT(0),
+    norms::Tuple{FT, FT} = (FT(1e6), FT(1e-9)),
+) where {FT <: Real}
     coef = polyfit(kernel_func, order, limit, lower_limit, norms)
     CoalescenceTensor(SMatrix{order + 1, order + 1}(coef))
 end
@@ -76,15 +82,13 @@ function polyfit(
     lower_limit = FT(0),
     norms = (FT(1e6), FT(1e-9)),
     npoints = 10,
-    opt_tol = 10 * eps(FT),
-    opt_max_iter = 1000,
+    opt_tol = sqrt(eps(FT)),
+    opt_max_iter = 20000,
 ) where {FT <: Real}
 
     kernel_func_n = get_normalized_kernel_func(kernel_func, norms)
     limit_n = limit / norms[2]
     lower_limit_n = lower_limit / norms[2]
-    @show kernel_func_n
-    @show limit_n
 
     check_symmetry(kernel_func_n)
     if limit_n <= lower_limit_n || lower_limit_n < FT(0)
@@ -130,7 +134,8 @@ function polyfit(
     res_ = optimize(f, c_vec0, g_abstol = opt_tol, iterations = opt_max_iter).minimizer
     res = [C_1_1; res_...]
     return SMatrix{r + 1, r + 1}([
-        i <= j ? res[Int(j * (j - 1) / 2 + i)] : res[Int(i * (i - 1) / 2 + j)] for i in 1:(r + 1), j in 1:(r + 1)
+        i <= j ? res[Int(j * (j - 1) / 2 + i)] / (norms[1] * norms[2]^(FT(i + j - 2))) :
+        res[Int(i * (i - 1) / 2 + j)] / (norms[1] * norms[2]^(FT(i + j - 2))) for i in 1:(r + 1), j in 1:(r + 1)
     ])
 end
 
