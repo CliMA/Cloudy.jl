@@ -86,7 +86,12 @@ function polyfit(
     opt_max_iter = 20000,
 ) where {FT <: Real}
 
-    kernel_func_n = get_normalized_kernel_func(kernel_func, norms)
+    if kernel_func isa CoalescenceKernelFunction
+        kernel_func_n = get_normalized_kernel_func(kernel_func, norms)
+    else
+        kernel_func_n = kernel_func
+        norms = (FT(1), FT(1))
+    end
     limit_n = limit / norms[2]
     lower_limit_n = lower_limit / norms[2]
 

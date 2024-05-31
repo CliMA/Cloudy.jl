@@ -1,6 +1,7 @@
 "Testing correctness of KernelTensors module."
 
 using Cloudy.KernelTensors
+using Cloudy.KernelFunctions
 using StaticArrays
 
 import Cloudy.KernelTensors: check_symmetry, polyfit
@@ -13,7 +14,7 @@ ker = CoalescenceTensor(c)
 @test ker.c == Array{FT}(c)
 
 #test initialization with kernel function
-kernel_func = LinearKernelFunction(FT(0.02))
+kernel_func = (x, y) -> 0.02 + x + y
 ker = CoalescenceTensor(kernel_func, 1, 10.0)
 @test ker.c ≈ SA[0.02 1.0; 1.0 0.0] rtol = rtol
 @test ker.c isa SMatrix{2, 2}{FT}

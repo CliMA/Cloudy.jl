@@ -1,4 +1,5 @@
 using Cloudy.KernelTensors
+using Cloudy.KernelFunctions
 import Cloudy.KernelTensors: check_symmetry, polyfit
 using StaticArrays
 using JET: @test_opt
