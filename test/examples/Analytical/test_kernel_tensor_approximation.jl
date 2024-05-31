@@ -1,7 +1,6 @@
 using Cloudy
 using Cloudy.KernelFunctions
 using Cloudy.KernelTensors
-using Cloudy.Coalescence
 using Plots
 
 function compute_kernel_from_tensor(c, x, y)
