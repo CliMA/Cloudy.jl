@@ -33,7 +33,7 @@ dist2b = ExponentialPrimitiveParticleDistribution(10.0, 1000.0)
 
 # Analytical Coal
 order = 1
-kernel = CoalescenceTensor((x, y) -> x + y, order, 1e-6)
+kernel = CoalescenceTensor(LinearKernelFunction(1.0), order, 1e-6)
 NProgMoms = (3, 3, 3)
 @test_opt CoalescenceData(kernel, NProgMoms, (0.1, 1.0, 10.0), (10.0, 0.1))
 CoalescenceData(kernel, NProgMoms, (0.1, 1.0, 10.0), (10.0, 0.1))

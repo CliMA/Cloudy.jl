@@ -109,7 +109,7 @@ function polyfit(
     # find the first element of the coefficients matrix - constant term in the approximation
     C_1_1 = max(eps(FT), kernel_func_n(FT(0), FT(0)))
     if r == 0
-        return SA[C_1_1]
+        return SA[C_1_1 / norms[1]]
     end
 
     # define loss function
