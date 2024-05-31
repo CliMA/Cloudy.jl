@@ -52,7 +52,7 @@ end
 # HydrodynamicKernelFunction
 FT = Float64
 limit = FT(1e-6)
-order = 5
+order = 4
 
 kernel_func = HydrodynamicKernelFunction(1e2 * π)
 kernel_tensor = CoalescenceTensor(kernel_func, order, limit)
