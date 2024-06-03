@@ -4,6 +4,7 @@ using OrdinaryDiffEq
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")
+include(joinpath(pkgdir(Cloudy), "test", "examples", "utils", "netcdf_helpers.jl"))
 
 FT = Float64
 
@@ -30,3 +31,4 @@ plot_params!(sol, ODE_parameters; file_name = "box_single_gamma_hydro_params.pdf
 plot_moments!(sol, ODE_parameters; file_name = "box_single_gamma_hydro_moments.pdf")
 plot_spectra!(sol, ODE_parameters; file_name = "box_single_gamma_hydro_spectra.pdf", logxrange = (-12, -3))
 print_box_results!(sol, ODE_parameters)
+box_output(sol, ODE_parameters, "box_single_gamma_hydro.nc", FT)
