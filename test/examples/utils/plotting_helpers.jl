@@ -299,7 +299,7 @@ function plot_rainshaft_results(
                         res[t_ind][iz, ind_rng[im]]
                     end)
                 end
-                (; N_liq, M_liq, N_rai, M_rai) = get_standard_N_q(pdists_tmp, size_cutoff = 5.236e-10)
+                (; N_liq, M_liq, N_rai, M_rai) = get_standard_N_q(pdists_tmp, 5.236e-10)
                 Nc[iz] = N_liq
                 Nr[iz] = N_rai
                 Mc[iz] = M_liq
