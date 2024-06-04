@@ -59,3 +59,45 @@ function box_output(sol, p, filename, FT)
 
     close(ds)
 end
+
+function rainshaft_output(z, sol, p, filename, FT)
+    path = joinpath(pkgdir(Cloudy), "test/outputs/")
+    ds = NCDataset(joinpath(path, filename), "c")
+    
+    # define the dimensions
+    time = sol.t
+    Ndist = length(p.pdists)
+    defDim(ds, "t", length(time))
+    defDim(ds, "z", length(z))
+    defDim(ds, "dist", Ndist)
+    defDim(ds, "order", maximum(p.NProgMoms))
+    t = defVar(ds, "time", FT, ("t",))
+    t[:] = time
+
+    # moments
+    M = defVar(ds, "moments", FT, ("t", "z", "dist", "order"))
+    Mtot = defVar(ds, "total_moments", FT, ("t", "z", "order"))
+    moments = sol.u
+    for i in 1:Ndist
+        for j in 1:p.NProgMoms[i]
+            ind = get_dist_moment_ind(p.NProgMoms, i, j)
+            for it in 1:length(time)
+                M[it, :, i, j] = moments[it][:, ind]
+            end
+        end
+    end
+
+    Nmom_min = minimum(p.NProgMoms)
+    moments_sum = zeros(length(time), length(z), Nmom_min)
+    for i in 1:Ndist
+        for j in 1:Nmom_min
+            ind = get_dist_moment_ind(p.NProgMoms, i, j)
+            for it in 1:length(time)
+                moments_sum[it, :, j] += moments[it][:, ind]
+            end
+        end
+    end
+    Mtot[:, :, 1:Nmom_min] = moments_sum
+
+    close(ds)
+end
