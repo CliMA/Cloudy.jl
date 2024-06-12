@@ -598,7 +598,11 @@ function get_standard_N_liq(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}
 end
 
 function get_standard_N_rai(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, size_cutoff = 1e-6) where {FT, N}
-    return mapreduce(j -> moment(pdists[j], FT(0)) - partial_moment(pdists[j], FT(0), size_cutoff), +, ntuple(identity, N))
+    return mapreduce(
+        j -> moment(pdists[j], FT(0)) - partial_moment(pdists[j], FT(0), size_cutoff),
+        +,
+        ntuple(identity, N),
+    )
 end
 
 function get_standard_M_liq(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, size_cutoff = 1e-6) where {FT, N}
@@ -606,7 +610,11 @@ function get_standard_M_liq(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}
 end
 
 function get_standard_M_rai(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, size_cutoff = 1e-6) where {FT, N}
-    return mapreduce(j -> moment(pdists[j], FT(1)) - partial_moment(pdists[j], FT(1), size_cutoff), +, ntuple(identity, N))
+    return mapreduce(
+        j -> moment(pdists[j], FT(1)) - partial_moment(pdists[j], FT(1), size_cutoff),
+        +,
+        ntuple(identity, N),
+    )
 end
 
 """

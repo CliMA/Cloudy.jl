@@ -219,8 +219,8 @@ m = (1.0, 3.0, 2.0)
 
 # get_standard_N_q
 pdists = (ExponentialPrimitiveParticleDistribution(10.0, 1.0), GammaPrimitiveParticleDistribution(5.0, 10.0, 2.0))
-Nq1 = get_standard_N_q(pdists; size_cutoff = 1.0)
-Nq2 = get_standard_N_q(pdists; size_cutoff = 0.5)
+Nq1 = get_standard_N_q(pdists, 1.0)
+Nq2 = get_standard_N_q(pdists, 0.5)
 @test Nq1.N_liq + Nq1.N_rai ≈ 15.0 rtol = rtol
 @test Nq1.M_liq + Nq1.M_rai ≈ 110.0 rtol = rtol
 @test Nq2.N_liq + Nq2.N_rai ≈ 15.0 rtol = rtol

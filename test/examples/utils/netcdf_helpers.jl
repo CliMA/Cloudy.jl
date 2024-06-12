@@ -10,7 +10,7 @@ include(joinpath(pkgdir(Cloudy), "test", "examples", "utils", "plotting_helpers.
 function box_output(sol, p, filename, FT)
     path = joinpath(pkgdir(Cloudy), "test/outputs/")
     ds = NCDataset(joinpath(path, filename), "c")
-    
+
     # define the dimensions
     time = sol.t
     Ndist = length(p.pdists)
@@ -39,7 +39,7 @@ function box_output(sol, p, filename, FT)
             moments_sum[:, j] += moments[:, ind]
         end
     end
-    Mtot[:,1:Nmom_min] = moments_sum
+    Mtot[:, 1:Nmom_min] = moments_sum
 
     # distribution parameters
     Nmom_max = maximum(p.NProgMoms)
@@ -63,7 +63,7 @@ end
 function rainshaft_output(z, sol, p, filename, FT)
     path = joinpath(pkgdir(Cloudy), "test/outputs/")
     ds = NCDataset(joinpath(path, filename), "c")
-    
+
     # define the dimensions
     time = sol.t
     Ndist = length(p.pdists)
