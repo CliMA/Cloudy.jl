@@ -1,6 +1,7 @@
 "Testing correctness of KernelTensors module."
 
 using Cloudy.KernelTensors
+using Cloudy.KernelFunctions
 using StaticArrays
 
 import Cloudy.KernelTensors: check_symmetry, polyfit

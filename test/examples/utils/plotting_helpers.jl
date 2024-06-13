@@ -76,7 +76,7 @@ function plot_moments!(sol, p; file_name = "test_moments.png")
     plot(
         plt...,
         layout = grid(Nrow, Ncol),
-        size = (Ncol * 500, Nrow * 350),
+        size = (Ncol * 400, Nrow * 270),
         foreground_color_legend = nothing,
         left_margin = 5Plots.mm,
         bottom_margin = 5Plots.mm,
@@ -141,7 +141,7 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
     plot(
         plt...,
         layout = grid(1, 3),
-        size = (1500, 350),
+        size = (1200, 270),
         foreground_color_legend = nothing,
         left_margin = 7Plots.mm,
         bottom_margin = 8Plots.mm,
