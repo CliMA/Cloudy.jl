@@ -72,7 +72,9 @@ function rainshaft_output(z, sol, p, filename, FT)
     defDim(ds, "dist", Ndist)
     defDim(ds, "order", maximum(p.NProgMoms))
     t = defVar(ds, "time", FT, ("t",))
+    zz = defVar(ds, "altitude", FT, ("z",))
     t[:] = time
+    zz[:] = z
 
     # moments
     M = defVar(ds, "moments", FT, ("t", "z", "dist", "order"))
@@ -98,6 +100,26 @@ function rainshaft_output(z, sol, p, filename, FT)
         end
     end
     Mtot[:, :, 1:Nmom_min] = moments_sum
+
+    Nc = defVar(ds, "Nc", FT, ("t", "z"))
+    Nr = defVar(ds, "Nr", FT, ("t", "z"))
+    Mc = defVar(ds, "Mc", FT, ("t", "z"))
+    Mr = defVar(ds, "Mr", FT, ("t", "z"))
+    for it in 1:length(time)
+        for iz in 1:length(z)
+            pdists_tmp = ntuple(Ndist) do ip
+                ind_rng = get_dist_moments_ind_range(p.NProgMoms, ip)
+                update_dist_from_moments(p.pdists[ip], ntuple(length(ind_rng)) do im
+                    moments[it][iz, ind_rng[im]]
+                end)
+            end
+            (; N_liq, M_liq, N_rai, M_rai) = get_standard_N_q(pdists_tmp, 5.236e-10)
+            Nc[it, iz] = N_liq
+            Nr[it, iz] = N_rai
+            Mc[it, iz] = M_liq
+            Mr[it, iz] = M_rai
+        end
+    end
 
     close(ds)
 end
