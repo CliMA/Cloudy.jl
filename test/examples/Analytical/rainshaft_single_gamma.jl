@@ -4,6 +4,7 @@ using OrdinaryDiffEq
 
 include("../utils/rainshaft_helpers.jl")
 include("../utils/plotting_helpers.jl")
+include(joinpath(pkgdir(Cloudy), "test", "examples", "utils", "netcdf_helpers.jl"))
 
 
 FT = Float64
@@ -46,3 +47,4 @@ sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 res = sol.u
 
 plot_rainshaft_results(z, res, ODE_parameters, file_name = "rainshaft_single_gamma.pdf")
+rainshaft_output(z, sol, ODE_parameters, "rainshaft_single_gamma.nc", FT)

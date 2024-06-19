@@ -4,7 +4,7 @@ using OrdinaryDiffEq
 
 include("../utils/rainshaft_helpers.jl")
 include("../utils/plotting_helpers.jl")
-
+include(joinpath(pkgdir(Cloudy), "test", "examples", "utils", "netcdf_helpers.jl"))
 
 FT = Float64
 
@@ -50,3 +50,4 @@ res = sol.u
 
 plot_rainshaft_results(z, res, ODE_parameters, file_name = "rainshaft_gamma_mixture.pdf", print = true)
 #plot_rainshaft_contours(z, sol.t, res, ODE_parameters, file_name="rainshaft_gamma_mixture_contours.png")
+rainshaft_output(z, sol, ODE_parameters, "rainshaft_double_gamma.nc", FT)
