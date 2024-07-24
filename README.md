@@ -19,8 +19,6 @@ Currently Cloudy.jl only supports collisions with simple kernels.
 
 Examples can be found in the examples folder.
 
-Installation hints can be found in .travis.yml file.
-
 To build the docs locally:
 
 - ```julia --project=docs```
