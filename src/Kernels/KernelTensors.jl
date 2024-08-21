@@ -95,7 +95,7 @@ function polyfit(
     limit_n = limit / norms[2]
     lower_limit_n = lower_limit / norms[2]
 
-    check_symmetry(kernel_func_n)
+    check_symmetry(FT, kernel_func_n)
     if limit_n <= lower_limit_n || lower_limit_n < FT(0)
         error("polyfit limits improperly specified")
     end
@@ -104,7 +104,7 @@ function polyfit(
     # to fit a 2d polynomial function to kernel_func
     Δ = limit_n / (npoints - 1)
     x_ = map(i -> i % npoints * Δ, 0:(npoints * npoints - 1))
-    y_ = map(i -> floor(i / npoints) * Δ, 0:(npoints * npoints - 1))
+    y_ = map(i -> FT(floor(i / npoints)) * Δ, 0:(npoints * npoints - 1))
     ind1_ = map(s -> s >= lower_limit_n, y_)
     ind2_ = map(s -> s >= 0, y_ - x_)
     inds_ = map(i -> ind1_[i] && ind2_[i], 1:(npoints * npoints))
@@ -125,7 +125,6 @@ function polyfit(
             i <= j ? c_vec[Int(j * (j - 1) / 2 + i)] : c_vec[Int(i * (i - 1) / 2 + j)] for i in 1:(r + 1),
             j in 1:(r + 1)
         ]
-
         z = map(x_i -> map(y_i -> kernel_func_n(x_i, y_i), y), x)
         for i in 1:(r + 1)
             for j in 1:(r + 1)
@@ -137,7 +136,7 @@ function polyfit(
 
     c_vec0 = zeros(Int((r + 1) * (r + 2) / 2) - 1)
     res_ = optimize(f, c_vec0, g_abstol = opt_tol, iterations = opt_max_iter).minimizer
-    res = [C_1_1; res_...]
+    res = [FT(C_1_1); FT.(res_)...]
     return SMatrix{r + 1, r + 1}([
         i <= j ? res[Int(j * (j - 1) / 2 + i)] / (norms[1] * norms[2]^(FT(i + j - 2))) :
         res[Int(i * (i - 1) / 2 + j)] / (norms[1] * norms[2]^(FT(i + j - 2))) for i in 1:(r + 1), j in 1:(r + 1)
@@ -169,9 +168,9 @@ function check_symmetry(array::AbstractArray{FT}) where {FT <: Real}
     end
 end
 # only called once at initialization, so performance not strictly necessary
-function check_symmetry(func)
+function check_symmetry(FT, func)
     n_test = 1000
-    test_numbers = rand(n_test, 2)
+    test_numbers = rand(FT, n_test, 2)
     for i in 1:n_test
         if abs(func(test_numbers[i, :]...) - func(test_numbers[i, end:-1:1]...)) > 1e-6
             error("function likely not symmetric.")

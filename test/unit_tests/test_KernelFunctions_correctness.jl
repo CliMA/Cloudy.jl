@@ -78,3 +78,11 @@ kernel_n = get_normalized_kernel_func(kernel, norms)
 @test kernel_n.x_threshold == x_th / norms[2]
 @test kernel_n.coal_rate_below_threshold == C_bl * norms[1] * norms[2]^2
 @test kernel_n.coal_rate_above_threshold == C_ab * norms[1] * norms[2]
+
+# type stability
+r = 1
+for FT in (Float64, Float32)
+    kernel_func = CL.KernelFunctions.LinearKernelFunction(FT(5e0)) 
+    kernel_tens = CL.KernelTensors.CoalescenceTensor(kernel_func, r, FT(5e-10))
+    @test kernel_tens isa CL.KernelTensors.CoalescenceTensor{r+1, FT, (r+1)*(r+1)}
+end
