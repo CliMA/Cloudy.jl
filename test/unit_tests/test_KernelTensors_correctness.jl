@@ -21,6 +21,7 @@ ker = CoalescenceTensor(kernel_func, 1, 10.0)
 
 # test auxilliary functions
 # test symmetry checks
+FT = Float64
 c = [1.0 0.0; 0.0 2.0]
 check_symmetry(c)
 c = [1.0 -0.2 0.1; -0.2 -1.0 1.1; 0.1 1.1 3.0]
@@ -30,9 +31,9 @@ c = [1.0 -0.2; 0.2 2.0]
 c = [1.0 0.2 0.1; -0.2 -1.0 1.1; 0.1 1.1 3.0]
 @test_throws Exception check_symmetry(c)
 f = (x, y) -> x + y
-check_symmetry(f)
+check_symmetry(FT, f)
 f = (x, y) -> x - y
-@test_throws Exception check_symmetry(f)
+@test_throws Exception check_symmetry(FT, f)
 
 # test polynomial fitting routines
 f = (x, y) -> 0.1 + 0.2 * x * y
@@ -50,3 +51,11 @@ ker = CoalescenceTensor(c)
 ker_n = get_normalized_kernel_tensor(ker, (10.0, 0.2))
 @test ker_n.c ≈ [10.0 4.0; 4.0 1.2] atol = 1e-12
 @test ker_n.c isa SMatrix{2, 2}{FT}
+
+# type stability
+r = 1
+for FT in (Float64, Float32)
+    kernel_func = CL.KernelFunctions.LinearKernelFunction(FT(5e0)) 
+    kernel_tens = CL.KernelTensors.CoalescenceTensor(kernel_func, r, FT(5e-10))
+    @test kernel_tens isa CL.KernelTensors.CoalescenceTensor{r+1, FT, (r+1)*(r+1)}
+end
