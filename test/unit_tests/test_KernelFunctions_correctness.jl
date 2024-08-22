@@ -82,7 +82,7 @@ kernel_n = get_normalized_kernel_func(kernel, norms)
 # type stability
 r = 1
 for FT in (Float64, Float32)
-    kernel_func = CL.KernelFunctions.LinearKernelFunction(FT(5e0)) 
+    kernel_func = CL.KernelFunctions.LinearKernelFunction(FT(5e0))
     kernel_tens = CL.KernelTensors.CoalescenceTensor(kernel_func, r, FT(5e-10))
-    @test kernel_tens isa CL.KernelTensors.CoalescenceTensor{r+1, FT, (r+1)*(r+1)}
+    @test kernel_tens isa CL.KernelTensors.CoalescenceTensor{r + 1, FT, (r + 1) * (r + 1)}
 end
