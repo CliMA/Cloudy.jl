@@ -20,8 +20,4 @@ include("./examples/Analytical/test_kernel_tensor_approximation.jl")
 include("./examples/Analytical/parcel_example.jl")
 
 # Numerical examples
-include("./examples/Numerical/single_particle_exp.jl")
-include("./examples/Numerical/single_particle_gamma.jl")
-include("./examples/Numerical/n_particles_exp.jl")
 include("./examples/Numerical/n_particles_gamma.jl")
-include("./examples/Numerical/n_particles_lognorm.jl")
