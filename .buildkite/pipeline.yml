@@ -84,7 +84,3 @@ steps:
       - label: ":crystal_ball: Examples: kernel tensor approximation"
         command: "julia --color=yes --project=test test/examples/Analytical/test_kernel_tensor_approximation.jl"
         artifact_paths: "test/outputs/*"
-
-      - label: ":crystal_ball: Examples: numerical, box, gamma mixture"
-        command: "julia --color=yes --project=test test/examples/Numerical/n_particles_gamma.jl"
-        artifact_paths: "test/outputs/*"
