@@ -4,7 +4,8 @@ using SpecialFunctions: gamma, gamma_inc
 using Cloudy.ParticleDistributions
 
 import Cloudy.ParticleDistributions:
-    integrate_SimpsonEvenFast, check_moment_consistency, moment_func, density_func, density, get_standard_N_q
+    integrate_SimpsonEvenFast, check_moment_consistency, moment_func, density_func, 
+    density, get_standard_N_q, compute_thresholds, compute_threshold
 rtol = 1e-3
 
 # Monodisperse distribution
@@ -234,3 +235,13 @@ x = collect(range(1.0, 10.0, Npt + 1))
 dx = x[2] - x[1]
 yy(j) = x[j]^2
 @test integrate_SimpsonEvenFast(Npt, dx, yy) ≈ 333.0 atol = 1e-6
+
+# computing thresholds based on percentile
+pdists = (ExponentialPrimitiveParticleDistribution(10.0, 1.0), GammaPrimitiveParticleDistribution(5.0, 10.0, 2.0))
+@test compute_threshold(pdists[1], 0.75) > 1.0
+@test compute_threshold(pdists[2], 0.75) > 2.0 * 10.0
+@test compute_threshold(pdists[1], 0.0) ≈ 0.0 rtol = rtol
+@test compute_threshold(pdists[2], 0.0) ≈ 0.0 rtol = rtol
+@test compute_thresholds(pdists)[1] ≈ 3.507 rtol = rtol
+@test compute_thresholds(pdists)[2] > 1e6
+@test compute_thresholds(pdists, (0.5, 1.0))[1] ≈ 0.6931 rtol = rtol

@@ -47,7 +47,7 @@ struct CoalescenceData{N, P, FT, T}
     N_mom_max::Int
     "number of 2d integrals that need to be precomputed before computing S"
     N_2d_ints::NTuple{N, Int}
-    "mass thresholds of distributions for the computation of S term"
+    "mass thresholds OR percentiles of distributions for the computation of S term"
     dist_thresholds::NTuple{N, FT}
     "matrix containing coalescence tensors for pairs of distributions"
     kernels::NTuple{N, NTuple{N, CoalescenceTensor{P, FT, T}}}
@@ -57,6 +57,7 @@ struct CoalescenceData{N, P, FT, T}
         NProgMoms::NTuple{N, Int},
         dist_thresholds::NTuple{N, FT},
         norms::Tuple{FT, FT} = (FT(1), FT(1)),
+        ts::ThresholdStyle = FixedThreshold()
     ) where {N, P, T, FT <: Real}
 
         kernels = ntuple(N) do j
@@ -74,8 +75,12 @@ struct CoalescenceData{N, P, FT, T}
             end
         end
 
-        thresholds = ntuple(N) do i
-            dist_thresholds[i] / norms[2]
+        if ts isa FixedThreshold
+            thresholds = ntuple(N) do i
+                dist_thresholds[i] / norms[2]
+            end
+        else
+            thresholds = dist_thresholds
         end
 
         new{N, P, FT, T}(N_mom_max, N_2d_ints, thresholds, kernels)
@@ -86,6 +91,7 @@ struct CoalescenceData{N, P, FT, T}
         NProgMoms::NTuple{N, Int},
         dist_thresholds::NTuple{N, FT},
         norms::Tuple{FT, FT} = (FT(1), FT(1)),
+        ts::ThresholdStyle = FixedThreshold()
     ) where {N, P, T, FT <: Real}
 
         kernels = ntuple(N) do j
@@ -94,7 +100,7 @@ struct CoalescenceData{N, P, FT, T}
             end
         end
 
-        CoalescenceData(kernels, NProgMoms, dist_thresholds, norms)
+        CoalescenceData(kernels, NProgMoms, dist_thresholds, norms, ts)
     end
 
 end
@@ -118,6 +124,34 @@ function get_coal_ints(
 
     moments = get_moments_matrix(pdists, Val(P + 2), coal_data.N_mom_max)
     finite_2d_ints = get_finite_2d_integrals(pdists, coal_data.dist_thresholds, moments, coal_data.N_2d_ints)
+    (; Q, R, S) = get_coalescence_integral_moment_qrs(cs, moments, NProgMoms, finite_2d_ints, coal_data.kernels)
+
+    coal_ints = ntuple(N) do k
+        ntuple(NProgMoms[k]) do m
+            if k == 1
+                sum(@views Q[m][:, k]) - sum(@views R[m][:, k]) + S[m][1, k]
+            else
+                sum(@views Q[m][:, k]) - sum(@views R[m][:, k]) + S[m][1, k] + S[m][2, k - 1]
+            end
+        end
+    end
+    return rflatten(coal_ints)
+end
+
+function get_coal_ints(
+    cs::AnalyticalCoalStyle,
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
+    coal_data::CoalescenceData{N, P, FT},
+    ts::MovingThreshold
+) where {N, P, FT <: Real}
+
+    NProgMoms = map(pdists) do dist
+        nparams(dist)
+    end
+
+    moments = get_moments_matrix(pdists, Val(P + 2), coal_data.N_mom_max)
+    inst_thresholds = compute_thresholds(pdists, coal_data.dist_thresholds)
+    finite_2d_ints = get_finite_2d_integrals(pdists, inst_thresholds, moments, coal_data.N_2d_ints)
     (; Q, R, S) = get_coalescence_integral_moment_qrs(cs, moments, NProgMoms, finite_2d_ints, coal_data.kernels)
 
     coal_ints = ntuple(N) do k

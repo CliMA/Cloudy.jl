@@ -9,7 +9,7 @@ Particle mass distribution functions for microphysical process modeling:
 """
 module ParticleDistributions
 
-using SpecialFunctions: gamma, gamma_inc
+using SpecialFunctions: gamma, gamma_inc, gamma_inc_inv
 using DocStringExtensions
 using QuadGK
 using StaticArrays
@@ -31,6 +31,7 @@ export nparams
 export update_dist_from_moments
 export moment_source_helper
 export get_standard_N_q
+export compute_thresholds
 
 """
   AbstractParticleDistribution{FT}
@@ -428,7 +429,7 @@ Returns a new gamma distribution given the first three moments
 function update_dist_from_moments(
     pdist::GammaPrimitiveParticleDistribution{FT},
     moments::Tuple{FT, FT, FT};
-    param_range = (; :k => (eps(FT), Inf)),
+    param_range = (; :k => (eps(FT), 10.0)),
 ) where {FT <: Real}
     if moments[1] > eps(FT) && moments[2] > eps(FT)
         n = moments[1]
@@ -634,4 +635,41 @@ function integrate_SimpsonEvenFast(n_bins::Int, dx::FT, y::F) where {FT <: Real,
         (17 * (y(1) + y(e)) + 59 * (y(2) + y(e - 1)) + 43 * (y(3) + y(e - 2)) + 49 * (y(4) + y(e - 3))) / 48
     return dx * retval
 end
+
+
+"""
+  compute_threshold(pdists; percentile)
+  `pdists` - tuple of particle size distributions
+  `percentile` - mass percentile
+Returns a tuple of new integral thresholds, one for each pdist, computed using the given percentile
+"""
+function compute_thresholds(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, percentile::FT = 0.97) where {FT, N}
+    return ntuple(N) do i
+        if i == N 
+            Inf
+        else
+            FT(compute_threshold(pdists[i], percentile))
+        end
+    end
+end
+
+function compute_thresholds(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, percentiles::NTuple{N, FT}) where {FT, N}
+    return ntuple(N) do i
+        if i == N 
+            Inf
+        else
+            FT(compute_threshold(pdists[i], percentiles[i]))
+        end
+    end
+end
+
+function compute_threshold(pdist::ExponentialPrimitiveParticleDistribution{FT}, percentile::FT = 0.97, minx::FT = 1e-18) where {FT <: Real}
+    return max(-pdist.θ * log(1 - percentile), minx)
+end
+
+function compute_threshold(pdist::GammaPrimitiveParticleDistribution{FT}, percentile::FT = 0.97, minx::FT = 1e-18) where {FT <: Real}
+    return max(pdist.θ * gamma_inc_inv(pdist.k, percentile, 1 - percentile), minx)
+end
+
+
 end #module ParticleDistributions.jl
