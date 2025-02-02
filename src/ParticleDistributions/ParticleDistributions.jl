@@ -438,8 +438,8 @@ function update_dist_from_moments(
         )
         θ = moments[2] / moments[1] / k
         return GammaPrimitiveParticleDistribution(n, θ, k)
-    else #don't change θ and k
-        GammaPrimitiveParticleDistribution(FT(0), pdist.θ, pdist.k)
+    else # make sure θ and k are physical
+        GammaPrimitiveParticleDistribution(FT(0), FT(1), FT(1))
     end
 end
 
@@ -458,8 +458,8 @@ function update_dist_from_moments(
         σ = max(param_range.σ[1], min(param_range.σ[2], sqrt(log(moments[1] * moments[3] / moments[2]^2))))
         n = moments[2] / exp(μ + 1 / 2 * σ^2)
         return LognormalPrimitiveParticleDistribution(n, μ, σ)
-    else #don't change μ and σ
-        return LognormalPrimitiveParticleDistribution(FT(0), pdist.μ, pdist.σ)
+    else # make sure μ and σ are physical
+        return LognormalPrimitiveParticleDistribution(FT(0), FT(1), FT(1))
     end
 end
 
@@ -476,8 +476,8 @@ function update_dist_from_moments(
         n = moments[1]
         θ = moments[2] / moments[1]
         return ExponentialPrimitiveParticleDistribution(n, θ)
-    else #don't change θ
-        return ExponentialPrimitiveParticleDistribution(FT(0), pdist.θ)
+    else # make sure θ is physical
+        return ExponentialPrimitiveParticleDistribution(FT(0), FT(1))
     end
 end
 
@@ -494,8 +494,8 @@ function update_dist_from_moments(
         n = moments[1]
         θ = moments[2] / moments[1]
         return MonodispersePrimitiveParticleDistribution(n, θ)
-    else #don't change θ
-        return MonodispersePrimitiveParticleDistribution(FT(0), pdist.θ)
+    else # make sure θ is physical
+        return MonodispersePrimitiveParticleDistribution(FT(0), FT(1))
     end
 end
 
