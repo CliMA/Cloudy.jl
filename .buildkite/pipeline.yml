@@ -1,6 +1,5 @@
 env:
   OPENBLAS_NUM_THREADS: 1
-  JULIA_DEPOT_PATH: "${BUILDKITE_BUILD_PATH}/${BUILDKITE_PIPELINE_SLUG}/depot/default"
 
 agents:
   queue: new-central
@@ -83,24 +82,4 @@ steps:
 
       - label: ":crystal_ball: Examples: kernel tensor approximation"
         command: "julia --color=yes --project=test test/examples/Analytical/test_kernel_tensor_approximation.jl"
-        artifact_paths: "test/outputs/*"
-
-      - label: ":crystal_ball: Examples: numerical, box, single exp"
-        command: "julia --color=yes --project=test test/examples/Numerical/single_particle_exp.jl"
-        artifact_paths: "test/outputs/*"
-
-      - label: ":crystal_ball: Examples: numerical, box, single gamma"
-        command: "julia --color=yes --project=test test/examples/Numerical/single_particle_gamma.jl"
-        artifact_paths: "test/outputs/*"
-
-      - label: ":crystal_ball: Examples: numerical, box, exp mixture"
-        command: "julia --color=yes --project=test test/examples/Numerical/n_particles_exp.jl"
-        artifact_paths: "test/outputs/*"
-
-      - label: ":crystal_ball: Examples: numerical, box, gamma mixture"
-        command: "julia --color=yes --project=test test/examples/Numerical/n_particles_gamma.jl"
-        artifact_paths: "test/outputs/*"
-
-      - label: ":crystal_ball: Examples: numerical, box, lognorm mixture"
-        command: "julia --color=yes --project=test test/examples/Numerical/n_particles_lognorm.jl"
         artifact_paths: "test/outputs/*"

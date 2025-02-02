@@ -84,53 +84,12 @@ for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
     @test 64 >= @allocated get_coal_ints(AnalyticalCoalStyle(), pdists, cd)
 end
 
-# Numerical Coal
-kernel = LinearKernelFunction(1.0)
-x = 50.0
-y = 20.0
-j = 1
-k = 2
-for pdists in ((dist1a, dist2a), (dist1b, dist2b))
-    # weighting function
-    @test_opt weighting_fn(10.0, 1, pdists)
-    @test_opt weighting_fn(8.0, 2, pdists)
-
-    # q_integrands
-    @test_opt q_integrand_inner(x, y, j, k, kernel, pdists)
-    @test_opt q_integrand_outer(x, j, k, kernel, pdists, 0.0)
-    @test_opt q_integrand_outer(x, j, k, kernel, pdists, 1.0)
-    @test_opt q_integrand_outer(x, j, k, kernel, pdists, 1.5)
-
-    # r_integrands
-    @test_opt r_integrand_inner(x, y, j, k, kernel, pdists)
-    @test_opt r_integrand_outer(x, j, k, kernel, pdists, 0.0)
-    @test_opt r_integrand_outer(x, j, k, kernel, pdists, 1.0)
-
-    # s_integrands
-    @test_opt s_integrand_inner(x, k, kernel, pdists, 1.0)
-    @test_opt s_integrand1(x, k, kernel, pdists, 1.0)
-    @test_opt s_integrand2(x, k, kernel, pdists, 1.0)
-end
-
-# overall Q R S fill matrices 
-# TODO these tests fail from #154
-# kernel = LinearKernelFunction(1.0)
-
-# for pdists in ((dist1a,), (dist1a, dist2a), (dist1b,), (dist1b, dist2b))
-
-#     @test_opt get_Q_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
-#     @test_opt get_R_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
-#     @test_opt get_S_coalescence_matrix(NumericalCoalStyle(), pdists, kernel)
-#     @test_opt get_coalescence_integral_moment_qrs(NumericalCoalStyle(), pdists, kernel)
-#     @test_opt get_coal_ints(NumericalCoalStyle(), pdists, kernel)
-
-# end
-
 ## Sedimentation.jl
 # Sedimentation moment flux tests
 pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
 vel = ((1.0, 0.0), (-1.0, 1.0 / 6))
 @test_opt get_sedimentation_flux(pdists, vel)
+get_sedimentation_flux(pdists, vel)
 @test 64 >= @allocated get_sedimentation_flux(pdists, vel)
 pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0), GammaPrimitiveParticleDistribution(1.0, 2.0, 3.0))
 @test_opt get_sedimentation_flux(pdists, vel)
@@ -143,6 +102,7 @@ pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
 ξ = 1e-6
 s = 0.01
 @test_opt get_cond_evap(pdists, s, ξ)
+get_cond_evap(pdists, s, ξ)
 @test 32 >= @allocated get_cond_evap(pdists, s, ξ)
 pdists = (
     ExponentialPrimitiveParticleDistribution(1.0, 1.0),
@@ -150,4 +110,5 @@ pdists = (
     GammaPrimitiveParticleDistribution(0.1, 10.0, 3.0),
 )
 @test_opt get_cond_evap(pdists, s, ξ)
+get_cond_evap(pdists, s, ξ)
 @test 80 >= @allocated get_cond_evap(pdists, s, ξ)
