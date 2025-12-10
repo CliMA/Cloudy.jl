@@ -57,7 +57,7 @@ struct CoalescenceData{N, P, FT, T}
         NProgMoms::NTuple{N, Int},
         dist_thresholds::NTuple{N, FT},
         norms::Tuple{FT, FT} = (FT(1), FT(1)),
-        ts::ThresholdStyle = FixedThreshold()
+        ts::ThresholdStyle = FixedThreshold(),
     ) where {N, P, T, FT <: Real}
 
         kernels = ntuple(N) do j
@@ -91,7 +91,7 @@ struct CoalescenceData{N, P, FT, T}
         NProgMoms::NTuple{N, Int},
         dist_thresholds::NTuple{N, FT},
         norms::Tuple{FT, FT} = (FT(1), FT(1)),
-        ts::ThresholdStyle = FixedThreshold()
+        ts::ThresholdStyle = FixedThreshold(),
     ) where {N, P, T, FT <: Real}
 
         kernels = ntuple(N) do j
@@ -142,7 +142,7 @@ function get_coal_ints(
     cs::AnalyticalCoalStyle,
     pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
     coal_data::CoalescenceData{N, P, FT},
-    ts::MovingThreshold
+    ts::MovingThreshold,
 ) where {N, P, FT <: Real}
 
     NProgMoms = map(pdists) do dist

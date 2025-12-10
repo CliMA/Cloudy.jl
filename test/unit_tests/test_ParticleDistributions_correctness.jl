@@ -4,8 +4,14 @@ using SpecialFunctions: gamma, gamma_inc
 using Cloudy.ParticleDistributions
 
 import Cloudy.ParticleDistributions:
-    integrate_SimpsonEvenFast, check_moment_consistency, moment_func, density_func, 
-    density, get_standard_N_q, compute_thresholds, compute_threshold
+    integrate_SimpsonEvenFast,
+    check_moment_consistency,
+    moment_func,
+    density_func,
+    density,
+    get_standard_N_q,
+    compute_thresholds,
+    compute_threshold
 rtol = 1e-3
 atol = 1e-6
 

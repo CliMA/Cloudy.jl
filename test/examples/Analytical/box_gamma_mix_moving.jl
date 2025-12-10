@@ -34,8 +34,7 @@ prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
 box_output(sol, ODE_parameters, "moving_gamma_golovin.nc", FT)
-plot_params!(sol, ODE_parameters; file_name = "moving_gamma_golovin_params.pdf", yscale=:identity)
+plot_params!(sol, ODE_parameters; file_name = "moving_gamma_golovin_params.pdf", yscale = :identity)
 plot_moments!(sol, ODE_parameters; file_name = "moving_gamma_golovin_moments.pdf")
 plot_spectra!(sol, ODE_parameters; file_name = "moving_gamma_golovin_spectra.pdf", logxrange = (-12, -3))
 #print_box_results!(sol, ODE_parameters)
-

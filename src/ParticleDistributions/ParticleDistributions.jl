@@ -645,7 +645,7 @@ Returns a tuple of new integral thresholds, one for each pdist, computed using t
 """
 function compute_thresholds(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, percentile::FT = 0.97) where {FT, N}
     return ntuple(N) do i
-        if i == N 
+        if i == N
             Inf
         else
             FT(compute_threshold(pdists[i], percentile))
@@ -653,9 +653,12 @@ function compute_thresholds(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}
     end
 end
 
-function compute_thresholds(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, percentiles::NTuple{N, FT}) where {FT, N}
+function compute_thresholds(
+    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
+    percentiles::NTuple{N, FT},
+) where {FT, N}
     return ntuple(N) do i
-        if i == N 
+        if i == N
             Inf
         else
             FT(compute_threshold(pdists[i], percentiles[i]))
@@ -663,11 +666,19 @@ function compute_thresholds(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}
     end
 end
 
-function compute_threshold(pdist::ExponentialPrimitiveParticleDistribution{FT}, percentile::FT = 0.97, minx::FT = 1e-18) where {FT <: Real}
+function compute_threshold(
+    pdist::ExponentialPrimitiveParticleDistribution{FT},
+    percentile::FT = 0.97,
+    minx::FT = 1e-18,
+) where {FT <: Real}
     return max(-pdist.θ * log(1 - percentile), minx)
 end
 
-function compute_threshold(pdist::GammaPrimitiveParticleDistribution{FT}, percentile::FT = 0.97, minx::FT = 1e-18) where {FT <: Real}
+function compute_threshold(
+    pdist::GammaPrimitiveParticleDistribution{FT},
+    percentile::FT = 0.97,
+    minx::FT = 1e-18,
+) where {FT <: Real}
     return max(pdist.θ * gamma_inc_inv(pdist.k, percentile, 1 - percentile), minx)
 end
 
