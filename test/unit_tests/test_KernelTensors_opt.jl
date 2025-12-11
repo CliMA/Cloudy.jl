@@ -7,6 +7,7 @@ using JET: @test_opt
 # test initialization with arrays
 c = SA[0.1 0.0; 0.0 0.2]
 @test_opt CoalescenceTensor(c)
+CoalescenceTensor(c)
 @test 80 >= @allocated CoalescenceTensor(c)
 
 # test initialization with kernel function
@@ -15,6 +16,7 @@ kernel_func = LinearKernelFunction(FT(0.02))
 
 # test symmetry checks
 @test_opt check_symmetry(c)
+check_symmetry(c)
 @test 0 == @allocated check_symmetry(c)
 
 # test polynomial fitting routines
