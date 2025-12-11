@@ -641,7 +641,9 @@ end
   compute_threshold(pdists; percentile)
   `pdists` - tuple of particle size distributions
   `percentile` - mass percentile
-Returns a tuple of new integral thresholds, one for each pdist, computed using the given percentile
+Returns a tuple of new integral thresholds, one for each pdist, computed using the given percentile.
+This is computed by computing the inverse CDF of the selected percentile, based on the form of 
+the distribution (e.g. exponential, gamma). 
 """
 function compute_thresholds(pdists::NTuple{N, PrimitiveParticleDistribution{FT}}, percentile::FT = 0.97) where {FT, N}
     return ntuple(N) do i
