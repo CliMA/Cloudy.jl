@@ -2,7 +2,7 @@ env:
   OPENBLAS_NUM_THREADS: 1
 
 agents:
-  queue: new-central
+  queue: central
   slurm_ntasks: 1
   modules: climacommon/2025_03_18
 
