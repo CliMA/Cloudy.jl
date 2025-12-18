@@ -1,10 +1,12 @@
+agents:
+  queue: central
+  slurm_mem: 2G
+  slurm_cpus_per_task: 1
+  slurm_time: '00:60:00'
+  modules: climacommon/2025_03_18
+
 env:
   OPENBLAS_NUM_THREADS: 1
-
-agents:
-  queue: new-central
-  slurm_ntasks: 1
-  modules: climacommon/2024_05_27
 
 steps:
   - label: "Init environment :computer:"
@@ -15,6 +17,12 @@ steps:
       - "julia --project=test -e 'using Pkg; Pkg.instantiate(;verbose=true)'"
       - "julia --project=test -e 'using Pkg; Pkg.precompile()'"
       - "julia --project=test -e 'using Pkg; Pkg.status()'"
+    agents:
+      slurm_cpus_per_task: 8
+      slurm_mem: 6G
+      slurm_time: '00:45:00'
+    env:
+      JULIA_NUM_PRECOMPILE_TASKS: 8
 
   - wait
 
@@ -34,6 +42,10 @@ steps:
 
       - label: ":crystal_ball: Examples: analytical, box, gamma mixture"
         command: "julia --color=yes --project=test test/examples/Analytical/box_gamma_mixture.jl"
+        artifact_paths: "test/outputs/*"
+
+      - label: ":crytal_ball: Examples: analytical, box, gamma mixture with moving thresholds"
+        command: "julia --color=yes --project=test test/examples/Analytical/box_gamma_mix_moving.jl"
         artifact_paths: "test/outputs/*"
 
       - label: ":crystal_ball: Examples: analytical, box, gamma mixture, 3 modes"

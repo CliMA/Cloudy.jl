@@ -60,7 +60,7 @@ function parcel_model_cloudy(dY, Y, p, t)
         ind_rng = get_dist_moments_ind_range(NProgMoms, i)
         CPD.update_dist_from_moments(p.pdists[i], moments[ind_rng])
     end))
-    ξ = CO.G_func(aps, tps, T, TD.Liquid())
+    ξ = CO.G_func_liquid(aps, tps, T)
     dmom_ce = CL.Condensation.get_cond_evap(pdists, Sₗ - 1, ξ, ρₗ)
     # ... water mass budget
     mass_ind = 2

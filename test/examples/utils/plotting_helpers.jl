@@ -125,8 +125,8 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
                 linewidth = 2,
                 xaxis = :log,
                 yaxis = "dm / d(ln r)",
-                xlabel = "r",
-                label = "Pdist " * string(j),
+                xlabel = "r (μm)",
+                label = i == 1 ? "Pdist " * string(j) : "",
                 title = "time = " * string(round(sol.t[t_ind[i]], sigdigits = 4)),
             )
             sp_sum[:, i] += 3 * x .^ 2 .* pdist_tmp.(x)
@@ -135,7 +135,7 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
                 @show 3 * x .^ 2 .* pdist_tmp.(x)
             end
         end
-        plot!(r, sp_sum[:, i], linewidth = 2, linestyle = :dash, linecolor = :black, label = "Sum")
+        plot!(r, sp_sum[:, i], linewidth = 2, linestyle = :dash, linecolor = :black, label = i == 1 ? "Sum " : "")
     end
 
     plot(
@@ -165,6 +165,7 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     moments = vcat(sol.u'...) ./ collect(mom_norms)'
     params = similar(moments)
     n_dist = length(p.pdists)
+    labels = ["N", "θ", "k"]
     plt = Array{Plots.Plot}(undef, n_dist)
     n_params = [nparams(p.pdists[i]) for i in 1:n_dist]
     for i in 1:n_dist
@@ -179,9 +180,9 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
 
         plot()
         for j in ind_rng
-            plot!(time, params[:, j], linewidth = 2, label = "p_" * string(j - ind_rng[1] + 1), yscale = yscale)
+            plot!(time, params[:, j], linewidth = 2, label = labels[j - ind_rng[1] + 1], yscale = yscale)
         end
-        plt[i] = plot!(xaxis = "time", yaxis = "parameters (mode " * string(i) * ")")
+        plt[i] = plot!(xaxis = "time [s]", yaxis = "parameters (mode " * string(i) * ")")
     end
     nrow = floor(Int, sqrt(n_dist))
     ncol = ceil(Int, sqrt(n_dist))

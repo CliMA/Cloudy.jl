@@ -4,6 +4,7 @@ using Cloudy
 using Cloudy.ParticleDistributions
 using Cloudy.EquationTypes
 using Cloudy.Coalescence:
+    MovingThreshold,
     CoalescenceData,
     weighting_fn,
     q_integrand_inner,

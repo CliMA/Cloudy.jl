@@ -12,17 +12,18 @@ using Cloudy.EquationTypes
 const CPD = Cloudy.ParticleDistributions
 
 """
-  make_box_model_rhs(coal_type::CoalescenceStyle)
+  make_box_model_rhs(coal_type::CoalescenceStyle, threshold_style::ThresholdStyle)
 
   `coal_type` type of coal source term function: AnalyticalCoalStyle, NumericalCoalStyle
+  `threshold_style` type of integration thresholds for analytical integration: Fixed or Moving
 Returns a function representing the right hand side of the ODE equation containing divergence 
 of coalescence source term.
 """
-function make_box_model_rhs(coal_type::CoalescenceStyle)
-    rhs!(dm, m, par, t) = rhs_coal!(coal_type, dm, m, par)
+function make_box_model_rhs(coal_type::CoalescenceStyle, threshold_style::ThresholdStyle = FixedThreshold())
+    rhs!(dm, m, par, t) = rhs_coal!(coal_type, dm, m, par, threshold_style)
 end
 
-function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
+function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p, threshold_style)
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
     mom_normalized = tuple(mom ./ mom_norms...)
     p = merge(p, (; pdists = ntuple(length(p.pdists)) do i
@@ -31,7 +32,11 @@ function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p)
     end))
 
     if coal_type isa AnalyticalCoalStyle
-        coal_ints = get_coal_ints(coal_type, p.pdists, p.coal_data)
+        if threshold_style isa FixedThreshold
+            coal_ints = get_coal_ints(coal_type, p.pdists, p.coal_data)
+        elseif threshold_style isa MovingThreshold
+            coal_ints = get_coal_ints(coal_type, p.pdists, p.coal_data, threshold_style)
+        end
     elseif coal_type isa NumericalCoalStyle
         coal_ints = get_coal_ints(coal_type, p.pdists, p.kernel_func)
     else
