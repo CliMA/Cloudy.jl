@@ -1,7 +1,7 @@
 name = "Cloudy"
 uuid = "9e3b23bb-e7cc-4b94-886c-65de2234ba87"
 authors = ["Climate Modeling Alliance"]
-version = "0.5.7"
+version = "0.5.8"
 
 [deps]
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
@@ -17,9 +17,9 @@ TerminalLoggers = "5d786b92-1e48-4d6f-9151-6b4477ca9bed"
 DocStringExtensions = "0.9"
 LinearAlgebra = "1"
 Logging = "1"
-Optim = "1.7"
-QuadGK = "2.9"
-SpecialFunctions = "2.3"
+Optim = "1.13"
+QuadGK = "2.11"
+SpecialFunctions = "2.6"
 StaticArrays = "1.9"
 TerminalLoggers = "0.1"
 julia = "1.9"
