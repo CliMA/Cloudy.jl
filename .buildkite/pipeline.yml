@@ -1,13 +1,12 @@
-env:
-  OPENBLAS_NUM_THREADS: 1
-
 agents:
   queue: central
-  slurm_ntasks: 1
   slurm_mem: 2G
   slurm_cpus_per_task: 1
-  slurm_time: '00:150:00'
+  slurm_time: '02:30:00'
   modules: climacommon/2025_03_18
+
+env:
+  OPENBLAS_NUM_THREADS: 1
 
 steps:
   - label: "Init environment :computer:"
@@ -18,6 +17,12 @@ steps:
       - "julia --project=test -e 'using Pkg; Pkg.instantiate(;verbose=true)'"
       - "julia --project=test -e 'using Pkg; Pkg.precompile()'"
       - "julia --project=test -e 'using Pkg; Pkg.status()'"
+    agents:
+      slurm_cpus_per_task: 8
+      slurm_mem: 6G
+      slurm_time: '02:00:00'
+    env:
+      JULIA_NUM_PRECOMPILE_TASKS: 8
 
   - wait
 
