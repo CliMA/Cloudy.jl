@@ -2,7 +2,7 @@ agents:
   queue: central
   slurm_mem: 2G
   slurm_cpus_per_task: 1
-  slurm_time: '02:30:00'
+  slurm_time: '00:30:00'
   modules: climacommon/2025_03_18
 
 env:
@@ -20,7 +20,7 @@ steps:
     agents:
       slurm_cpus_per_task: 8
       slurm_mem: 6G
-      slurm_time: '02:00:00'
+      slurm_time: '00:20:00'
     env:
       JULIA_NUM_PRECOMPILE_TASKS: 8
 
