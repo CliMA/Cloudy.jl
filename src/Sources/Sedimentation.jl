@@ -20,9 +20,9 @@ Returns sedimentation flux of all prognostic moments, which is the integral of t
 terminal velocity of particles is assumed to be expressed as: ∑ vel[i][1] * x^(vel[i][2]) where vel is a vector of tuples.
 """
 function get_sedimentation_flux(
-    pdists::NTuple{N, PrimitiveParticleDistribution{FT}},
-    vel::NTuple{M, Tuple{FT, FT}},
-) where {N, M, FT <: Real}
+    pdists::NTuple{N,PrimitiveParticleDistribution{FT}},
+    vel::NTuple{M,Tuple{FT,FT}},
+) where {N,M,FT<:Real}
 
     # build diagnostic moments and compute sedimentation flux for prognostic moments
     sedi_int = map(pdists) do pdist

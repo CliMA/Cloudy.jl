@@ -125,7 +125,11 @@ dist = GammaPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 @test_throws Exception density(dist, -3.1)
 
 # Update params or dist from moments
-dist = update_dist_from_moments(dist, (1.1, 2.0, 4.1); param_range = (; :k => (eps(Float64), 5.0)))
+dist = update_dist_from_moments(
+    dist,
+    (1.1, 2.0, 4.1);
+    param_range = (; :k => (eps(Float64), 5.0)),
+)
 @test normed_density(dist, 1.0) ≈ 0.419 rtol = rtol
 @test moment(dist, 0.0) ≈ 1.1 rtol = rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol = rtol
@@ -167,7 +171,11 @@ dist = LognormalPrimitiveParticleDistribution(1.0, 1.0, 2.0)
 @test_throws Exception density(dist, -0.1)
 
 # Update params or dist from moments
-dist = update_dist_from_moments(dist, (1.1, 2.0, 4.1); param_range = (; :μ => (-1e5, 1e5), :σ => (eps(Float64), 5.0)))
+dist = update_dist_from_moments(
+    dist,
+    (1.1, 2.0, 4.1);
+    param_range = (; :μ => (-1e5, 1e5), :σ => (eps(Float64), 5.0)),
+)
 @test normed_density(dist, 1.0) ≈ 0.3450 rtol = rtol
 @test moment(dist, 0.0) ≈ 1.1 rtol = rtol
 @test moment(dist, 1.0) ≈ 2.0 rtol = rtol
@@ -226,7 +234,10 @@ m = (1.0, 3.0, 2.0)
 @test_throws Exception check_moment_consistency(m)
 
 # get_standard_N_q
-pdists = (ExponentialPrimitiveParticleDistribution(10.0, 1.0), GammaPrimitiveParticleDistribution(5.0, 10.0, 2.0))
+pdists = (
+    ExponentialPrimitiveParticleDistribution(10.0, 1.0),
+    GammaPrimitiveParticleDistribution(5.0, 10.0, 2.0),
+)
 Nq1 = get_standard_N_q(pdists, 1.0)
 Nq2 = get_standard_N_q(pdists, 0.5)
 @test Nq1.N_liq + Nq1.N_rai ≈ 15.0 rtol = rtol
@@ -244,7 +255,10 @@ yy(j) = x[j]^2
 @test integrate_SimpsonEvenFast(Npt, dx, yy) ≈ 333.0 atol = 1e-6
 
 # computing thresholds based on percentile
-pdists = (ExponentialPrimitiveParticleDistribution(10.0, 1.0), GammaPrimitiveParticleDistribution(5.0, 10.0, 2.0))
+pdists = (
+    ExponentialPrimitiveParticleDistribution(10.0, 1.0),
+    GammaPrimitiveParticleDistribution(5.0, 10.0, 2.0),
+)
 @test compute_threshold(pdists[1], 0.75) > 1.0
 @test compute_threshold(pdists[2], 0.75) > 2.0 * 10.0
 @test compute_threshold(pdists[1], 0.0) ≈ 0.0 atol = atol

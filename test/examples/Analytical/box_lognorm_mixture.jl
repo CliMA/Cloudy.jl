@@ -25,10 +25,26 @@ end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
 coal_data = CoalescenceData(kernel, NProgMoms, (5e-10, Inf), norms)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(1))
+ODE_parameters = (;
+    pdists = dist_init,
+    coal_data = coal_data,
+    NProgMoms = NProgMoms,
+    norms = norms,
+    dt = FT(1),
+)
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
-plot_params!(sol, ODE_parameters; yscale = :identity, file_name = "box_lognorm_mixture_params.pdf")
+plot_params!(
+    sol,
+    ODE_parameters;
+    yscale = :identity,
+    file_name = "box_lognorm_mixture_params.pdf",
+)
 plot_moments!(sol, ODE_parameters; file_name = "box_lognorm_mixture_moments.pdf")
-plot_spectra!(sol, ODE_parameters; file_name = "box_lognorm_mixture_spectra.pdf", logxrange = (-11, -4))
+plot_spectra!(
+    sol,
+    ODE_parameters;
+    file_name = "box_lognorm_mixture_spectra.pdf",
+    logxrange = (-11, -4),
+)

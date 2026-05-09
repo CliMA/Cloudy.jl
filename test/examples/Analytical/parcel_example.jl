@@ -37,7 +37,7 @@ function parcel_model_cloudy(dY, Y, p, t)
     qₗ = FT(0)
     # ... water mass budget
     mass_ind = 2
-    for i in 1:length(pdists)
+    for i = 1:length(pdists)
         qₗ += moments[mass_ind] / ρ_air
         mass_ind += NProgMoms[i]
     end
@@ -56,16 +56,19 @@ function parcel_model_cloudy(dY, Y, p, t)
     a3 = L_vap^2 / Rᵥ / T^2 / cp_air
 
     # Cloudy condnsational growth / evaporation
-    p = merge(p, (; pdists = ntuple(length(p.pdists)) do i
-        ind_rng = get_dist_moments_ind_range(NProgMoms, i)
-        CPD.update_dist_from_moments(p.pdists[i], moments[ind_rng])
-    end))
+    p = merge(
+        p,
+        (; pdists = ntuple(length(p.pdists)) do i
+            ind_rng = get_dist_moments_ind_range(NProgMoms, i)
+            CPD.update_dist_from_moments(p.pdists[i], moments[ind_rng])
+        end),
+    )
     ξ = CO.G_func_liquid(aps, tps, T)
     dmom_ce = CL.Condensation.get_cond_evap(pdists, Sₗ - 1, ξ, ρₗ)
     # ... water mass budget
     mass_ind = 2
     dqₗ_dt_v2l = FT(0)
-    for i in 1:length(pdists)
+    for i = 1:length(pdists)
         dqₗ_dt_v2l += dmom_ce[mass_ind] / ρ_air
         mass_ind += NProgMoms[i]
     end
@@ -93,10 +96,23 @@ function run_parcel_cloudy(Yinit, t_0, t_end, pp)
     println("Condensation growth only ")
 
     # Parameters for the ODE solver
-    p = (wps = pp.wps, aps = pp.aps, tps = pp.tps, w = pp.w, pdists = pp.pdists, NProgMoms = pp.NProgMoms)
+    p = (
+        wps = pp.wps,
+        aps = pp.aps,
+        tps = pp.tps,
+        w = pp.w,
+        pdists = pp.pdists,
+        NProgMoms = pp.NProgMoms,
+    )
 
     problem = ODE.ODEProblem(parcel_model_cloudy, Yinit, (FT(t_0), FT(t_end)), p)
-    return ODE.solve(problem, ODE.Euler(), dt = pp.const_dt, reltol = 100 * eps(FT), abstol = 100 * eps(FT))
+    return ODE.solve(
+        problem,
+        ODE.Euler(),
+        dt = pp.const_dt,
+        reltol = 100 * eps(FT),
+        abstol = 100 * eps(FT),
+    )
 end
 
 function init_conditions(ρₗ, type::String)
@@ -187,13 +203,18 @@ ax2 = MK.Axis(fig[3, 1], xlabel = "Time [s]", ylabel = "Temperature [K]")
 ax3 = MK.Axis(fig[2, 1], ylabel = "q_vap [g/kg]")
 ax4 = MK.Axis(fig[2, 2], xlabel = "Time [s]", ylabel = "q_liq [g/kg]")
 ax5 = MK.Axis(fig[1, 2], ylabel = "radius [μm]")
-ax6 = MK.Axis(fig[3, 2], xlabel = "radius [μm]", ylabel = "dm / d(ln r) [kg / m^3]", xscale = log10)
+ax6 = MK.Axis(
+    fig[3, 2],
+    xlabel = "radius [μm]",
+    ylabel = "dm / d(ln r) [kg / m^3]",
+    xscale = log10,
+)
 MK.lines!(ax1, Rogers_time_supersat, Rogers_supersat, label = "Rogers_1975")
 MK.lines!(ax5, Rogers_time_radius, Rogers_radius)
 
 # Initial conditions
 size_distribution_list = ["monodisperse", "gamma", "mixture"]
-for j in 1:length(size_distribution_list)
+for j = 1:length(size_distribution_list)
 
     DSD = size_distribution_list[j]
     (dist_init, NProgMoms, moments_init, ml_v) = init_conditions(ρₗ, DSD)
@@ -208,7 +229,15 @@ for j in 1:length(size_distribution_list)
 
 
     Y0 = [Sₗ, p₀, T₀, qᵥ, moments_init...]
-    p = (wps = wps, aps = aps, tps = tps, w = w, const_dt = const_dt, pdists = dist_init, NProgMoms = NProgMoms)
+    p = (
+        wps = wps,
+        aps = aps,
+        tps = tps,
+        w = w,
+        const_dt = const_dt,
+        pdists = dist_init,
+        NProgMoms = NProgMoms,
+    )
 
     # solve ODE
     sol = run_parcel_cloudy(Y0, FT(0), t_max, p)
@@ -231,8 +260,22 @@ for j in 1:length(size_distribution_list)
     end
 end
 
-MK.axislegend(ax1, framevisible = false, labelsize = 12, orientation = :horizontal, nbanks = 2, position = :rb)
+MK.axislegend(
+    ax1,
+    framevisible = false,
+    labelsize = 12,
+    orientation = :horizontal,
+    nbanks = 2,
+    position = :rb,
+)
 
-MK.axislegend(ax6, framevisible = false, labelsize = 12, orientation = :horizontal, nbanks = 2, position = :rt)
+MK.axislegend(
+    ax6,
+    framevisible = false,
+    labelsize = 12,
+    orientation = :horizontal,
+    nbanks = 2,
+    position = :rt,
+)
 
 MK.save("parcel_exp_gamma.pdf", fig)

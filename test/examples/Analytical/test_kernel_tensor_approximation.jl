@@ -6,8 +6,8 @@ using Plots
 function compute_kernel_from_tensor(c, x, y)
     n, m = size(c)
     output = 0.0
-    for i in 1:n
-        for j in 1:m
+    for i = 1:n
+        for j = 1:m
             output += c[i, j] * x^(i - 1) * y^(j - 1)
         end
     end
@@ -17,15 +17,15 @@ end
 function compute_kernel_from_tensor_matrix(matrix_of_kernels, thresholds, x, y)
     num_kernels = length(matrix_of_kernels)
     output = 0.0
-    for xk in 1:num_kernels
-        for yk in 1:num_kernels
+    for xk = 1:num_kernels
+        for yk = 1:num_kernels
             # find the correct kernel index
-            if x >= thresholds[xk] && x < thresholds[xk + 1]
-                if y >= thresholds[yk] && y < thresholds[yk + 1]
+            if x >= thresholds[xk] && x < thresholds[xk+1]
+                if y >= thresholds[yk] && y < thresholds[yk+1]
                     c = matrix_of_kernels[xk][yk].c
                     n, m = size(c)
-                    for i in 1:n
-                        for j in 1:m
+                    for i = 1:n
+                        for j = 1:m
                             output += c[i, j] * x^(i - 1) * y^(j - 1)
                         end
                     end
@@ -62,10 +62,11 @@ x = range(0, limit, n)
 y = range(0, limit, n)
 z_kernel = zeros(n, n)
 z_tensor = zeros(n, n)
-for i in 1:n
-    for j in 1:n
+for i = 1:n
+    for j = 1:n
         z_kernel[i, j] = i < j ? NaN : kernel_func(x[i], y[j])
-        z_tensor[i, j] = i < j ? NaN : compute_kernel_from_tensor(kernel_tensor.c, x[i], y[j])
+        z_tensor[i, j] =
+            i < j ? NaN : compute_kernel_from_tensor(kernel_tensor.c, x[i], y[j])
     end
 end
 
@@ -80,7 +81,15 @@ p1 = contourf(
     colorbar_exponentformat = "power",
     clim = (min_lim, max_lim),
 )
-p2 = contourf(x, y, z_tensor, xaxis = "x", yaxis = "y", title = "Kernel Tensor", colorbar_exponentformat = "power")
+p2 = contourf(
+    x,
+    y,
+    z_tensor,
+    xaxis = "x",
+    yaxis = "y",
+    title = "Kernel Tensor",
+    colorbar_exponentformat = "power",
+)
 
 plot(
     p1,
@@ -117,11 +126,17 @@ x = range(0, limit, n)
 y = range(0, limit, n)
 z_kernel = zeros(n, n)
 z_tensor = zeros(n, n)
-for i in 1:n
-    for j in 1:n
+for i = 1:n
+    for j = 1:n
         z_kernel[i, j] = i < j ? NaN : kernel_func(x[i], y[j])
         z_tensor[i, j] =
-            i < j ? NaN : compute_kernel_from_tensor_matrix(matrix_of_kernels, (FT(0), FT(5e-10), FT(1e-6)), x[i], y[j])
+            i < j ? NaN :
+            compute_kernel_from_tensor_matrix(
+                matrix_of_kernels,
+                (FT(0), FT(5e-10), FT(1e-6)),
+                x[i],
+                y[j],
+            )
     end
 end
 
@@ -136,7 +151,15 @@ p1 = contourf(
     colorbar_exponentformat = "power",
     clim = (min_lim, max_lim),
 )
-p2 = contourf(x, y, z_tensor, xaxis = "x", yaxis = "y", title = "Kernel Tensor", colorbar_exponentformat = "power")
+p2 = contourf(
+    x,
+    y,
+    z_tensor,
+    xaxis = "x",
+    yaxis = "y",
+    title = "Kernel Tensor",
+    colorbar_exponentformat = "power",
+)
 
 plot(
     p1,

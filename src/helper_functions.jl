@@ -16,7 +16,7 @@ function get_dist_moment_ind(NProgMoms::NTuple, i::Int, m::Int)
             "moment index must be positive integer and equal or smaller than the dist number of prognostic moments!!!",
         )
     end
-    return i == 1 ? m : sum(NProgMoms[1:(i - 1)]) + m
+    return i == 1 ? m : sum(NProgMoms[1:(i-1)]) + m
 end
 
 """
@@ -27,8 +27,8 @@ end
 Returns range of indecies of the i'th distribution's moments in the long vector containing moments of all distributions
 """
 function get_dist_moments_ind_range(NProgMoms::NTuple, i::Int)
-    last_ind = i == 1 ? 0 : sum(NProgMoms[1:(i - 1)])
-    return (last_ind + 1):(last_ind + NProgMoms[i])
+    last_ind = i == 1 ? 0 : sum(NProgMoms[1:(i-1)])
+    return (last_ind+1):(last_ind+NProgMoms[i])
 end
 
 """
@@ -37,7 +37,10 @@ end
   `norms` - vector containing scale of number and mass/volume of particles
 Returns normalizing factors of the vector of moments based on given scales of number and mass/volume of particles
 """
-function get_moments_normalizing_factors(NProgMoms::NTuple{N, Int}, norms::Tuple{FT, FT}) where {N, FT <: Real}
+function get_moments_normalizing_factors(
+    NProgMoms::NTuple{N,Int},
+    norms::Tuple{FT,FT},
+) where {N,FT<:Real}
     if norms[1] <= 0 || norms[2] <= 0
         error("norms must be positive!")
     end
