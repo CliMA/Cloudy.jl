@@ -1,6 +1,7 @@
 "Box model with a mixture of a monodisperse and a gamma dist"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")

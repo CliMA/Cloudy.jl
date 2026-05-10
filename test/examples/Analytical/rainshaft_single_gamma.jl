@@ -1,6 +1,7 @@
 "1D Rainshaft model with coalescence and sedimentation for a single gamma distribution"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 
 include("../utils/rainshaft_helpers.jl")
 include("../utils/plotting_helpers.jl")

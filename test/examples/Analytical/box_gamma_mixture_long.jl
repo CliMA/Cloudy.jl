@@ -1,6 +1,7 @@
 "Box model with two gamma modes and using Long's kernel"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 using StaticArrays
 
 include("../utils/box_model_helpers.jl")

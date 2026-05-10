@@ -1,4 +1,5 @@
 import OrdinaryDiffEq as ODE
+import OrdinaryDiffEqSSPRK: SSPRK33
 import CairoMakie as MK
 import Thermodynamics as TD
 import Cloudy as CL
@@ -28,27 +29,22 @@ function parcel_model_cloudy(dY, Y, p, t)
     grav = TD.Parameters.grav(tps)
     ρₗ = wps.ρw
 
-    # Get thermodynamic parameters, phase partition and create thermo state.
-    q = TD.PhasePartition(qᵥ, FT(0), FT(0))  # use dry air density to compute ql
-    ts = TD.PhaseNonEquil_pTq(tps, p_air, T, q)
-    ρ_air = TD.air_density(tps, ts)
-
-    qᵢ = FT(0.0)
+    qᵢ = FT(0)
     qₗ = FT(0)
+    ρ_air = TD.air_density(tps, T, p_air, qᵥ, qₗ, qᵢ)
+
     # ... water mass budget
     mass_ind = 2
     for i = 1:length(pdists)
         qₗ += moments[mass_ind] / ρ_air
         mass_ind += NProgMoms[i]
     end
-    q = TD.PhasePartition(qᵥ + qₗ + qᵢ, qₗ, qᵢ)
-    ts = TD.PhaseNonEquil_pTq(tps, p_air, T, q)
 
     # Constants and variables that depend on the moisture content
-    R_air = TD.gas_constant_air(tps, q)
-    cp_air = TD.cp_m(tps, q)
+    R_air = TD.gas_constant_air(tps, qᵥ + qₗ + qᵢ, qₗ, qᵢ)
+    cp_air = TD.cp_m(tps, qᵥ + qₗ + qᵢ, qₗ, qᵢ)
     L_vap = TD.latent_heat_vapor(tps, T)
-    ρ_air = TD.air_density(tps, ts)
+    ρ_air = TD.air_density(tps, T, p_air, qᵥ + qₗ + qᵢ, qₗ, qᵢ)
 
     # Adiabatic parcel coefficients
     a1 = L_vap * grav / cp_air / T^2 / Rᵥ - grav / R_air / T
@@ -108,7 +104,7 @@ function run_parcel_cloudy(Yinit, t_0, t_end, pp)
     problem = ODE.ODEProblem(parcel_model_cloudy, Yinit, (FT(t_0), FT(t_end)), p)
     return ODE.solve(
         problem,
-        ODE.Euler(),
+        SSPRK33(),
         dt = pp.const_dt,
         reltol = 100 * eps(FT),
         abstol = 100 * eps(FT),

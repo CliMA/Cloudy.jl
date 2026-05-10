@@ -1,6 +1,7 @@
 "Test case with a single exponential distribution"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 using Cloudy.KernelFunctions
 
 include("../utils/box_model_helpers.jl")

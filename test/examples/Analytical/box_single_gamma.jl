@@ -2,6 +2,7 @@
 
 import Cloudy
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 
 include(joinpath(pkgdir(Cloudy), "test", "examples", "utils", "box_model_helpers.jl"))
 include(joinpath(pkgdir(Cloudy), "test", "examples", "utils", "plotting_helpers.jl"))

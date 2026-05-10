@@ -1,6 +1,7 @@
 "Test case with N lognormal distributions"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 using Cloudy.KernelFunctions
 
 include("../utils/plotting_helpers.jl")
