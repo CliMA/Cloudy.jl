@@ -14,7 +14,14 @@ struct CallAndReturnNothing{F}
 end
 ((; f)::CallAndReturnNothing)(args...) = (f(args...); nothing)
 
-function bench_press(foo::F, args, max_run_time; max_mem = 0.0, max_allocs = 0.0, print_args = true) where {F}
+function bench_press(
+    foo::F,
+    args,
+    max_run_time;
+    max_mem = 0.0,
+    max_allocs = 0.0,
+    print_args = true,
+) where {F}
     print("Testing $foo")
     if print_args
         println("$args")
@@ -57,7 +64,13 @@ function benchmark_particle_distributions()
     moments = [(1.1, 2.0), (1.1, 2.0, 4.1), (1.1, 2.0, 4.1), (1.0, 1.0)]
     for (dist, mom) in zip(all_pdists, moments)
         bench_press(CallAndReturnNothing(update_dist_from_moments), (dist, mom), 200)
-        bench_press(CallAndReturnNothing(get_moments), (dist,), 60, max_mem = 80, max_allocs = 2)
+        bench_press(
+            CallAndReturnNothing(get_moments),
+            (dist,),
+            60,
+            max_mem = 80,
+            max_allocs = 2,
+        )
     end
 
     bench_press(
@@ -90,7 +103,13 @@ function benchmark_particle_distributions()
     x = collect(range(1.0, 10.0, Npt + 1))
     dx = x[2] - x[1]
     y(j) = x[j]^2
-    bench_press(CallAndReturnNothing(integrate_SimpsonEvenFast), (Npt, dx, y), 1200; max_allocs = 0, print_args = false)
+    bench_press(
+        CallAndReturnNothing(integrate_SimpsonEvenFast),
+        (Npt, dx, y),
+        1200;
+        max_allocs = 0,
+        print_args = false,
+    )
 end
 
 benchmark_particle_distributions()

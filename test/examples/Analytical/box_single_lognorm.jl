@@ -1,6 +1,7 @@
 "Box model with a single Lognormal mode"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")
@@ -22,10 +23,26 @@ end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
 coal_data = CoalescenceData(kernel, NProgMoms, (Inf,), norms)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(10))
+ODE_parameters = (;
+    pdists = dist_init,
+    coal_data = coal_data,
+    NProgMoms = NProgMoms,
+    norms = norms,
+    dt = FT(10),
+)
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
-plot_params!(sol, ODE_parameters; file_name = "box_single_lognorm_params.pdf", yscale = :identity)
+plot_params!(
+    sol,
+    ODE_parameters;
+    file_name = "box_single_lognorm_params.pdf",
+    yscale = :identity,
+)
 plot_moments!(sol, ODE_parameters; file_name = "box_single_lognorm_moments.pdf")
-plot_spectra!(sol, ODE_parameters; file_name = "box_single_lognorm_spectra.pdf", logxrange = (-11, 1))
+plot_spectra!(
+    sol,
+    ODE_parameters;
+    file_name = "box_single_lognorm_spectra.pdf",
+    logxrange = (-11, 1),
+)

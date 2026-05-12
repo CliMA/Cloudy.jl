@@ -1,6 +1,7 @@
 "1D Rainshaft model with coalescence and sedimentation for a single gamma distribution"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 
 include("../utils/rainshaft_helpers.jl")
 include("../utils/plotting_helpers.jl")
@@ -13,7 +14,7 @@ FT = Float64
 a = 0.0
 b = 3000.0
 dz = (b - a) / 60
-z = (a + dz / 2):dz:b
+z = (a+dz/2):dz:b
 
 # Initial condition
 # M0: 1/m^3 - M1: kg/m^3 - M2: kg^2/m^3

@@ -6,11 +6,11 @@ makedocs(
     format = Documenter.HTML(prettyurls = get(ENV, "CI", nothing) == "true"),
     clean = false,
     pages = Any[
-        "Home" => "index.md",
-        "KernelTensors" => "KernelTensors.md",
-        "ParticleDistributions" => "ParticleDistributions.md",
-        "Coalescence" => "Coalescence.md",
-        "Sedimentation" => "Sedimentation.md",
+        "Home"=>"index.md",
+        "KernelTensors"=>"KernelTensors.md",
+        "ParticleDistributions"=>"ParticleDistributions.md",
+        "Coalescence"=>"Coalescence.md",
+        "Sedimentation"=>"Sedimentation.md",
     ],
 )
 

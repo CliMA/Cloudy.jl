@@ -1,6 +1,7 @@
 "Box model with two gamma modes"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")
@@ -27,14 +28,31 @@ NProgMoms = map(dist_init) do dist
     nparams(dist)
 end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
-coal_data = CoalescenceData(kernel, NProgMoms, (0.99, 0.99, 0.99, 1.0), norms, MovingThreshold())
+coal_data =
+    CoalescenceData(kernel, NProgMoms, (0.99, 0.99, 0.99, 1.0), norms, MovingThreshold())
 rhs = make_box_model_rhs(AnalyticalCoalStyle(), MovingThreshold())
-ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(1))
+ODE_parameters = (;
+    pdists = dist_init,
+    coal_data = coal_data,
+    NProgMoms = NProgMoms,
+    norms = norms,
+    dt = FT(1),
+)
 prob = ODEProblem(rhs, moment_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
 box_output(sol, ODE_parameters, "moving_gamma_golovin.nc", FT)
-plot_params!(sol, ODE_parameters; file_name = "moving_gamma_golovin_params.pdf", yscale = :identity)
+plot_params!(
+    sol,
+    ODE_parameters;
+    file_name = "moving_gamma_golovin_params.pdf",
+    yscale = :identity,
+)
 plot_moments!(sol, ODE_parameters; file_name = "moving_gamma_golovin_moments.pdf")
-plot_spectra!(sol, ODE_parameters; file_name = "moving_gamma_golovin_spectra.pdf", logxrange = (-12, -3))
+plot_spectra!(
+    sol,
+    ODE_parameters;
+    file_name = "moving_gamma_golovin_spectra.pdf",
+    logxrange = (-12, -3),
+)
 #print_box_results!(sol, ODE_parameters)

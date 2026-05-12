@@ -16,7 +16,7 @@ NProgMoms = (2, 2, 3)
 
 norm_factors = get_moments_normalizing_factors(NProgMoms, (10.0, 0.1))
 norm_factors_ = (10.0, 1.0, 10.0, 1.0, 10.0, 1.0, 0.1)
-for i in 1:7
+for i = 1:7
     @test norm_factors[i] ≈ norm_factors_[i] atol = 1e-12
 end
 

@@ -1,6 +1,7 @@
 "Box model with a single gamma mode"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")
@@ -23,12 +24,23 @@ end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
 coal_data = CoalescenceData(kernel, NProgMoms, (Inf,), norms)
 rhs = make_box_model_rhs(AnalyticalCoalStyle())
-ODE_parameters = (; pdists = dist_init, coal_data = coal_data, NProgMoms = NProgMoms, norms = norms, dt = FT(10))
+ODE_parameters = (;
+    pdists = dist_init,
+    coal_data = coal_data,
+    NProgMoms = NProgMoms,
+    norms = norms,
+    dt = FT(10),
+)
 prob = ODEProblem(rhs, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
 plot_params!(sol, ODE_parameters; file_name = "box_single_gamma_hydro_params.pdf")
 plot_moments!(sol, ODE_parameters; file_name = "box_single_gamma_hydro_moments.pdf")
-plot_spectra!(sol, ODE_parameters; file_name = "box_single_gamma_hydro_spectra.pdf", logxrange = (-12, -3))
+plot_spectra!(
+    sol,
+    ODE_parameters;
+    file_name = "box_single_gamma_hydro_spectra.pdf",
+    logxrange = (-12, -3),
+)
 print_box_results!(sol, ODE_parameters)
 box_output(sol, ODE_parameters, "box_single_gamma_hydro.nc", FT)

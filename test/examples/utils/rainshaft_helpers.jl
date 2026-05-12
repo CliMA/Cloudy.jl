@@ -28,7 +28,7 @@ function initial_condition(z, mom_amp)
 
     nmom = length(mom_amp)
     ic = zeros(length(z), nmom)
-    for i in 1:nmom
+    for i = 1:nmom
         ic[:, i] = mom_amp[i] * at
     end
 
@@ -52,12 +52,17 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
         m[findall(x -> x < 0, m)] .= 0
         coal_source = similar(m)
         sedi_flux = similar(m)
-        for i in 1:nz
+        for i = 1:nz
             m_z_normalized = tuple(m[i, :] ./ mom_norms...)
-            p = merge(p, (; pdists = ntuple(length(p.pdists)) do j
-                ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
-                update_dist_from_moments(p.pdists[j], m_z_normalized[ind_rng])
-            end))
+            p = merge(
+                p,
+                (;
+                    pdists = ntuple(length(p.pdists)) do j
+                        ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
+                        update_dist_from_moments(p.pdists[j], m_z_normalized[ind_rng])
+                    end
+                ),
+            )
 
             if all(m_z_normalized .< eps(Float64))
                 coal_source[i, :] = zeros(1, nmom)
@@ -75,8 +80,8 @@ function make_rainshaft_rhs(coal_type::CoalescenceStyle)
         sedi_flux_top = zeros(1, nmom)
         sedi_flux = [sedi_flux; sedi_flux_top]
         sedi_source = similar(m)
-        for i in 1:nz
-            sedi_source[i, :] = -(sedi_flux[i + 1, :] - sedi_flux[i, :]) / p.dz
+        for i = 1:nz
+            sedi_source[i, :] = -(sedi_flux[i+1, :] - sedi_flux[i, :]) / p.dz
         end
 
         return coal_source .+ sedi_source
@@ -98,20 +103,20 @@ function analytical_sol(dist, ic, coeff, z, t)
     nz, nmom = size(ic)
     nm = 10000
     m_ = 10 .^ range(-5, 4, nm)
-    ic_f = linear_interpolation((z, 0:(nmom - 1)), ic, extrapolation_bc = Line())
+    ic_f = linear_interpolation((z, 0:(nmom-1)), ic, extrapolation_bc = Line())
 
     mom = zeros(nz, nmom)
     for (i, z_) in enumerate(z)
-        for j in 2:(nm - 1)
+        for j = 2:(nm-1)
             m = m_[j]
-            dm = (m_[j + 1] - m_[j - 1]) / 2
+            dm = (m_[j+1] - m_[j-1]) / 2
             v = coeff[1] + coeff[2] * m^(1 / 6)
             z0 = z_ + v * t
             if z0 > maximum(z)
                 continue
             end
-            dist = update_params_from_moments(Dict(:dist => dist), ic_f.(z0, 0:(nmom - 1)))
-            for k in 1:nmom
+            dist = update_params_from_moments(Dict(:dist => dist), ic_f.(z0, 0:(nmom-1)))
+            for k = 1:nmom
                 mom[i, k] += m^(k - 1) * density(dist, m) * dm
             end
         end

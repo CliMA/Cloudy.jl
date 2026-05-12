@@ -1,6 +1,7 @@
 "Box model with a single gamma mode"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 
 include("../utils/box_model_helpers.jl")
 include("../utils/plotting_helpers.jl")
@@ -24,11 +25,17 @@ NProgMoms = map(dist_init) do dist
     nparams(dist)
 end
 norms = (1e6, 1e-9) # 1e6/m^3; 1e-9 kg
-ODE_parameters = (; ξ = ξ, pdists = dist_init, NProgMoms = NProgMoms, norms = norms, dt = FT(10))
+ODE_parameters =
+    (; ξ = ξ, pdists = dist_init, NProgMoms = NProgMoms, norms = norms, dt = FT(10))
 prob = ODEProblem(rhs!, moments_init, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 
 plot_params!(sol, ODE_parameters; file_name = "condensation_expgam_params.pdf")
 plot_moments!(sol, ODE_parameters; file_name = "condensation_expgam_moments.pdf")
-plot_spectra!(sol, ODE_parameters; file_name = "condensation_expgam_spectra.pdf", logxrange = (-12, -6))
+plot_spectra!(
+    sol,
+    ODE_parameters;
+    file_name = "condensation_expgam_spectra.pdf",
+    logxrange = (-12, -6),
+)
 print_box_results!(sol, ODE_parameters)

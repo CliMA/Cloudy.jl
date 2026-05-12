@@ -24,8 +24,8 @@ function box_output(sol, p, filename, FT)
     M = defVar(ds, "moments", FT, ("t", "dist", "order"))
     Mtot = defVar(ds, "total_moments", FT, ("t", "order"))
     moments = vcat(sol.u'...)
-    for i in 1:Ndist
-        for j in 1:p.NProgMoms[i]
+    for i = 1:Ndist
+        for j = 1:p.NProgMoms[i]
             ind = get_dist_moment_ind(p.NProgMoms, i, j)
             M[:, i, j] = moments[:, ind]
         end
@@ -33,8 +33,8 @@ function box_output(sol, p, filename, FT)
 
     Nmom_min = minimum(p.NProgMoms)
     moments_sum = zeros(length(time), Nmom_min)
-    for i in 1:Ndist
-        for j in 1:Nmom_min
+    for i = 1:Ndist
+        for j = 1:Nmom_min
             ind = get_dist_moment_ind(p.NProgMoms, i, j)
             moments_sum[:, j] += moments[:, ind]
         end
@@ -45,8 +45,8 @@ function box_output(sol, p, filename, FT)
     Nmom_max = maximum(p.NProgMoms)
     pp = defVar(ds, "params", FT, ("t", "dist", "order"))
     params = zeros(length(time), Ndist, Nmom_max)
-    for i in 1:length(time)
-        for j in 1:Ndist
+    for i = 1:length(time)
+        for j = 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
             moms = moments[i, ind_rng]
             pdist_tmp = update_dist_from_moments(p.pdists[j], ntuple(length(moms)) do i
@@ -80,10 +80,10 @@ function rainshaft_output(z, sol, p, filename, FT)
     M = defVar(ds, "moments", FT, ("t", "z", "dist", "order"))
     Mtot = defVar(ds, "total_moments", FT, ("t", "z", "order"))
     moments = sol.u
-    for i in 1:Ndist
-        for j in 1:p.NProgMoms[i]
+    for i = 1:Ndist
+        for j = 1:p.NProgMoms[i]
             ind = get_dist_moment_ind(p.NProgMoms, i, j)
-            for it in 1:length(time)
+            for it = 1:length(time)
                 M[it, :, i, j] = moments[it][:, ind]
             end
         end
@@ -91,10 +91,10 @@ function rainshaft_output(z, sol, p, filename, FT)
 
     Nmom_min = minimum(p.NProgMoms)
     moments_sum = zeros(length(time), length(z), Nmom_min)
-    for i in 1:Ndist
-        for j in 1:Nmom_min
+    for i = 1:Ndist
+        for j = 1:Nmom_min
             ind = get_dist_moment_ind(p.NProgMoms, i, j)
-            for it in 1:length(time)
+            for it = 1:length(time)
                 moments_sum[it, :, j] += moments[it][:, ind]
             end
         end
@@ -105,8 +105,8 @@ function rainshaft_output(z, sol, p, filename, FT)
     Nr = defVar(ds, "Nr", FT, ("t", "z"))
     Mc = defVar(ds, "Mc", FT, ("t", "z"))
     Mr = defVar(ds, "Mr", FT, ("t", "z"))
-    for it in 1:length(time)
-        for iz in 1:length(z)
+    for it = 1:length(time)
+        for iz = 1:length(z)
             pdists_tmp = ntuple(Ndist) do ip
                 ind_rng = get_dist_moments_ind_range(p.NProgMoms, ip)
                 update_dist_from_moments(p.pdists[ip], ntuple(length(ind_rng)) do im

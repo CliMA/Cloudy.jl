@@ -1,6 +1,7 @@
 "1D Rainshaft model with coalescence and sedimentation for two gamma modes"
 
 using OrdinaryDiffEq
+import OrdinaryDiffEqSSPRK: SSPRK33
 
 include("../utils/rainshaft_helpers.jl")
 include("../utils/plotting_helpers.jl")
@@ -12,7 +13,7 @@ FT = Float64
 a = 0.0
 b = 3000.0
 dz = (b - a) / 20
-z = (a + dz / 2):dz:b
+z = (a+dz/2):dz:b
 
 # Initial condition
 # M0: 1/m^3 - M1: kg/m^3 - M2: kg^2/m^3
@@ -48,6 +49,12 @@ prob = ODEProblem(rhs, m, tspan, ODE_parameters)
 sol = solve(prob, SSPRK33(), dt = ODE_parameters.dt)
 res = sol.u
 
-plot_rainshaft_results(z, res, ODE_parameters, file_name = "rainshaft_gamma_mixture.pdf", print = true)
+plot_rainshaft_results(
+    z,
+    res,
+    ODE_parameters,
+    file_name = "rainshaft_gamma_mixture.pdf",
+    print = true,
+)
 #plot_rainshaft_contours(z, sol.t, res, ODE_parameters, file_name="rainshaft_gamma_mixture_contours.png")
 rainshaft_output(z, sol, ODE_parameters, "rainshaft_double_gamma.nc", FT)

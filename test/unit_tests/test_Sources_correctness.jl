@@ -43,7 +43,7 @@ function sm1916(n_steps, δt; is_kernel_function = true)
     kernel_func = ConstantKernelFunction(1.0)
     ker =
         (is_kernel_function == true) ? CoalescenceTensor(kernel_func, 0, 100.0) :
-        CoalescenceTensor(SMatrix{1, 1}([1.0]))
+        CoalescenceTensor(SMatrix{1,1}([1.0]))
 
     # Initial condition
     mom = (1.0, 2.0)
@@ -51,7 +51,7 @@ function sm1916(n_steps, δt; is_kernel_function = true)
     coal_data = CoalescenceData(ker, (nparams(dist[1]),), (Inf,))
 
     # Euler steps
-    for i in 1:n_steps
+    for i = 1:n_steps
         ldist = (update_dist_from_moments(dist[1], mom),)
         dmom = get_coal_ints(AnalyticalCoalStyle(), ldist, coal_data)
         mom = ntuple(2) do i
@@ -72,10 +72,16 @@ n_steps = 5
 δt = 1e-4
 rtol = 1e-3
 # Run tests
-for i in 0:n_steps
+for i = 0:n_steps
     t = δt * i
     @test all(isapprox.(sm1916(n_steps, δt), (sm1916_ana(t, 1, 1), 2.0); rtol))
-    @test all(isapprox.(sm1916(n_steps, δt; is_kernel_function = false), (sm1916_ana(t, 1, 1), 2.0); rtol))
+    @test all(
+        isapprox.(
+            sm1916(n_steps, δt; is_kernel_function = false),
+            (sm1916_ana(t, 1, 1), 2.0);
+            rtol,
+        ),
+    )
 end
 
 # Test Exponential + Gamma
@@ -96,19 +102,20 @@ coal_ints = get_coal_ints(AnalyticalCoalStyle(), dist, coal_data)
 
 n_mom = maximum(NProgMoms) + order
 mom = zeros(FT, 2, n_mom)
-for i in 1:2
-    for j in 1:n_mom
+for i = 1:2
+    for j = 1:n_mom
         mom[i, j] = moment(dist[i], FT(j - 1))
     end
 end
 
 int_w_thrsh = zeros(FT, n_mom, n_mom)
 mom_times_mom = zeros(FT, n_mom, n_mom)
-for i in 1:n_mom
-    for j in i:n_mom
+for i = 1:n_mom
+    for j = i:n_mom
         mom_times_mom[i, j] = mom[1, i] * mom[1, j]
         tmp =
-            (mom_times_mom[i, j] < eps(FT)) ? FT(0) : moment_source_helper(dist[1], FT(i - 1), FT(j - 1), thresholds[1])
+            (mom_times_mom[i, j] < eps(FT)) ? FT(0) :
+            moment_source_helper(dist[1], FT(i - 1), FT(j - 1), thresholds[1])
         int_w_thrsh[i, j] = min(mom_times_mom[i, j], tmp)
         mom_times_mom[j, i] = mom_times_mom[i, j]
         int_w_thrsh[j, i] = int_w_thrsh[i, j]
@@ -116,29 +123,29 @@ for i in 1:n_mom
 end
 
 coal_int = similar(mom_p)
-for i in 1:2
+for i = 1:2
     local j = (i == 1) ? 2 : 1
-    for k in 0:(NProgMoms[i] - 1)
+    for k = 0:(NProgMoms[i]-1)
         temp = 0.0
 
-        for a in 0:order
-            for b in 0:order
-                coef = kernel.c[a + 1, b + 1] #kernel[i, j].c[a + 1, b + 1]
-                temp -= coef * mom[i, a + k + 1] * mom[i, b + 1]
-                temp -= coef * mom[i, a + k + 1] * mom[j, b + 1]
-                for c in 0:k
+        for a = 0:order
+            for b = 0:order
+                coef = kernel.c[a+1, b+1] #kernel[i, j].c[a + 1, b + 1]
+                temp -= coef * mom[i, a+k+1] * mom[i, b+1]
+                temp -= coef * mom[i, a+k+1] * mom[j, b+1]
+                for c = 0:k
                     coef_binomial = coef * binomial(k, c)
                     if i == 1
-                        temp += 0.5 * coef_binomial * int_w_thrsh[a + c + 1, b + k - c + 1]
+                        temp += 0.5 * coef_binomial * int_w_thrsh[a+c+1, b+k-c+1]
                     elseif i == 2
                         tmp_s12 =
                             0.5 *
                             coef_binomial *
-                            (mom_times_mom[a + c + 1, b + k - c + 1] - int_w_thrsh[a + c + 1, b + k - c + 1])
+                            (mom_times_mom[a+c+1, b+k-c+1] - int_w_thrsh[a+c+1, b+k-c+1])
                         temp += tmp_s12
-                        tmp_s21 = 0.5 * coef_binomial * mom[i, a + c + 1] * mom[i, b + k - c + 1]
+                        tmp_s21 = 0.5 * coef_binomial * mom[i, a+c+1] * mom[i, b+k-c+1]
                         temp += tmp_s21
-                        temp += coef_binomial * mom[j, a + c + 1] * mom[i, b + k - c + 1]
+                        temp += coef_binomial * mom[j, a+c+1] * mom[i, b+k-c+1]
                     end
                 end
             end
@@ -180,14 +187,14 @@ dist3 = GammaPrimitiveParticleDistribution(2.0, 500.0, 6.0)
 pdists = (dist1, dist2, dist3)
 x = 50.0
 y = 20.0
-for j in 1:3
-    for k in 1:3
+for j = 1:3
+    for k = 1:3
         if j == k
             @test_throws AssertionError q_integrand_inner(x, y, j, k, kernel, pdists)
         else
             @test q_integrand_inner(x, y, j, k, kernel, pdists) > 0.0
             @test_throws AssertionError q_integrand_inner(y, x, j, k, kernel, pdists)
-            for moment_order in 0:2
+            for moment_order = 0:2
                 @test q_integrand_outer(x, j, k, kernel, pdists, FT(moment_order)) > 0.0
                 @test q_integrand_outer(y, j, k, kernel, pdists, FT(moment_order)) > 0.0
             end
@@ -196,9 +203,9 @@ for j in 1:3
 end
 
 # r_integrands
-for moment_order in 0:2
-    for j in 1:3
-        for k in 1:3
+for moment_order = 0:2
+    for j = 1:3
+        for k = 1:3
             @test r_integrand_outer(x, j, k, kernel, pdists, FT(moment_order)) > 0.0
             @test r_integrand_outer(y, j, k, kernel, pdists, FT(moment_order)) > 0.0
             @test r_integrand_inner(x, y, j, k, kernel, pdists) > 0.0
@@ -209,13 +216,14 @@ for moment_order in 0:2
 end
 
 # s_integrands
-for k in 1:3
-    for moment_order in 0:2
+for k = 1:3
+    for moment_order = 0:2
         @test s_integrand_inner(x, k, kernel, pdists, FT(moment_order)) > 0.0
         @test s_integrand1(x, k, kernel, pdists, FT(moment_order)) >= 0.0
         @test s_integrand2(x, k, kernel, pdists, FT(moment_order)) >= 0.0
         @test isapprox(
-            s_integrand1(x, k, kernel, pdists, FT(moment_order)) + s_integrand2(x, k, kernel, pdists, FT(moment_order)),
+            s_integrand1(x, k, kernel, pdists, FT(moment_order)) +
+            s_integrand2(x, k, kernel, pdists, FT(moment_order)),
             s_integrand_inner(x, k, kernel, pdists, FT(moment_order)),
             rtol = 1e-6,
         )
@@ -245,8 +253,8 @@ S = get_S_coalescence_matrix(NumericalCoalStyle(), pdists, kernel_func)
 coal_ints = get_coal_ints(NumericalCoalStyle(), pdists, kernel_func)
 @test coal_ints[get_dist_moment_ind(NProgMoms, 1, 1)] < 0.0
 dM = zeros(Float64, 3)
-for i in 1:length(NProgMoms)
-    for j in 1:3
+for i = 1:length(NProgMoms)
+    for j = 1:3
         dM[j] += coal_ints[get_dist_moment_ind(NProgMoms, i, j)]
     end
 end
@@ -258,7 +266,10 @@ end
 # Sedimentation moment flux tests
 pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
 vel = ((1.0, 0.0), (-1.0, 1.0 / 6))
-@test all(get_sedimentation_flux(pdists, vel) .≈ (-1.0 + gamma(1.0 + 1.0 / 6), -1.0 + gamma(2.0 + 1.0 / 6)))
+@test all(
+    get_sedimentation_flux(pdists, vel) .≈
+    (-1.0 + gamma(1.0 + 1.0 / 6), -1.0 + gamma(2.0 + 1.0 / 6)),
+)
 
 ## Condensation.jl
 # Condensation moment tests
@@ -266,8 +277,11 @@ pdists = (ExponentialPrimitiveParticleDistribution(1.0, 1.0),)
 ξ = 1e-6
 s = 0.01
 @test all(
-    get_cond_evap(pdists, s, ξ) .≈
-    (0.0, 3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3)),
+    get_cond_evap(pdists, s, ξ) .≈ (
+        0.0,
+        3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) /
+        1000.0^(1 / 3),
+    ),
 )
 
 pdists = (
@@ -278,12 +292,17 @@ pdists = (
 @test all(
     get_cond_evap(pdists, s, ξ) .≈ (
         0.0,
-        3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
+        3 * 1e-6 * 0.01 * moment(pdists[1], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) /
+        1000.0^(1 / 3),
         0.0,
-        3 * 1e-6 * 0.01 * moment(pdists[2], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
-        3 * 2 * 1e-6 * 0.01 * moment(pdists[2], 2 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
+        3 * 1e-6 * 0.01 * moment(pdists[2], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) /
+        1000.0^(1 / 3),
+        3 * 2 * 1e-6 * 0.01 * moment(pdists[2], 2 - 2 / 3) * (4 * π / 3)^(2 / 3) /
+        1000.0^(1 / 3),
         0.0,
-        3 * 1e-6 * 0.01 * moment(pdists[3], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
-        3 * 2 * 1e-6 * 0.01 * moment(pdists[3], 2 - 2 / 3) * (4 * π / 3)^(2 / 3) / 1000.0^(1 / 3),
+        3 * 1e-6 * 0.01 * moment(pdists[3], 1 - 2 / 3) * (4 * π / 3)^(2 / 3) /
+        1000.0^(1 / 3),
+        3 * 2 * 1e-6 * 0.01 * moment(pdists[3], 2 - 2 / 3) * (4 * π / 3)^(2 / 3) /
+        1000.0^(1 / 3),
     ),
 )

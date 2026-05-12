@@ -19,17 +19,23 @@ const CPD = Cloudy.ParticleDistributions
 Returns a function representing the right hand side of the ODE equation containing divergence 
 of coalescence source term.
 """
-function make_box_model_rhs(coal_type::CoalescenceStyle, threshold_style::ThresholdStyle = FixedThreshold())
+function make_box_model_rhs(
+    coal_type::CoalescenceStyle,
+    threshold_style::ThresholdStyle = FixedThreshold(),
+)
     rhs!(dm, m, par, t) = rhs_coal!(coal_type, dm, m, par, threshold_style)
 end
 
 function rhs_coal!(coal_type::CoalescenceStyle, dmom, mom, p, threshold_style)
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
     mom_normalized = tuple(mom ./ mom_norms...)
-    p = merge(p, (; pdists = ntuple(length(p.pdists)) do i
-        ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
-        update_dist_from_moments(p.pdists[i], mom_normalized[ind_rng])
-    end))
+    p = merge(
+        p,
+        (; pdists = ntuple(length(p.pdists)) do i
+            ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
+            update_dist_from_moments(p.pdists[i], mom_normalized[ind_rng])
+        end),
+    )
 
     if coal_type isa AnalyticalCoalStyle
         if threshold_style isa FixedThreshold
@@ -49,10 +55,13 @@ end
 function rhs_condensation!(dmom, mom, p, s)
     mom_norms = get_moments_normalizing_factors(p.NProgMoms, p.norms)
     mom_normalized = tuple(mom ./ mom_norms...)
-    p = merge(p, (; pdists = ntuple(length(p.pdists)) do i
-        ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
-        update_dist_from_moments(p.pdists[i], mom_normalized[ind_rng])
-    end))
+    p = merge(
+        p,
+        (; pdists = ntuple(length(p.pdists)) do i
+            ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
+            update_dist_from_moments(p.pdists[i], mom_normalized[ind_rng])
+        end),
+    )
     ξ_normalized = p.ξ / p.norms[2]^(2 / 3)
     dmom .= get_cond_evap(p.pdists, s, ξ_normalized) .* mom_norms
 end
@@ -74,5 +83,7 @@ function golovin_analytical_solution(x, x0, t; b = 1.5e-3, n = 1)
     end
     τ = 1 - exp(-n * b * x0 * t)
     sqrt_τ = sqrt(τ)
-    return n * (1 - τ) / (x * sqrt_τ) * besselix(1, 2 * x / x0 * sqrt_τ) * exp(-(1 + τ - 2 * sqrt_τ) * x / x0)
+    return n * (1 - τ) / (x * sqrt_τ) *
+           besselix(1, 2 * x / x0 * sqrt_τ) *
+           exp(-(1 + τ - 2 * sqrt_τ) * x / x0)
 end

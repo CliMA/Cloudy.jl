@@ -10,9 +10,9 @@ include("./rainshaft_helpers.jl")
   - `dist` - is a particle mass distribution
 Returns the names and values of settable parameters for a dist.
 """
-function get_params(dist::CPD.PrimitiveParticleDistribution{FT} where {FT <: Real})
-    params = Array{Symbol, 1}(collect(propertynames(dist)))
-    values = Array{FT, 1}([getproperty(dist, p) for p in params])
+function get_params(dist::CPD.PrimitiveParticleDistribution{FT} where {FT<:Real})
+    params = Array{Symbol,1}(collect(propertynames(dist)))
+    values = Array{FT,1}([getproperty(dist, p) for p in params])
     return params, values
 end
 
@@ -28,18 +28,18 @@ function plot_moments!(sol, p; file_name = "test_moments.png")
     moments = vcat(sol.u'...)
 
     Ndist = length(p.pdists)
-    n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
+    n_params = [nparams(p.pdists[i]) for i = 1:Ndist]
     Nmom_min = minimum(n_params)
     Nmom_max = maximum(n_params)
     moments_sum = zeros(length(time), Nmom_min)
 
     plt = Array{Plots.Plot}(undef, Nmom_max)
-    for i in 1:Nmom_max
+    for i = 1:Nmom_max
         plt[i] = plot()
     end
 
-    for i in 1:Ndist
-        for j in 1:n_params[i]
+    for i = 1:Ndist
+        for j = 1:n_params[i]
             ind = get_dist_moment_ind(p.NProgMoms, i, j)
             plt[j] = plot(
                 plt[j],
@@ -56,7 +56,7 @@ function plot_moments!(sol, p; file_name = "test_moments.png")
             end
         end
     end
-    for i in 1:Nmom_min
+    for i = 1:Nmom_min
         plt[i] = plot(
             plt[i],
             time,
@@ -94,7 +94,13 @@ end
   `p` - additional ODE parameters carried in the solver
 Plots the spectra
 """
-function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15, -3), print = false)
+function plot_spectra!(
+    sol,
+    p;
+    file_name = "test_spectra.png",
+    logxrange = (-15, -3),
+    print = false,
+)
     x = 10 .^ (collect(range(logxrange[1], logxrange[2], 100)))
     r = (x / 1000 * 3 / 4 / π) .^ (1 / 3) * 1e6 # plot in µm
 
@@ -105,15 +111,15 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
 
     moments = vcat(sol.u'...)
     Ndist = length(p.pdists)
-    n_params = [nparams(p.pdists[i]) for i in 1:Ndist]
+    n_params = [nparams(p.pdists[i]) for i = 1:Ndist]
 
     plt = Array{Plots.Plot}(undef, 3)
     t_ind = [1, floor(Int, length(sol.t) / 2), length(sol.t)]
     sp_sum = zeros(length(r), 3)
 
-    for i in 1:3
+    for i = 1:3
         plt[i] = plot()
-        for j in 1:Ndist
+        for j = 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
             moms = moments[t_ind[i], ind_rng]
             pdist_tmp = update_dist_from_moments(p.pdists[j], ntuple(length(moms)) do i
@@ -135,7 +141,14 @@ function plot_spectra!(sol, p; file_name = "test_spectra.png", logxrange = (-15,
                 @show 3 * x .^ 2 .* pdist_tmp.(x)
             end
         end
-        plot!(r, sp_sum[:, i], linewidth = 2, linestyle = :dash, linecolor = :black, label = i == 1 ? "Sum " : "")
+        plot!(
+            r,
+            sp_sum[:, i],
+            linewidth = 2,
+            linestyle = :dash,
+            linecolor = :black,
+            label = i == 1 ? "Sum " : "",
+        )
     end
 
     plot(
@@ -167,20 +180,27 @@ function plot_params!(sol, p; yscale = :log10, file_name = "box_model.pdf")
     n_dist = length(p.pdists)
     labels = ["N", "θ", "k"]
     plt = Array{Plots.Plot}(undef, n_dist)
-    n_params = [nparams(p.pdists[i]) for i in 1:n_dist]
-    for i in 1:n_dist
+    n_params = [nparams(p.pdists[i]) for i = 1:n_dist]
+    for i = 1:n_dist
         ind_rng = get_dist_moments_ind_range(p.NProgMoms, i)
-        for j in 1:size(params)[1]
+        for j = 1:size(params)[1]
             moms_tmp = moments[j, ind_rng]
-            pdist_tmp = CPD.update_dist_from_moments(p.pdists[i], ntuple(length(moms_tmp)) do i
-                moms_tmp[i]
-            end)
+            pdist_tmp =
+                CPD.update_dist_from_moments(p.pdists[i], ntuple(length(moms_tmp)) do i
+                    moms_tmp[i]
+                end)
             params[j, ind_rng] = vcat(get_params(pdist_tmp)[2]...)
         end
 
         plot()
         for j in ind_rng
-            plot!(time, params[:, j], linewidth = 2, label = labels[j - ind_rng[1] + 1], yscale = yscale)
+            plot!(
+                time,
+                params[:, j],
+                linewidth = 2,
+                label = labels[j-ind_rng[1]+1],
+                yscale = yscale,
+            )
         end
         plt[i] = plot!(xaxis = "time [s]", yaxis = "parameters (mode " * string(i) * ")")
     end
@@ -219,22 +239,22 @@ function print_box_results!(sol, p)
     Nmom_max = maximum(p.NProgMoms)
     moments_sum = zeros(length(time), Nmom_min)
 
-    for i in 1:Ndist
-        for j in 1:Nmom_min
+    for i = 1:Ndist
+        for j = 1:Nmom_min
             ind = get_dist_moment_ind(p.NProgMoms, i, j)
             moments_sum[:, j] += moments[:, ind]
             @show moments[:, ind]
         end
     end
     @show time
-    for j in 1:Nmom_min
+    for j = 1:Nmom_min
         @show moments_sum[:, j]
     end
 
     t_ind = [1, ceil(Int, length(sol.t) / 2), length(sol.t)]
     params = zeros(length(t_ind), Ndist, Nmom_max)
-    for i in 1:3
-        for j in 1:Ndist
+    for i = 1:3
+        for j = 1:Ndist
             ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
             moms = moments[t_ind[i], ind_rng]
             pdist_tmp = update_dist_from_moments(p.pdists[j], ntuple(length(moms)) do i
@@ -274,15 +294,16 @@ function plot_rainshaft_results(
     plt = Array{Plots.Plot}(undef, n_plots)
     nt = length(res)
     plot_time_inds = [1, floor(Int, nt / 4), floor(Int, 2 * nt / 4), nt]
-    for i in 1:n_dist
-        for j in 1:nm_max
+    for i = 1:n_dist
+        for j = 1:nm_max
             xlabel_ext = " (mode " * string(i) * ")"
-            plt[(i - 1) * nm_max + j] = plot(xaxis = "M_" * string(j - 1) * xlabel_ext, yaxis = "z(km)")
+            plt[(i-1)*nm_max+j] =
+                plot(xaxis = "M_" * string(j - 1) * xlabel_ext, yaxis = "z(km)")
             if j > nm[i]
                 continue
             end
             for (k, t_ind) in enumerate(plot_time_inds)
-                plot!(res[t_ind][:, (i - 1) * nm_max + j], z / 1000, lw = 3, c = k, label = false)
+                plot!(res[t_ind][:, (i-1)*nm_max+j], z / 1000, lw = 3, c = k, label = false)
             end
         end
     end
@@ -293,12 +314,12 @@ function plot_rainshaft_results(
             Nr = zeros(length(z))
             Mc = zeros(length(z))
             Mr = zeros(length(z))
-            for iz in 1:length(z)
+            for iz = 1:length(z)
                 pdists_tmp = ntuple(n_dist) do ip
                     ind_rng = get_dist_moments_ind_range(p.NProgMoms, ip)
                     update_dist_from_moments(p.pdists[ip], ntuple(length(ind_rng)) do im
-                        res[t_ind][iz, ind_rng[im]]
-                    end)
+                            res[t_ind][iz, ind_rng[im]]
+                        end)
                 end
                 (; N_liq, M_liq, N_rai, M_rai) = get_standard_N_q(pdists_tmp, 5.236e-10)
                 Nc[iz] = N_liq
@@ -317,16 +338,40 @@ function plot_rainshaft_results(
     if plot_analytical_sedimentation
         for (k, t_ind) in enumerate(plot_time_inds)
             t = t_ind * p.dt
-            for i in 1:n_dist
+            for i = 1:n_dist
                 ind_rng = get_dist_moments_ind_range(p.NProgMoms, j)
                 sdm_anl = analytical_sol(p.pdists[i], ic[:, ind_rng], p.vel, z, t)
-                for j in 1:nm[i]
-                    plot!(plt[(i - 1) * nm_max + j], sdm_anl[:, j], z / 1000, lw = 1, ls = :dash, c = k, label = false)
+                for j = 1:nm[i]
+                    plot!(
+                        plt[(i-1)*nm_max+j],
+                        sdm_anl[:, j],
+                        z / 1000,
+                        lw = 1,
+                        ls = :dash,
+                        c = k,
+                        label = false,
+                    )
                 end
             end
         end
-        plot!(plt[1], NaN .* z, z / 1000, lw = 3, ls = :solid, c = :black, label = "numerical solution")
-        plot!(plt[1], NaN .* z, z / 1000, lw = 1, ls = :dash, c = :black, label = "analytical sedimentation")
+        plot!(
+            plt[1],
+            NaN .* z,
+            z / 1000,
+            lw = 3,
+            ls = :solid,
+            c = :black,
+            label = "numerical solution",
+        )
+        plot!(
+            plt[1],
+            NaN .* z,
+            z / 1000,
+            lw = 1,
+            ls = :dash,
+            c = :black,
+            label = "analytical sedimentation",
+        )
     end
     plot(
         plt...,
@@ -363,14 +408,15 @@ function plot_rainshaft_contours(z, t, res, p; file_name = "rainshaft_contour.pd
     #u[:,1:6:end]
 
     # res[time][z_ind, moment_ind]
-    for i in 1:n_dist
-        for j in 1:nm_max
+    for i = 1:n_dist
+        for j = 1:nm_max
             xlabel_ext = " (mode " * string(i) * ")"
-            plt[(i - 1) * nm_max + j] = plot(xaxis = "t(s)", yaxis = "z(km)", title = "M" * string(j) * xlabel_ext)
+            plt[(i-1)*nm_max+j] =
+                plot(xaxis = "t(s)", yaxis = "z(km)", title = "M" * string(j) * xlabel_ext)
             if j > nm[i]
                 continue
             end
-            qty = collect(u[:, ((i - 1) * nm_max + j):n_plots:end])
+            qty = collect(u[:, ((i-1)*nm_max+j):n_plots:end])
             heatmap!([1, 2], z / 1000, [z / 1000, 2 * z / 1000])#z/1000, t, qty)
         end
     end
